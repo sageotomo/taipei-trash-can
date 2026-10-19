@@ -2,34 +2,27 @@ import { useCallback, useMemo } from "react";
 import type L from "leaflet";
 import { FEATURES, DEFAULT_WEIGHTS, mainReason, type CellScore } from "../lib/score";
 import { classOf, quantileBreaks } from "../lib/hex";
-import { HexLayer, PointLayer, PANES } from "../map/layers";
+import { HexLayer, PANES } from "../map/layers";
+import { POI_TYPES, PoiIcon, PoiPointLayer, type PoiType } from "../map/icons";
 import { placeNames } from "../lib/place";
 import { Section, SourceTag, Swatch, fmt } from "../ui";
 import type { AppData } from "../data";
-import type { FeatureKey, GridCell, PoiKind, Weights } from "../types";
+import type { FeatureKey, GridCell, Weights } from "../types";
 
 export const GAP_COLORS = ["#fbeccc", "#f6cf86", "#ee9f47", "#d4662a", "#9e3412"];
 
-export type LayerKey = "bins" | PoiKind;
+export type LayerKey = "bins" | "mrt" | "bus" | "youbike" | "shop";
 export type LayerVisibility = Record<LayerKey, boolean>;
 
 export const DEFAULT_LAYERS: LayerVisibility = { bins: true, mrt: true, bus: false, youbike: false, shop: false };
 
-const LAYER_INFO: { key: LayerKey; label: string; color: string; source: string }[] = [
-  { key: "bins", label: "現有清潔箱", color: "#2e6b4f", source: "bins" },
-  { key: "mrt", label: "捷運站", color: "#1d4e89", source: "mrt" },
-  { key: "bus", label: "公車站", color: "#5f6f74", source: "bus" },
-  { key: "youbike", label: "YouBike", color: "#e3b23c", source: "youbike" },
-  { key: "shop", label: "飲料店、小吃店", color: "#c0577a", source: "shops" },
+const LAYER_INFO: { key: LayerKey; icons: PoiType[]; label: string; source: string }[] = [
+  { key: "bins", icons: ["bins"], label: "現有清潔箱", source: "bins" },
+  { key: "mrt", icons: ["mrt"], label: "捷運站", source: "mrt" },
+  { key: "bus", icons: ["bus"], label: "公車站", source: "bus" },
+  { key: "youbike", icons: ["youbike"], label: "YouBike 站", source: "youbike" },
+  { key: "shop", icons: ["drink", "food"], label: "飲料店、小吃店", source: "shops" },
 ];
-
-const POINT_STYLE: Record<LayerKey, L.CircleMarkerOptions> = {
-  bins: { radius: 4, fillColor: "#2e6b4f", color: "#ffffff", weight: 1, fillOpacity: 1 },
-  mrt: { radius: 6, fillColor: "#1d4e89", color: "#ffffff", weight: 1.5, fillOpacity: 1 },
-  bus: { radius: 2.5, fillColor: "#5f6f74", color: "#5f6f74", weight: 0, fillOpacity: 0.7 },
-  youbike: { radius: 3, fillColor: "#e3b23c", color: "#8a6a14", weight: 0.5, fillOpacity: 0.9 },
-  shop: { radius: 2.5, fillColor: "#c0577a", color: "#c0577a", weight: 0, fillOpacity: 0.75 },
-};
 
 // ---------------- 地圖圖層 ----------------
 
@@ -75,45 +68,40 @@ export function RecommendLayers({ data, scores, recommended, selected, onSelect,
   );
 }
 
-/** 各種點位圖層，其他分頁也會用到 */
+/** 各種點位圖層，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
 export function PoiLayers({ data, layers }: { data: AppData; layers: Partial<LayerVisibility> }) {
   const groups = useMemo(() => {
-    const byKind: Record<PoiKind, { lat: number; lng: number; name?: string; flow?: number }[]> = {
-      mrt: [], bus: [], youbike: [], shop: [],
+    const out: Record<PoiType, { lat: number; lng: number; label: string }[]> = {
+      bins: [], mrt: [], bus: [], youbike: [], drink: [], food: [],
     };
+    const tag = (simulated: boolean) => (simulated ? "（模擬）" : "");
     for (const f of data.pois.features) {
       const [lng, lat] = f.geometry.coordinates;
-      byKind[f.properties.kind].push({ lat, lng, name: f.properties.name, flow: f.properties.daily_flow });
+      const p = f.properties;
+      if (p.kind === "mrt") out.mrt.push({ lat, lng, label: `捷運${p.name}站・約 ${fmt(p.daily_flow ?? 0)} 人次/日${tag(p.simulated)}` });
+      else if (p.kind === "shop") {
+        const t = p.type === "drink" ? "drink" : "food";
+        out[t].push({ lat, lng, label: POI_TYPES[t].label + tag(p.simulated) });
+      } else out[p.kind].push({ lat, lng, label: POI_TYPES[p.kind].label + tag(p.simulated) });
     }
-    return byKind;
-  }, [data.pois]);
+    for (const f of data.bins.features) {
+      const [lng, lat] = f.geometry.coordinates;
+      out.bins.push({ lat, lng, label: `清潔箱 ${f.properties.id}${tag(f.properties.simulated)}` });
+    }
+    return out;
+  }, [data.pois, data.bins]);
 
-  const bins = useMemo(
-    () => data.bins.features.map((f) => ({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] })),
-    [data.bins]
-  );
-
-  const kinds: PoiKind[] = ["bus", "youbike", "shop", "mrt"];
   return (
     <>
-      {kinds.map((k) =>
-        layers[k] ? (
-          <PointLayer
-            key={k}
-            points={groups[k]}
-            style={STYLE_FN[k]}
-            tooltip={k === "mrt" ? (i) => `${groups.mrt[i].name} 站・約 ${fmt(groups.mrt[i].flow ?? 0)} 人次/日` : undefined}
-          />
-        ) : null
-      )}
-      {layers.bins ? <PointLayer points={bins} style={STYLE_FN.bins} pane={PANES.top} /> : null}
+      {layers.bus ? <PoiPointLayer type="bus" points={groups.bus} iconZoom={16} /> : null}
+      {layers.youbike ? <PoiPointLayer type="youbike" points={groups.youbike} iconZoom={16} /> : null}
+      {layers.shop ? <PoiPointLayer type="drink" points={groups.drink} iconZoom={16} /> : null}
+      {layers.shop ? <PoiPointLayer type="food" points={groups.food} iconZoom={16} /> : null}
+      {layers.bins ? <PoiPointLayer type="bins" points={groups.bins} iconZoom={15} pane={PANES.top} /> : null}
+      {layers.mrt ? <PoiPointLayer type="mrt" points={groups.mrt} iconZoom={13} pane={PANES.top} /> : null}
     </>
   );
 }
-
-const STYLE_FN = Object.fromEntries(
-  (Object.keys(POINT_STYLE) as LayerKey[]).map((k) => [k, () => POINT_STYLE[k]])
-) as Record<LayerKey, () => L.CircleMarkerOptions>;
 
 // ---------------- 側邊面板 ----------------
 
@@ -197,13 +185,18 @@ export function RecommendPanel(props: PanelProps) {
                   checked={props.layers[l.key]}
                   onChange={(e) => props.onLayers({ ...props.layers, [l.key]: e.target.checked })}
                 />
-                <Swatch color={l.color} />
+                <span className="layer-icons">
+                  {l.icons.map((t) => (
+                    <PoiIcon key={t} type={t} />
+                  ))}
+                </span>
                 {l.label}
                 <SourceTag source={source(l.source)} />
               </label>
             </li>
           ))}
         </ul>
+        <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span>缺口小</span>
           {GAP_COLORS.map((c) => (

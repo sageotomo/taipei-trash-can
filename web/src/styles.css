@@ -844,3 +844,27 @@ textarea {
 .basemap {
   filter: grayscale(0.9) contrast(0.85) brightness(1.06);
 }
+
+/* ---------- 點位圖示 ---------- */
+
+.poi-icon,
+.poi-marker {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  border-radius: 50%;
+}
+
+.poi-marker {
+  width: 24px;
+  height: 24px;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 1px 3px rgba(27, 42, 47, 0.35);
+}
+
+.layer-icons {
+  display: inline-flex;
+  gap: 3px;
+  margin-right: 4px;
+}
