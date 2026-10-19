@@ -45,6 +45,17 @@ describe("computeScores", () => {
 });
 
 describe("pickRecommendations", () => {
+  it("權重全為 0 時沒有建議點", () => {
+    const zero = { mrt: 0, bus: 0, youbike: 0, food: 0, reports: 0, fill: 0 };
+    const grid = gridDisk(latLngToCell(25.0478, 121.517, 9), 2).map((h) => cell(h, { mrt_n: 1, bus_n: 1 }));
+    expect(pickRecommendations(computeScores(grid, zero, grid.map(() => 1)), zero)).toEqual([]);
+  });
+
+  it("沒有任何需求的格子不會被挑", () => {
+    const grid = gridDisk(latLngToCell(25.0478, 121.517, 9), 2).map((h) => cell(h));
+    expect(pickRecommendations(computeScores(grid, DEFAULT_WEIGHTS, grid.map(() => 0)), DEFAULT_WEIGHTS)).toEqual([]);
+  });
+
   it("不會挑到相鄰的格子", () => {
     const ring = gridDisk(latLngToCell(25.0478, 121.517, 9), 1);
     const full = { mrt_n: 1, bus_n: 1, youbike_n: 1, food_n: 1, fill_n: 1 };

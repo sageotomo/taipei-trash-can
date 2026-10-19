@@ -158,6 +158,13 @@ export function RecommendPanel(props: PanelProps) {
       <WeightSliders weights={props.weights} onChange={props.onWeights} sources={data.sources} />
 
       <Section title={`建議增設前 ${recommendations.length} 名`}>
+        {recommendations.length === 0 ? (
+          <p className="hint-box">
+            {Object.values(props.weights).every((w) => w === 0)
+              ? "權重全部是 0，沒有任何需求可以計算。調高至少一項權重，就會出現建議點。"
+              : "目前的權重下，沒有格子的需求達到門檻。"}
+          </p>
+        ) : null}
         <ol className="rank-list">
           {recommendations.map((r, i) => {
             const reason = FEATURES.find((f) => f.key === mainReason(r))!;
@@ -287,12 +294,18 @@ function CellDetail({
       <div className="detail-head">
         <div>
           <div className="detail-rank">
-            第 {fmt(score.rank)} 名<small> / {fmt(total)} 格</small>
+            {score.gap > 0 ? (
+              <>
+                第 {fmt(score.rank)} 名<small> / {fmt(total)} 格</small>
+              </>
+            ) : (
+              "沒有需求"
+            )}
           </div>
           <div className="muted">
             {place}
             <br />
-            {isRecommended ? "列入建議增設" : "未列入前 30 名"}
+            {isRecommended ? "列入建議增設" : score.gap > 0 ? "未列入前 30 名" : "目前的權重下，這一格的需求是 0"}
           </div>
         </div>
         <button className="icon-button" onClick={onClose} aria-label="關閉">

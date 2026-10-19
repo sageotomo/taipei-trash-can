@@ -100,12 +100,14 @@ def pick_recommendations(scored: pd.DataFrame, weights: dict[str, float] = DEFAU
     import h3
 
     total = sum(weights.values())
+    if total <= 0:
+        return scored.iloc[0:0]
     blocked: set[str] = set()
     picks = []
     for row in scored.sort_values("gap", ascending=False).itertuples():
         if len(picks) >= n:
             break
-        if row.demand < 0.35 * total or row.h3 in blocked:
+        if row.gap <= 0 or row.demand < 0.35 * total or row.h3 in blocked:
             continue
         picks.append(row.Index)
         blocked |= set(h3.grid_disk(row.h3, 1))

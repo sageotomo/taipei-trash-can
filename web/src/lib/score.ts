@@ -89,14 +89,16 @@ export function computeScores(grid: GridCell[], weights: Weights, reportCounts: 
 /**
  * 建議增設點：依缺口由高到低挑，需求要達總權重的 35%，
  * 而且和已挑的格子不能相鄰（避免同一條街連放好幾個）。
+ * 權重全為 0 或缺口為 0 的格子沒有任何需求，不會被挑。
  */
 export function pickRecommendations(scores: CellScore[], weights: Weights, n = TOP_N): CellScore[] {
   const total = Object.values(weights).reduce((a, b) => a + b, 0);
+  if (total <= 0) return [];
   const blocked = new Set<string>();
   const picks: CellScore[] = [];
   for (const s of [...scores].sort((a, b) => b.gap - a.gap)) {
     if (picks.length >= n) break;
-    if (s.demand < 0.35 * total || blocked.has(s.h3)) continue;
+    if (s.gap <= 0 || s.demand < 0.35 * total || blocked.has(s.h3)) continue;
     picks.push(s);
     for (const c of gridDisk(s.h3, 1)) blocked.add(c);
   }
