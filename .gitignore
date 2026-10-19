@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.vite/
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
+
+# 原始下載檔太大，不進 git（說明見 data/NOTES.md）
+data/raw/*
+!data/raw/.gitkeep
