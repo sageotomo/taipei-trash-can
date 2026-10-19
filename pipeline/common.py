@@ -16,7 +16,6 @@ REFERENCE = ROOT / "pipeline" / "reference"
 OUT = ROOT / "web" / "public" / "data"  # 給網站讀的 JSON
 
 SEED = 42
-H3_RES = 9  # 每格約 0.1 km²
 
 # 預設權重：和網頁滑桿的初始值一致
 DEFAULT_WEIGHTS = {
@@ -97,7 +96,7 @@ def compute_gap(grid: pd.DataFrame, weights: dict[str, float] = DEFAULT_WEIGHTS)
 
 def pick_recommendations(scored: pd.DataFrame, weights: dict[str, float] = DEFAULT_WEIGHTS, n: int = 30) -> pd.DataFrame:
     """和 score.ts 的 pickRecommendations 相同：缺口高到低、需求 ≥ 總權重 35%、彼此不相鄰。"""
-    import h3
+    from hexgrid import grid_disk
 
     total = sum(weights.values())
     if total <= 0:
@@ -107,10 +106,10 @@ def pick_recommendations(scored: pd.DataFrame, weights: dict[str, float] = DEFAU
     for row in scored.sort_values("gap", ascending=False).itertuples():
         if len(picks) >= n:
             break
-        if row.gap <= 0 or row.demand < 0.35 * total or row.h3 in blocked:
+        if row.gap <= 0 or row.demand < 0.35 * total or row.cell in blocked:
             continue
         picks.append(row.Index)
-        blocked |= set(h3.grid_disk(row.h3, 1))
+        blocked |= set(grid_disk(row.cell, 1))
     return scored.loc[picks]
 
 

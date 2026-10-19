@@ -1,6 +1,5 @@
 numpy>=2.0
 pandas>=2.2
-h3>=4.0
 pytest>=8.0
 # 只有在 data/raw/ 放了公車站牌 SHP 時才需要：
 # geopandas>=1.0

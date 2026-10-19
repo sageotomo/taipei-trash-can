@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { latLngToCell, gridDisk } from "h3-js";
+import { latLngToCell, gridDisk } from "./hexgrid";
 import { DEFAULT_WEIGHTS, computeScores, normalizePositive, pickRecommendations } from "./score";
 import type { GridCell } from "../types";
 
-function cell(h3: string, over: Partial<GridCell> = {}): GridCell {
+function cell(id: string, over: Partial<GridCell> = {}): GridCell {
   return {
-    h3, district: "中正區", bins: 0, nbins: 0,
+    cell: id, district: "中正區", bins: 0, nbins: 0,
     mrt: 0, bus: 0, youbike: 0, food: 0, reports: 0, fill: 0,
     mrt_n: 0, bus_n: 0, youbike_n: 0, food_n: 0, fill_n: 0,
     ...over,
@@ -25,7 +25,7 @@ describe("normalizePositive", () => {
 });
 
 describe("computeScores", () => {
-  const center = latLngToCell(25.0478, 121.517, 9);
+  const center = latLngToCell(25.0478, 121.517);
 
   it("需求相同時，有桶的格子缺口較小", () => {
     const busy = { mrt_n: 1, bus_n: 1, youbike_n: 1, food_n: 1, fill_n: 1 };
@@ -47,20 +47,21 @@ describe("computeScores", () => {
 describe("pickRecommendations", () => {
   it("權重全為 0 時沒有建議點", () => {
     const zero = { mrt: 0, bus: 0, youbike: 0, food: 0, reports: 0, fill: 0 };
-    const grid = gridDisk(latLngToCell(25.0478, 121.517, 9), 2).map((h) => cell(h, { mrt_n: 1, bus_n: 1 }));
+    const grid = gridDisk(latLngToCell(25.0478, 121.517), 2).map((h) => cell(h, { mrt_n: 1, bus_n: 1 }));
     expect(pickRecommendations(computeScores(grid, zero, grid.map(() => 1)), zero)).toEqual([]);
   });
 
   it("沒有任何需求的格子不會被挑", () => {
-    const grid = gridDisk(latLngToCell(25.0478, 121.517, 9), 2).map((h) => cell(h));
+    const grid = gridDisk(latLngToCell(25.0478, 121.517), 2).map((h) => cell(h));
     expect(pickRecommendations(computeScores(grid, DEFAULT_WEIGHTS, grid.map(() => 0)), DEFAULT_WEIGHTS)).toEqual([]);
   });
 
   it("不會挑到相鄰的格子", () => {
-    const ring = gridDisk(latLngToCell(25.0478, 121.517, 9), 1);
+    // 中心格需求最高，周圍 6 格都和它相鄰，所以只會挑到中心格
+    const center = latLngToCell(25.0478, 121.517);
     const full = { mrt_n: 1, bus_n: 1, youbike_n: 1, food_n: 1, fill_n: 1 };
-    const grid = ring.map((h, i) => cell(h, { ...full, mrt_n: 1 - i * 0.01 }));
+    const grid = gridDisk(center, 1).map((h) => cell(h, { ...full, mrt_n: h === center ? 1 : 0.9 }));
     const picks = pickRecommendations(computeScores(grid, DEFAULT_WEIGHTS, grid.map(() => 1)), DEFAULT_WEIGHTS);
-    expect(picks).toHaveLength(1);
+    expect(picks.map((p) => p.cell)).toEqual([center]);
   });
 });

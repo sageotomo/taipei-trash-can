@@ -1,19 +1,19 @@
-import { cellToBoundary, cellToLatLng } from "h3-js";
+import { cellBoundary, cellCenter } from "./hexgrid";
 
 const boundaries = new Map<string, [number, number][]>();
 
-/** 六角形的頂點，Leaflet 用的 [緯度, 經度] 順序（h3-js 預設就是這個順序） */
-export function hexBoundary(h3: string): [number, number][] {
-  let b = boundaries.get(h3);
+/** 六角形的頂點，Leaflet 用的 [緯度, 經度] 順序 */
+export function hexBoundary(cell: string): [number, number][] {
+  let b = boundaries.get(cell);
   if (!b) {
-    b = cellToBoundary(h3) as [number, number][];
-    boundaries.set(h3, b);
+    b = cellBoundary(cell);
+    boundaries.set(cell, b);
   }
   return b;
 }
 
-export function hexCenter(h3: string): [number, number] {
-  return cellToLatLng(h3) as [number, number];
+export function hexCenter(cell: string): [number, number] {
+  return cellCenter(cell);
 }
 
 /** 把數值切成 k 個分位數級距，回傳分界值（長度 k-1） */

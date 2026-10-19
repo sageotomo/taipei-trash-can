@@ -47,8 +47,8 @@ export function HexLayer({ cells, style, onClick, tooltip }: HexLayerProps) {
 
   useEffect(() => {
     const group = L.layerGroup();
-    shapes.current = cells.map((h3, i) => {
-      const poly = L.polygon(hexBoundary(h3), { renderer, pane: PANES.hexes, ...styleRef.current(i) });
+    shapes.current = cells.map((cell, i) => {
+      const poly = L.polygon(hexBoundary(cell), { renderer, pane: PANES.hexes, ...styleRef.current(i) });
       poly.on("click", () => onClickRef.current?.(i));
       if (tooltipRef.current) poly.bindTooltip(() => tooltipRef.current?.(i) ?? "", { sticky: true, direction: "top" });
       poly.addTo(group);

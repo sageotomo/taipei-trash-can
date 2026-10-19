@@ -32,7 +32,7 @@
 
 ## 演算法
 
-把研究範圍（各捷運站外約 1.5 公里）切成 H3 六角網格（解析度 9，每格約 0.1 km²，共 1,637 格）。
+把研究範圍（各捷運站外約 1.6 公里）切成尖頂朝北的正六角形網格：中心到頂點 190 公尺，每格約 0.09 km²，共 1,603 格（`pipeline/hexgrid.py`、`web/src/lib/hexgrid.ts`，兩邊有測試確保格子編號一致）。
 
 **需求**＝Σ 權重 × 標準化特徵，6 個特徵：
 
@@ -71,7 +71,8 @@
 pipeline/        Python：把原始資料算成靜態 JSON（只需要跑一次）
   01_load.py       讀 data/raw/ 的真實資料
   02_simulate.py   補齊模擬資料
-  03_grid.py       H3 網格特徵 → grid.json 等
+  03_grid.py       六角網格特徵 → grid.json 等
+  hexgrid.py       自訂正六角形網格
   04_fill_sim.py   填滿模擬 → fill.json
   05_progress.py   施政進度 → progress.json
 web/             Vite + React + TypeScript + Leaflet：讀 JSON、畫地圖
@@ -103,7 +104,7 @@ push 到 `main` 後，GitHub Actions 會跑測試、build，並部署到 GitHub 
 ## 使用的開源套件與 AI 工具
 
 - 地圖：[Leaflet](https://leafletjs.com/)、[react-leaflet](https://react-leaflet.js.org/)，底圖 © 內政部國土測繪中心（備援：© OpenStreetMap）
-- 網格：[H3](https://h3geo.org/)（h3-js、h3-py）
+- 網格：自訂正六角形網格，演算法參考 [Red Blob Games: Hexagonal Grids](https://www.redblobgames.com/grids/hexagons/)
 - 前端：React、Vite、TypeScript、Vitest
 - 資料處理：pandas、NumPy、pytest
 - AI 工具：本專案的規劃與程式碼由 Claude（Anthropic）協助撰寫

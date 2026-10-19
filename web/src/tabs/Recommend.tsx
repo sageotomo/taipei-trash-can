@@ -43,7 +43,7 @@ interface LayersProps {
 }
 
 export function RecommendLayers({ data, scores, recommended, selected, onSelect, layers }: LayersProps) {
-  const cells = useMemo(() => data.grid.map((c) => c.h3), [data.grid]);
+  const cells = useMemo(() => data.grid.map((c) => c.cell), [data.grid]);
   const breaks = useMemo(() => quantileBreaks(scores.map((s) => s.gap), GAP_COLORS.length), [scores]);
 
   const hexStyle = useCallback(
@@ -53,10 +53,10 @@ export function RecommendLayers({ data, scores, recommended, selected, onSelect,
       const isRec = recommended.has(i);
       return {
         fillColor: k < 0 ? "#ffffff" : GAP_COLORS[k],
-        fillOpacity: k < 0 ? 0.15 : 0.62,
+        fillOpacity: k < 0 ? 0.05 : 0.38,
         color: isSelected ? "#1b2a2f" : isRec ? "#5b1a08" : "#ffffff",
-        weight: isSelected ? 3 : isRec ? 2 : 0.6,
-        opacity: 1,
+        weight: isSelected ? 3 : isRec ? 2 : 0.5,
+        opacity: isSelected || isRec ? 1 : 0.5,
       };
     },
     [scores, breaks, selected, recommended]
@@ -169,7 +169,7 @@ export function RecommendPanel(props: PanelProps) {
           {recommendations.map((r, i) => {
             const reason = FEATURES.find((f) => f.key === mainReason(r))!;
             return (
-              <li key={r.h3}>
+              <li key={r.cell}>
                 <button
                   className={r.index === selected ? "rank-item active" : "rank-item"}
                   onClick={() => onSelect(r.index, true)}

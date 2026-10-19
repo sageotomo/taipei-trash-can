@@ -32,10 +32,10 @@ function useBinStats(data: AppData) {
   return useMemo(() => {
     const stats = new Map<string, { bins: number; overflowSum: number }>();
     data.bins.features.forEach((f, i) => {
-      const s = stats.get(f.properties.h3) ?? { bins: 0, overflowSum: 0 };
+      const s = stats.get(f.properties.cell) ?? { bins: 0, overflowSum: 0 };
       s.bins += 1;
       s.overflowSum += data.fill.overflow.A[i];
-      stats.set(f.properties.h3, s);
+      stats.set(f.properties.cell, s);
     });
     return stats;
   }, [data]);
@@ -52,7 +52,7 @@ interface LayersProps {
 }
 
 export function ReportLayers({ data, reports, reportCounts, selected, draft }: LayersProps) {
-  const cells = useMemo(() => data.grid.map((c) => c.h3), [data.grid]);
+  const cells = useMemo(() => data.grid.map((c) => c.cell), [data.grid]);
 
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
@@ -60,9 +60,10 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft }: L
       const isSelected = i === selected;
       return {
         fillColor: k < 0 ? "#ffffff" : HOT_COLORS[k],
-        fillOpacity: k < 0 ? 0.08 : 0.6,
+        fillOpacity: k < 0 ? 0.04 : 0.4,
         color: isSelected ? "#1b2a2f" : "#ffffff",
         weight: isSelected ? 3 : 0.5,
+        opacity: isSelected ? 1 : 0.5,
       };
     },
     [reportCounts, selected]
@@ -148,7 +149,7 @@ export function ReportPanel(props: PanelProps) {
   const cell = selected !== null ? data.grid[selected] : null;
   const advice = useMemo(() => {
     if (!cell || selected === null) return null;
-    const s = binStats.get(cell.h3);
+    const s = binStats.get(cell.cell);
     const bins = s?.bins ?? 0;
     const avgOverflow = s && s.bins > 0 ? s.overflowSum / s.bins : 0;
     const count = reportCounts[selected] ?? 0;

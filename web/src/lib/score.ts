@@ -1,7 +1,7 @@
 // 缺口計算：需求 = Σ 權重 × 標準化特徵；缺口 = 需求 ÷ (1 + 本格桶數 + 0.5 × 相鄰桶數)
 // 和 pipeline/common.py、pipeline/05_progress.py 用同一套規則。
 
-import { gridDisk } from "h3-js";
+import { gridDisk } from "./hexgrid";
 import type { FeatureKey, GridCell, Weights } from "../types";
 
 export const FEATURES: { key: FeatureKey; label: string; unit: string }[] = [
@@ -44,7 +44,7 @@ export function normalizePositive(values: number[]): number[] {
 }
 
 export interface CellScore {
-  h3: string;
+  cell: string;
   index: number;            // 在 grid 陣列中的位置
   demand: number;
   supply: number;
@@ -79,7 +79,7 @@ export function computeScores(grid: GridCell[], weights: Weights, reportCounts: 
     const contributions = {} as Record<FeatureKey, number>;
     for (const { key } of FEATURES) contributions[key] = demand > 0 ? parts[key] / demand : 0;
     const supply = supplyOf(cell);
-    return { h3: cell.h3, index, demand, supply, gap: demand / (1 + supply), rank: 0, norm, contributions };
+    return { cell: cell.cell, index, demand, supply, gap: demand / (1 + supply), rank: 0, norm, contributions };
   });
 
   [...scores].sort((a, b) => b.gap - a.gap).forEach((s, i) => (s.rank = i + 1));
@@ -98,9 +98,9 @@ export function pickRecommendations(scores: CellScore[], weights: Weights, n = T
   const picks: CellScore[] = [];
   for (const s of [...scores].sort((a, b) => b.gap - a.gap)) {
     if (picks.length >= n) break;
-    if (s.gap <= 0 || s.demand < 0.35 * total || blocked.has(s.h3)) continue;
+    if (s.gap <= 0 || s.demand < 0.35 * total || blocked.has(s.cell)) continue;
     picks.push(s);
-    for (const c of gridDisk(s.h3, 1)) blocked.add(c);
+    for (const c of gridDisk(s.cell, 1)) blocked.add(c);
   }
   return picks;
 }

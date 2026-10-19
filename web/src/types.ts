@@ -4,7 +4,7 @@ export type FeatureKey = "mrt" | "bus" | "youbike" | "food" | "reports" | "fill"
 export type Weights = Record<FeatureKey, number>;
 
 export interface GridCell {
-  h3: string;
+  cell: string;
   district: string;
   bins: number;   // 本格清潔箱數
   nbins: number;  // 相鄰 6 格清潔箱數
@@ -38,7 +38,7 @@ export interface BinProps {
   id: string;
   district: string;
   road: string;
-  h3: string;
+  cell: string;
   fill_rate: number;
   simulated: boolean;
 }
@@ -60,7 +60,7 @@ export interface Report {
   lng: number;
   created_at: string;
   district?: string;
-  h3: string;
+  cell: string;
   simulated?: boolean;
   local?: boolean; // 這台瀏覽器新增的
 }
@@ -97,7 +97,7 @@ export type ProgressStatus = "已設置" | "施工中" | "規劃中" | "未處�
 /** pipeline/05_progress.py 的輸出（模擬） */
 export interface ProgressItem {
   rank: number;
-  h3: string;
+  cell: string;
   lat: number;
   lng: number;
   district: string;

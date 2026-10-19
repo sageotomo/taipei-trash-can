@@ -23,14 +23,14 @@ export function ProgressLayers({ data, district, selected, onSelect }: {
   onSelect: (i: number) => void;
 }) {
   const items = data.progress;
-  const cells = useMemo(() => items.map((p) => p.h3), [items]);
+  const cells = useMemo(() => items.map((p) => p.cell), [items]);
 
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
       const visible = district === "全部" || items[i].district === district;
       return {
         fillColor: STATUS_COLORS[items[i].status],
-        fillOpacity: visible ? 0.35 : 0.05,
+        fillOpacity: visible ? 0.25 : 0.04,
         color: i === selected ? "#1b2a2f" : STATUS_COLORS[items[i].status],
         weight: i === selected ? 3 : 1.5,
         opacity: visible ? 1 : 0.2,
@@ -141,7 +141,7 @@ export function ProgressPanel({ data, district, onDistrict, selected, onSelect }
           <tbody>
             {items.map((p, i) =>
               district === "全部" || p.district === district ? (
-                <tr key={p.h3} className={i === selected ? "active" : undefined}>
+                <tr key={p.cell} className={i === selected ? "active" : undefined}>
                   <td>
                     <button className="cell-button" onClick={() => onSelect(i)}>
                       {place([p.lat, p.lng], p.district)}

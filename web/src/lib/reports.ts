@@ -1,11 +1,10 @@
 // 市民通報只存在這台裝置的瀏覽器（localStorage），不需要後端，也不收個資。
 // localStorage 在無痕模式或封鎖網站資料時可能讀寫失敗，所以都包在 try/catch 裡。
 
-import { latLngToCell } from "h3-js";
+import { latLngToCell } from "./hexgrid";
 import type { Report } from "../types";
 
-const KEY = "trash-bins:reports";
-export const H3_RES = 9;
+const KEY = "trash-bins:reports:v2"; // 格子系統換過，舊版通報的格子編號不相容
 
 export const CATEGORIES = ["亂丟垃圾", "清潔箱滿溢", "家戶垃圾棄置"] as const;
 export type Category = (typeof CATEGORIES)[number];
@@ -35,7 +34,7 @@ export function createReport(input: { category: Category; note: string; lat: num
     note: input.note.trim().slice(0, 200),
     lat: input.lat,
     lng: input.lng,
-    h3: latLngToCell(input.lat, input.lng, H3_RES),
+    cell: latLngToCell(input.lat, input.lng),
     created_at: new Date().toISOString().slice(0, 10),
     local: true,
   };

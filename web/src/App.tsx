@@ -5,9 +5,8 @@ import { useAppData } from "./data";
 import { computeScores, DEFAULT_WEIGHTS, pickRecommendations } from "./lib/score";
 import { hexCenter } from "./lib/hex";
 import { FlyTo, MapClick, MapPanes } from "./map/layers";
-import { latLngToCell } from "h3-js";
+import { latLngToCell } from "./lib/hexgrid";
 import {
-  H3_RES,
   addLocalReport,
   clearLocalReports,
   createReport,
@@ -53,14 +52,14 @@ export default function App() {
     setFocus({ lat, lng, zoom, key: Date.now() });
   }, []);
 
-  const cellIndex = useMemo(() => new Map((data?.grid ?? []).map((c, i) => [c.h3, i])), [data]);
+  const cellIndex = useMemo(() => new Map((data?.grid ?? []).map((c, i) => [c.cell, i])), [data]);
   const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...localReports], [data, localReports]);
 
   // 每格通報數：歷史通報＋這台裝置新增的通報。增設建議的「市民通報」特徵也用這個，所以通報會即時影響缺口
   const reportCounts = useMemo(() => {
     const counts = new Array<number>(data?.grid.length ?? 0).fill(0);
     for (const r of allReports) {
-      const i = cellIndex.get(r.h3);
+      const i = cellIndex.get(r.cell);
       if (i !== undefined) counts[i]++;
     }
     return counts;
@@ -77,7 +76,7 @@ export default function App() {
     (index: number | null, fly = false) => {
       setSelected(index);
       if (index !== null && fly && data) {
-        const [lat, lng] = hexCenter(data.grid[index].h3);
+        const [lat, lng] = hexCenter(data.grid[index].cell);
         flyTo(lat, lng);
       }
     },
@@ -87,7 +86,7 @@ export default function App() {
   const pickReportLocation = useCallback(
     (lat: number, lng: number) => {
       setDraft({ lat, lng });
-      setReportCell(cellIndex.get(latLngToCell(lat, lng, H3_RES)) ?? null);
+      setReportCell(cellIndex.get(latLngToCell(lat, lng)) ?? null);
     },
     [cellIndex]
   );
@@ -212,7 +211,7 @@ export default function App() {
               onClear={() => setLocalReports(clearLocalReports())}
               onFocus={(lat, lng) => {
                 flyTo(lat, lng, 17);
-                setReportCell(cellIndex.get(latLngToCell(lat, lng, H3_RES)) ?? null);
+                setReportCell(cellIndex.get(latLngToCell(lat, lng)) ?? null);
               }}
             />
           ) : null}

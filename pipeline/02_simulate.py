@@ -5,21 +5,21 @@
 
 輸出到 pipeline/build/：
   stations.csv  bins.csv  bus.csv  youbike.csv  shops.csv  reports.csv
-  hourly.json   area.json（研究範圍的 H3 格子）  sources.json
+  hourly.json   area.json（研究範圍的格子）  sources.json
 """
 
 from __future__ import annotations
 
-import h3
 import numpy as np
 import pandas as pd
 
-from common import BUILD, H3_RES, REFERENCE, SEED, ensure_dirs, haversine_m, offset, read_json, write_json
+from common import BUILD, REFERENCE, SEED, ensure_dirs, haversine_m, offset, read_json, write_json
+from hexgrid import cell_center, grid_disk, latlng_to_cell
 
 N_BINS = 800          # 主辦說明：目前約 800 組
 N_SPREAD_BUS = 1200   # 研究範圍內平均撒的公車站
 N_REPORTS = 260
-AREA_RINGS = 5        # 每個捷運站往外 5 圈（約 1.5 公里）當研究範圍
+AREA_RINGS = 5        # 每個捷運站往外 5 圈（約 1.6 公里）當研究範圍
 
 NIGHT_MARKETS = [
     ("士林夜市", 25.0880, 121.5241),
@@ -82,13 +82,13 @@ def get_hourly(report) -> list[float]:
 def study_area(stations: pd.DataFrame) -> list[str]:
     cells: set[str] = set()
     for lat, lng in zip(stations["lat"], stations["lng"]):
-        cells |= set(h3.grid_disk(h3.latlng_to_cell(lat, lng, H3_RES), AREA_RINGS))
+        cells |= set(grid_disk(latlng_to_cell(lat, lng), AREA_RINGS))
     return sorted(cells)
 
 
 def random_points_in_area(rng, area: list[str], n: int, sd_m=90.0):
     picks = rng.choice(len(area), n, replace=True)
-    centers = np.array([h3.cell_to_latlng(area[i]) for i in picks])
+    centers = np.array([cell_center(area[i]) for i in picks])
     return offset(centers[:, 0], centers[:, 1], rng.normal(0, sd_m, n), rng.normal(0, sd_m, n))
 
 

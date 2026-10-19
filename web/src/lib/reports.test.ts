@@ -17,9 +17,9 @@ describe("suggestAction", () => {
 });
 
 describe("createReport", () => {
-  it("算出 H3 格子、截斷過長的說明", () => {
+  it("算出格子編號、截斷過長的說明", () => {
     const r = createReport({ category: "亂丟垃圾", note: "x".repeat(300), lat: 25.0478, lng: 121.517 });
-    expect(r.h3).toMatch(/^89/);
+    expect(r.cell).toMatch(/^-?\d+_-?\d+$/);
     expect(r.note).toHaveLength(200);
     expect(r.local).toBe(true);
   });

@@ -6,11 +6,11 @@
 
 from __future__ import annotations
 
-import h3
 import numpy as np
 import pandas as pd
 
 from common import OUT, SEED, compute_gap, pick_recommendations, read_json, write_json
+from hexgrid import cell_center
 
 STATUSES = ["已設置", "施工中", "規劃中", "未處理"]
 STATUS_P = [0.3, 0.2, 0.27, 0.23]
@@ -28,10 +28,10 @@ def main() -> None:
 
     items = []
     for rank, (row, st, day) in enumerate(zip(picks.itertuples(), status, updated), start=1):
-        lat, lng = h3.cell_to_latlng(row.h3)
+        lat, lng = cell_center(row.cell)
         items.append({
             "rank": rank,
-            "h3": row.h3,
+            "cell": row.cell,
             "lat": round(lat, 5),
             "lng": round(lng, 5),
             "district": row.district,

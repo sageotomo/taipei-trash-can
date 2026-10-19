@@ -31,7 +31,7 @@ export function makePlacer(data: AppData) {
 /** 每個網格的地點描述，和 grid 同順序 */
 export function placeNames(data: AppData): string[] {
   const place = makePlacer(data);
-  return data.grid.map((cell) => place(hexCenter(cell.h3), cell.district));
+  return data.grid.map((cell) => place(hexCenter(cell.cell), cell.district));
 }
 
 /** 每個清潔箱的地點描述，和 bins.geojson 同順序 */

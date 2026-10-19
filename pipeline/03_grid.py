@@ -1,4 +1,4 @@
-"""步驟 3：把所有點位分到 H3 六角網格，算出每格的特徵，輸出網站要用的 JSON。
+"""步驟 3：把所有點位分到六角網格（pipeline/hexgrid.py），算出每格的特徵，輸出網站要用的 JSON。
 
 每格的 6 個需求特徵：
   mrt      捷運人流：500 m 內各站每日進出人次，依距離線性衰減
@@ -14,11 +14,11 @@
 
 from __future__ import annotations
 
-import h3
 import numpy as np
 import pandas as pd
 
-from common import BUILD, H3_RES, OUT, ensure_dirs, haversine_m, normalize_positive, read_json, write_json
+from common import BUILD, OUT, ensure_dirs, haversine_m, normalize_positive, read_json, write_json
+from hexgrid import cell_center, grid_disk, latlng_to_cells
 
 MRT_RADIUS_M = 500
 BASE_FILL = 0.02        # 最冷門的桶每小時填 2%
@@ -26,7 +26,7 @@ EXTRA_FILL = 0.12       # 最熱門的桶每小時再多 12%
 
 
 def to_cell(df: pd.DataFrame) -> pd.Series:
-    return pd.Series([h3.latlng_to_cell(a, b, H3_RES) for a, b in zip(df["lat"], df["lng"])], index=df.index)
+    return pd.Series(latlng_to_cells(df["lat"].values, df["lng"].values), index=df.index)
 
 
 def count_by_cell(cells: pd.Series) -> dict[str, int]:
@@ -35,7 +35,7 @@ def count_by_cell(cells: pd.Series) -> dict[str, int]:
 
 def with_neighbors(area: list[str], counts: dict[str, float]) -> dict[str, float]:
     """本格＋相鄰 6 格的加總。"""
-    return {c: sum(counts.get(n, 0) for n in h3.grid_disk(c, 1)) for c in area}
+    return {c: sum(counts.get(n, 0) for n in grid_disk(c, 1)) for c in area}
 
 
 def bin_fill_rates(bins, stations, shops) -> np.ndarray:
@@ -52,8 +52,8 @@ def bin_fill_rates(bins, stations, shops) -> np.ndarray:
 
 
 def build_grid(area, stations, bins, bus, youbike, shops, reports) -> pd.DataFrame:
-    centers = np.array([h3.cell_to_latlng(c) for c in area])
-    grid = pd.DataFrame({"h3": area, "lat": centers[:, 0], "lng": centers[:, 1]})
+    centers = np.array([cell_center(c) for c in area])
+    grid = pd.DataFrame({"cell": area, "lat": centers[:, 0], "lng": centers[:, 1]})
 
     # 捷運人流（距離衰減）
     d = haversine_m(grid["lat"].values[:, None], grid["lng"].values[:, None],
@@ -63,18 +63,18 @@ def build_grid(area, stations, bins, bus, youbike, shops, reports) -> pd.DataFra
 
     for name, df in (("bus", bus), ("youbike", youbike), ("food", shops)):
         nb = with_neighbors(area, count_by_cell(to_cell(df)))
-        grid[name] = grid["h3"].map(nb).fillna(0)
+        grid[name] = grid["cell"].map(nb).fillna(0)
 
-    grid["reports"] = grid["h3"].map(count_by_cell(reports["h3"])).fillna(0).astype(int)
+    grid["reports"] = grid["cell"].map(count_by_cell(reports["cell"])).fillna(0).astype(int)
 
-    bin_counts = count_by_cell(bins["h3"])
-    grid["bins"] = grid["h3"].map(bin_counts).fillna(0).astype(int)
-    grid["nbins"] = grid["h3"].map(with_neighbors(area, bin_counts)).fillna(0).astype(int) - grid["bins"]
+    bin_counts = count_by_cell(bins["cell"])
+    grid["bins"] = grid["cell"].map(bin_counts).fillna(0).astype(int)
+    grid["nbins"] = grid["cell"].map(with_neighbors(area, bin_counts)).fillna(0).astype(int) - grid["bins"]
 
-    fill_sum = bins.groupby("h3")["fill_rate"].sum().to_dict()
+    fill_sum = bins.groupby("cell")["fill_rate"].sum().to_dict()
     sums = with_neighbors(area, fill_sum)
     n = grid["bins"] + grid["nbins"]
-    grid["fill"] = np.where(n > 0, grid["h3"].map(sums).fillna(0) / n.clip(lower=1), 0.0)
+    grid["fill"] = np.where(n > 0, grid["cell"].map(sums).fillna(0) / n.clip(lower=1), 0.0)
 
     for name in ("mrt", "bus", "youbike", "food", "fill"):
         grid[f"{name}_n"] = normalize_positive(grid[name])
@@ -106,13 +106,16 @@ def main() -> None:
     area = read_json(BUILD / "area.json")
     sources = read_json(BUILD / "sources.json")
 
-    bins["h3"] = to_cell(bins)
+    # 先四捨五入到輸出用的精度（約 1 m），格子編號才會和網頁用輸出座標算出來的一致
+    for df in (bins, reports):
+        df["lat"], df["lng"] = df["lat"].round(5), df["lng"].round(5)
+    bins["cell"] = to_cell(bins)
     bins["fill_rate"] = bin_fill_rates(bins, stations, shops).round(4)
-    reports["h3"] = to_cell(reports)
+    reports["cell"] = to_cell(reports)
     grid = build_grid(area, stations, bins, bus, youbike, shops, reports)
 
     # ---- 輸出 ----
-    keep = ["h3", "district", "bins", "nbins", "mrt", "bus", "youbike", "food", "reports", "fill",
+    keep = ["cell", "district", "bins", "nbins", "mrt", "bus", "youbike", "food", "reports", "fill",
             "mrt_n", "bus_n", "youbike_n", "food_n", "fill_n"]
     rows = grid[keep].copy()
     rows["mrt"] = rows["mrt"].round(0).astype(int)
@@ -126,7 +129,7 @@ def main() -> None:
     bins_out = bins.assign(simulated=sim["bins"])
     write_json(OUT / "bins.geojson", {
         "type": "FeatureCollection",
-        "features": point_features(bins_out, ["id", "district", "road", "h3", "fill_rate", "simulated"]),
+        "features": point_features(bins_out, ["id", "district", "road", "cell", "fill_rate", "simulated"]),
     })
 
     stations_out = stations.assign(daily_flow=stations["daily_flow"].round(0).astype(int), simulated=sim["mrt"])
