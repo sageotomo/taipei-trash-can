@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { BinProps, FeatureCollection, GridCell, PoiProps, Report, Source } from "./types";
+import type { BinProps, FeatureCollection, FillData, GridCell, PoiProps, Report, Source } from "./types";
 
 export interface AppData {
   grid: GridCell[];
@@ -7,6 +7,7 @@ export interface AppData {
   pois: FeatureCollection<PoiProps>;
   reportsSeed: Report[];
   sources: Source[];
+  fill: FillData;
 }
 
 async function load<T>(name: string): Promise<T> {
@@ -27,9 +28,10 @@ export function useAppData() {
       load<FeatureCollection<PoiProps>>("pois.geojson"),
       load<Report[]>("reports_seed.json"),
       load<Source[]>("sources.json"),
+      load<FillData>("fill.json"),
     ])
-      .then(([grid, bins, pois, reportsSeed, sources]) => {
-        if (!cancelled) setData({ grid, bins, pois, reportsSeed, sources });
+      .then(([grid, bins, pois, reportsSeed, sources, fill]) => {
+        if (!cancelled) setData({ grid, bins, pois, reportsSeed, sources, fill });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {

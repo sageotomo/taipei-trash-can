@@ -71,3 +71,23 @@ export interface Source {
   real: boolean;
   note: string;
 }
+
+export type Strategy = "A" | "B";
+
+export interface FillSummary {
+  overflow_hours: number;
+  trips: number;
+  bins_ever_full: number;
+}
+
+/** pipeline/04_fill_sim.py 的輸出；陣列順序和 bins.geojson 相同 */
+export interface FillData {
+  hours: number;
+  fixed_hours: number[];
+  dispatch_at: number;
+  hourly: number[];
+  levels: Record<Strategy, number[][]>; // [桶][小時] 0–100，100 代表滿溢
+  overflow: Record<Strategy, number[]>; // 每桶 7 天內滿溢的小時數
+  trips: Record<Strategy, number[]>;
+  summary: Record<Strategy, FillSummary>;
+}

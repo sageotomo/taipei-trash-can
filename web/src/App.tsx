@@ -4,7 +4,8 @@ import { useAppData } from "./data";
 import { computeScores, DEFAULT_WEIGHTS, pickRecommendations } from "./lib/score";
 import { hexCenter } from "./lib/hex";
 import { FlyTo, MapPanes } from "./map/layers";
-import { DEFAULT_LAYERS, RecommendLayers, RecommendPanel, type LayerVisibility } from "./tabs/Recommend";
+import { DEFAULT_LAYERS, PoiLayers, RecommendLayers, RecommendPanel, type LayerVisibility } from "./tabs/Recommend";
+import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
 import type { Weights } from "./types";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
@@ -28,6 +29,7 @@ export default function App() {
   const [selected, setSelected] = useState<number | null>(null);
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS);
   const [focus, setFocus] = useState<Focus>(null);
+  const [fillState, setFillState] = useState<FillState>({ hour: 18, strategy: "A" }) // 週一 18:00 下班尖峰;
 
   const flyTo = useCallback((lat: number, lng: number, zoom = 16) => {
     setFocus({ lat, lng, zoom, key: Date.now() });
@@ -63,6 +65,15 @@ export default function App() {
     [data, flyTo]
   );
 
+  const focusBin = useCallback(
+    (i: number) => {
+      if (!data) return;
+      const [lng, lat] = data.bins.features[i].geometry.coordinates;
+      flyTo(lat, lng, 17);
+    },
+    [data, flyTo]
+  );
+
   return (
     <div className="app">
       <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
@@ -83,6 +94,12 @@ export default function App() {
             onSelect={(i) => selectCell(i)}
             layers={layers}
           />
+        ) : null}
+        {data && tab === "fill" ? (
+          <>
+            <PoiLayers data={data} layers={{ mrt: true }} />
+            <FillLayers data={data} state={fillState} onPick={focusBin} />
+          </>
         ) : null}
       </MapContainer>
 
@@ -123,7 +140,10 @@ export default function App() {
               reportCounts={reportCounts}
             />
           ) : null}
-          {data && tab !== "recommend" ? <p className="muted">這個分頁還在開發中。</p> : null}
+          {data && tab === "fill" ? (
+            <FillPanel data={data} state={fillState} onChange={setFillState} onFocusBin={focusBin} />
+          ) : null}
+          {data && (tab === "reports" || tab === "progress") ? <p className="muted">這個分頁還在開發中。</p> : null}
         </section>
       </aside>
     </div>
