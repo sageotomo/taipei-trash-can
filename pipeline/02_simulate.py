@@ -186,11 +186,13 @@ def build_sources(report: dict) -> list[dict]:
         {"key": "bins", "label": "行人專用清潔箱", "real": real("bins"),
          "note": "環保局開放資料" if real("bins") else "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口"},
         {"key": "mrt", "label": "捷運站與人流", "real": real("mrt"),
-         "note": "捷運公司各站分時進出量" if real("mrt") else "站點座標為近似值，每日人流為模擬"},
+         "note": "捷運公司車站資料（座標）＋各站分時進出量 2026 年 9 月（人流）" if real("mrt") else "站點座標為近似值，每日人流為模擬"},
         {"key": "bus", "label": "公車站牌", "real": real("bus"),
-         "note": "交通局公車站牌位置" if real("bus") else "依捷運人流在站點周邊撒點"},
-        {"key": "youbike", "label": "YouBike 站點", "real": False, "note": "捷運站與部分公車站旁撒點"},
-        {"key": "shops", "label": "飲料店、小吃店", "real": False, "note": "依捷運人流與夜市位置撒點"},
+         "note": "交通局公運處臺北市公車站牌位置圖" if real("bus") else "依捷運人流在站點周邊撒點"},
+        {"key": "youbike", "label": "YouBike 站點", "real": real("youbike"),
+         "note": "交通局 YouBike2.0 臺北市公共自行車即時資訊（站點快照）" if real("youbike") else "捷運站與部分公車站旁撒點"},
+        {"key": "shops", "label": "飲料店、餐飲店", "real": real("shops"),
+         "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
         {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
         {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
         {"key": "progress", "label": "增設進度", "real": False, "note": "從建議前 30 名隨機指定狀態"},
@@ -205,8 +207,8 @@ def main() -> None:
     stations, _ = get_stations(report)
     area = study_area(stations)
     bus = pd.read_csv(BUILD / "real_bus.csv") if report.get("bus") else simulate_bus(rng, stations, area)
-    youbike = simulate_youbike(rng, stations, bus)
-    shops = simulate_shops(rng, stations)
+    youbike = pd.read_csv(BUILD / "real_youbike.csv") if report.get("youbike") else simulate_youbike(rng, stations, bus)
+    shops = pd.read_csv(BUILD / "real_shops.csv", keep_default_na=False) if report.get("shops") else simulate_shops(rng, stations)
     bins = pd.read_csv(BUILD / "real_bins.csv") if report.get("bins") else simulate_bins(rng, stations, bus)
     reports = simulate_reports(rng, shops, bins, stations)
 

@@ -8,7 +8,7 @@ export const FEATURES: { key: FeatureKey; label: string; unit: string }[] = [
   { key: "mrt", label: "捷運人流", unit: "人次/日" },
   { key: "bus", label: "公車站", unit: "站" },
   { key: "youbike", label: "YouBike", unit: "站" },
-  { key: "food", label: "飲料店、小吃店", unit: "家" },
+  { key: "food", label: "飲料店、餐飲店", unit: "家" },
   { key: "reports", label: "市民通報", unit: "件" },
   { key: "fill", label: "現有桶填滿速度", unit: "%/小時" },
 ];

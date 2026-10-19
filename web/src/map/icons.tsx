@@ -24,7 +24,7 @@ export const POI_TYPES: Record<PoiType, { label: string; color: string }> = {
   bus: { label: "公車站", color: "#5f6f74" },
   youbike: { label: "YouBike 站", color: "#d38b12" },
   drink: { label: "飲料店", color: "#c0577a" },
-  food: { label: "小吃店", color: "#8e5a2b" },
+  food: { label: "餐飲店", color: "#8e5a2b" },
 };
 
 function svg(type: PoiType, size: number): string {
@@ -98,17 +98,19 @@ function IconMarkers({ type, points }: { type: PoiType; points: (LatLngPoint & {
   useEffect(() => {
     const group = L.layerGroup().addTo(map);
     const icon = divIcon(type);
+    const renderer = L.canvas({ pane: PANES.points });
     const refresh = () => {
       group.clearLayers();
       const bounds = map.getBounds().pad(0.2);
-      let n = 0;
-      for (const p of points) {
-        if (n >= MAX_MARKERS) break;
-        if (!bounds.contains([p.lat, p.lng])) continue;
-        L.marker([p.lat, p.lng], { icon, keyboard: false, zIndexOffset: type === "mrt" ? 1000 : type === "bins" ? 500 : 0 })
-          .bindTooltip(p.label ?? POI_TYPES[type].label, { direction: "top" })
-          .addTo(group);
-        n++;
+      const visible = points.filter((p) => bounds.contains([p.lat, p.lng]));
+      // 畫面內的點太多時，圖示會疊成一團又拖慢地圖，改畫圓點
+      const asDots = visible.length > MAX_MARKERS;
+      for (const p of visible) {
+        const label = p.label ?? POI_TYPES[type].label;
+        const marker = asDots
+          ? L.circleMarker([p.lat, p.lng], { renderer, radius: 4, fillColor: POI_TYPES[type].color, color: "#ffffff", weight: 1, fillOpacity: 1 })
+          : L.marker([p.lat, p.lng], { icon, keyboard: false, zIndexOffset: type === "mrt" ? 1000 : type === "bins" ? 500 : 0 });
+        marker.bindTooltip(label, { direction: "top" }).addTo(group);
       }
     };
     refresh();

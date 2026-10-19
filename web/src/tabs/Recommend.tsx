@@ -21,7 +21,7 @@ const LAYER_INFO: { key: LayerKey; icons: PoiType[]; label: string; source: stri
   { key: "mrt", icons: ["mrt"], label: "捷運站", source: "mrt" },
   { key: "bus", icons: ["bus"], label: "公車站", source: "bus" },
   { key: "youbike", icons: ["youbike"], label: "YouBike 站", source: "youbike" },
-  { key: "shop", icons: ["drink", "food"], label: "飲料店、小吃店", source: "shops" },
+  { key: "shop", icons: ["drink", "food"], label: "飲料店、餐飲店", source: "shops" },
 ];
 
 // ---------------- 地圖圖層 ----------------
@@ -78,11 +78,12 @@ export function PoiLayers({ data, layers }: { data: AppData; layers: Partial<Lay
     for (const f of data.pois.features) {
       const [lng, lat] = f.geometry.coordinates;
       const p = f.properties;
-      if (p.kind === "mrt") out.mrt.push({ lat, lng, label: `捷運${p.name}站・約 ${fmt(p.daily_flow ?? 0)} 人次/日${tag(p.simulated)}` });
+      const named = (kindLabel: string) => (p.name ? `${kindLabel}：${p.name}` : kindLabel) + tag(p.simulated);
+      if (p.kind === "mrt") out.mrt.push({ lat, lng, label: `捷運${p.name}${p.name?.endsWith("站") ? "" : "站"}・每日進出約 ${fmt(p.daily_flow ?? 0)} 人次${tag(p.simulated)}` });
       else if (p.kind === "shop") {
         const t = p.type === "drink" ? "drink" : "food";
-        out[t].push({ lat, lng, label: POI_TYPES[t].label + tag(p.simulated) });
-      } else out[p.kind].push({ lat, lng, label: POI_TYPES[p.kind].label + tag(p.simulated) });
+        out[t].push({ lat, lng, label: named(POI_TYPES[t].label) });
+      } else out[p.kind].push({ lat, lng, label: named(POI_TYPES[p.kind].label) });
     }
     for (const f of data.bins.features) {
       const [lng, lat] = f.geometry.coordinates;
@@ -95,8 +96,8 @@ export function PoiLayers({ data, layers }: { data: AppData; layers: Partial<Lay
     <>
       {layers.bus ? <PoiPointLayer type="bus" points={groups.bus} iconZoom={16} /> : null}
       {layers.youbike ? <PoiPointLayer type="youbike" points={groups.youbike} iconZoom={16} /> : null}
+      {layers.shop ? <PoiPointLayer type="food" points={groups.food} iconZoom={17} /> : null}
       {layers.shop ? <PoiPointLayer type="drink" points={groups.drink} iconZoom={16} /> : null}
-      {layers.shop ? <PoiPointLayer type="food" points={groups.food} iconZoom={16} /> : null}
       {layers.bins ? <PoiPointLayer type="bins" points={groups.bins} iconZoom={15} pane={PANES.top} /> : null}
       {layers.mrt ? <PoiPointLayer type="mrt" points={groups.mrt} iconZoom={13} pane={PANES.top} /> : null}
     </>

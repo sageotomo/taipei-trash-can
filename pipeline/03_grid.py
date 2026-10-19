@@ -14,6 +14,8 @@
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 import pandas as pd
 
@@ -81,10 +83,20 @@ def build_grid(area, stations, bins, bus, youbike, shops, reports) -> pd.DataFra
     return grid
 
 
+def with_name(df: pd.DataFrame) -> pd.DataFrame:
+    """模擬資料沒有名稱欄位時補空字串"""
+    return df if "name" in df.columns else df.assign(name="")
+
+
 def point_features(df: pd.DataFrame, props: list[str], kind: str | None = None) -> list[dict]:
     feats = []
     for row in df.itertuples(index=False):
-        p = {k: getattr(row, k) for k in props}
+        p = {}
+        for k in props:
+            v = getattr(row, k)
+            if isinstance(v, float) and math.isnan(v) or v == "":
+                continue  # 沒有值就省略，讓檔案小一點
+            p[k] = v.item() if hasattr(v, "item") else v
         if kind:
             p = {"kind": kind, **p}
         feats.append({
@@ -135,9 +147,9 @@ def main() -> None:
     stations_out = stations.assign(daily_flow=stations["daily_flow"].round(0).astype(int), simulated=sim["mrt"])
     pois = (
         point_features(stations_out, ["name", "daily_flow", "simulated"], "mrt")
-        + point_features(bus.assign(simulated=sim["bus"]), ["simulated"], "bus")
-        + point_features(youbike.assign(simulated=True), ["simulated"], "youbike")
-        + point_features(shops.assign(simulated=True), ["type", "simulated"], "shop")
+        + point_features(with_name(bus).assign(simulated=sim["bus"]), ["name", "simulated"], "bus")
+        + point_features(with_name(youbike).assign(simulated=sim["youbike"]), ["name", "simulated"], "youbike")
+        + point_features(with_name(shops).assign(simulated=sim["shops"]), ["name", "type", "simulated"], "shop")
     )
     write_json(OUT / "pois.geojson", {"type": "FeatureCollection", "features": pois})
 

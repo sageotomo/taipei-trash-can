@@ -6,6 +6,8 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 
-# 原始下載檔太大，不進 git（說明見 data/NOTES.md）
+# 原始下載檔：只收已整理好的小檔（說明見 data/NOTES.md），捷運 OD 原始月檔約 300 MB 不收
 data/raw/*
 !data/raw/.gitkeep
+!data/raw/*.csv
+data/raw/mrt_od.csv

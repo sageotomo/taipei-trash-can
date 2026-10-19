@@ -8,26 +8,26 @@
   {
     "key": "mrt",
     "label": "捷運站與人流",
-    "real": false,
-    "note": "站點座標為近似值，每日人流為模擬"
+    "real": true,
+    "note": "捷運公司車站資料（座標）＋各站分時進出量 2026 年 9 月（人流）"
   },
   {
     "key": "bus",
     "label": "公車站牌",
-    "real": false,
-    "note": "依捷運人流在站點周邊撒點"
+    "real": true,
+    "note": "交通局公運處臺北市公車站牌位置圖"
   },
   {
     "key": "youbike",
     "label": "YouBike 站點",
-    "real": false,
-    "note": "捷運站與部分公車站旁撒點"
+    "real": true,
+    "note": "交通局 YouBike2.0 臺北市公共自行車即時資訊（站點快照）"
   },
   {
     "key": "shops",
-    "label": "飲料店、小吃店",
-    "real": false,
-    "note": "依捷運人流與夜市位置撒點"
+    "label": "飲料店、餐飲店",
+    "real": true,
+    "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）"
   },
   {
     "key": "reports",
