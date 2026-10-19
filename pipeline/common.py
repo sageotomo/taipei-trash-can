@@ -82,6 +82,36 @@ def normalize_positive(values: pd.Series) -> pd.Series:
     return out
 
 
+def compute_gap(grid: pd.DataFrame, weights: dict[str, float] = DEFAULT_WEIGHTS) -> pd.DataFrame:
+    """和 web/src/lib/score.ts 的 computeScores 相同：需求、供給、缺口。
+
+    grid 需要 *_n 欄位（reports 用原始件數，這裡標準化）以及 bins、nbins。
+    """
+    out = grid.copy()
+    out["reports_n"] = normalize_positive(out["reports"])
+    out["demand"] = sum(w * out[f"{k}_n"] for k, w in weights.items())
+    out["supply"] = out["bins"] + 0.5 * out["nbins"]
+    out["gap"] = out["demand"] / (1 + out["supply"])
+    return out
+
+
+def pick_recommendations(scored: pd.DataFrame, weights: dict[str, float] = DEFAULT_WEIGHTS, n: int = 30) -> pd.DataFrame:
+    """和 score.ts 的 pickRecommendations 相同：缺口高到低、需求 ≥ 總權重 35%、彼此不相鄰。"""
+    import h3
+
+    total = sum(weights.values())
+    blocked: set[str] = set()
+    picks = []
+    for row in scored.sort_values("gap", ascending=False).itertuples():
+        if len(picks) >= n:
+            break
+        if row.demand < 0.35 * total or row.h3 in blocked:
+            continue
+        picks.append(row.Index)
+        blocked |= set(h3.grid_disk(row.h3, 1))
+    return scored.loc[picks]
+
+
 def round_floats(value, digits: int = 4):
     if isinstance(value, float):
         return round(value, digits) if math.isfinite(value) else None

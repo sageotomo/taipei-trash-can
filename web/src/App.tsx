@@ -15,6 +15,7 @@ import {
   type Category,
 } from "./lib/reports";
 import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
+import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_LAYERS, PoiLayers, RecommendLayers, RecommendPanel, type LayerVisibility } from "./tabs/Recommend";
 import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
 import type { Report, Weights } from "./types";
@@ -43,6 +44,8 @@ export default function App() {
   const [localReports, setLocalReports] = useState<Report[]>(loadLocalReports);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [reportCell, setReportCell] = useState<number | null>(null);
+  const [district, setDistrict] = useState("全部");
+  const [progressSelected, setProgressSelected] = useState<number | null>(null);
   const [fillState, setFillState] = useState<FillState>({ hour: 18, strategy: "A" }) // 週一 18:00 下班尖峰;
 
   const flyTo = useCallback((lat: number, lng: number, zoom = 16) => {
@@ -97,6 +100,15 @@ export default function App() {
     [draft]
   );
 
+  const selectProgress = useCallback(
+    (i: number) => {
+      if (!data) return;
+      setProgressSelected(i);
+      flyTo(data.progress[i].lat, data.progress[i].lng, 16);
+    },
+    [data, flyTo]
+  );
+
   const focusBin = useCallback(
     (i: number) => {
       if (!data) return;
@@ -144,6 +156,9 @@ export default function App() {
               draft={draft}
             />
           </>
+        ) : null}
+        {data && tab === "progress" ? (
+          <ProgressLayers data={data} district={district} selected={progressSelected} onSelect={selectProgress} />
         ) : null}
       </MapContainer>
 
@@ -205,7 +220,15 @@ export default function App() {
               }}
             />
           ) : null}
-          {data && tab === "progress" ? <p className="muted">這個分頁還在開發中。</p> : null}
+          {data && tab === "progress" ? (
+            <ProgressPanel
+              data={data}
+              district={district}
+              onDistrict={setDistrict}
+              selected={progressSelected}
+              onSelect={selectProgress}
+            />
+          ) : null}
         </section>
       </aside>
     </div>

@@ -13,6 +13,7 @@ data:
 	cd $(P) && $(PY) 02_simulate.py
 	cd $(P) && $(PY) 03_grid.py
 	cd $(P) && $(PY) 04_fill_sim.py
+	cd $(P) && $(PY) 05_progress.py
 
 test:
 	cd $(P) && $(PY) -m pytest -q

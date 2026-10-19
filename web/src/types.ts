@@ -91,3 +91,18 @@ export interface FillData {
   trips: Record<Strategy, number[]>;
   summary: Record<Strategy, FillSummary>;
 }
+
+export type ProgressStatus = "已設置" | "施工中" | "規劃中" | "未處理";
+
+/** pipeline/05_progress.py 的輸出（模擬） */
+export interface ProgressItem {
+  rank: number;
+  h3: string;
+  lat: number;
+  lng: number;
+  district: string;
+  status: ProgressStatus;
+  updated_at: string;
+  owner: string;
+  simulated: boolean;
+}

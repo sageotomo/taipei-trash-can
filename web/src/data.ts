@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { BinProps, FeatureCollection, FillData, GridCell, PoiProps, Report, Source } from "./types";
+import type { BinProps, FeatureCollection, FillData, GridCell, PoiProps, ProgressItem, Report, Source } from "./types";
 
 export interface AppData {
   grid: GridCell[];
@@ -8,6 +8,7 @@ export interface AppData {
   reportsSeed: Report[];
   sources: Source[];
   fill: FillData;
+  progress: ProgressItem[];
 }
 
 async function load<T>(name: string): Promise<T> {
@@ -29,9 +30,10 @@ export function useAppData() {
       load<Report[]>("reports_seed.json"),
       load<Source[]>("sources.json"),
       load<FillData>("fill.json"),
+      load<ProgressItem[]>("progress.json"),
     ])
-      .then(([grid, bins, pois, reportsSeed, sources, fill]) => {
-        if (!cancelled) setData({ grid, bins, pois, reportsSeed, sources, fill });
+      .then(([grid, bins, pois, reportsSeed, sources, fill, progress]) => {
+        if (!cancelled) setData({ grid, bins, pois, reportsSeed, sources, fill, progress });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {
