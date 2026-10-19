@@ -839,3 +839,8 @@ textarea {
 .nowrap {
   white-space: nowrap;
 }
+
+/* 底圖淡化成灰階，讓網格和點位成為主角 */
+.basemap {
+  filter: grayscale(0.9) contrast(0.85) brightness(1.06);
+}

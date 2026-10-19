@@ -102,7 +102,7 @@ push 到 `main` 後，GitHub Actions 會跑測試、build，並部署到 GitHub 
 
 ## 使用的開源套件與 AI 工具
 
-- 地圖：[Leaflet](https://leafletjs.com/)、[react-leaflet](https://react-leaflet.js.org/)，底圖 © OpenStreetMap、© CARTO
+- 地圖：[Leaflet](https://leafletjs.com/)、[react-leaflet](https://react-leaflet.js.org/)，底圖 © 內政部國土測繪中心（備援：© OpenStreetMap）
 - 網格：[H3](https://h3geo.org/)（h3-js、h3-py）
 - 前端：React、Vite、TypeScript、Vitest
 - 資料處理：pandas、NumPy、pytest

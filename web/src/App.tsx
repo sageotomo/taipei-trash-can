@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { MapContainer, TileLayer } from "react-leaflet";
+import { MapContainer } from "react-leaflet";
+import { BaseMap } from "./map/basemap";
 import { useAppData } from "./data";
 import { computeScores, DEFAULT_WEIGHTS, pickRecommendations } from "./lib/score";
 import { hexCenter } from "./lib/hex";
@@ -121,12 +122,7 @@ export default function App() {
   return (
     <div className="app">
       <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
-        <TileLayer
-          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          subdomains="abcd"
-          maxZoom={19}
-        />
+        <BaseMap />
         <MapPanes />
         <FlyTo target={focus} />
         {data && tab === "recommend" ? (
