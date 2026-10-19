@@ -11,6 +11,7 @@ all: data
 data:
 	cd $(P) && $(PY) 01_load.py
 	cd $(P) && $(PY) 02_simulate.py
+	cd $(P) && $(PY) 03_grid.py
 
 test:
 	cd $(P) && $(PY) -m pytest -q

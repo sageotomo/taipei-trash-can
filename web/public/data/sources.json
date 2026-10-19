@@ -1,0 +1,50 @@
+[
+  {
+    "key": "bins",
+    "label": "行人專用清潔箱",
+    "real": false,
+    "note": "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口"
+  },
+  {
+    "key": "mrt",
+    "label": "捷運站與人流",
+    "real": false,
+    "note": "站點座標為近似值，每日人流為模擬"
+  },
+  {
+    "key": "bus",
+    "label": "公車站牌",
+    "real": false,
+    "note": "依捷運人流在站點周邊撒點"
+  },
+  {
+    "key": "youbike",
+    "label": "YouBike 站點",
+    "real": false,
+    "note": "捷運站與部分公車站旁撒點"
+  },
+  {
+    "key": "shops",
+    "label": "飲料店、小吃店",
+    "real": false,
+    "note": "依捷運人流與夜市位置撒點"
+  },
+  {
+    "key": "reports",
+    "label": "歷史通報",
+    "real": false,
+    "note": "店家多、附近沒有桶的地方較常出現"
+  },
+  {
+    "key": "fill",
+    "label": "智慧垃圾桶填滿紀錄",
+    "real": false,
+    "note": "主辦說明此資料不存在，依人流與時段模擬"
+  },
+  {
+    "key": "progress",
+    "label": "增設進度",
+    "real": false,
+    "note": "從建議前 30 名隨機指定狀態"
+  }
+]
