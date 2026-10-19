@@ -6,6 +6,25 @@
     <meta name="description" content="用人流、店家與市民通報，算出台北哪裡最缺垃圾桶，並公開增設進度。" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <title>找回消失的垃圾桶</title>
+    <script>
+      // 部署後舊的 JS 檔會被刪除；瀏覽器若還快取著舊首頁，載入會失敗而一片空白。
+      // 偵測到程式檔載入失敗時，帶時間參數重新載入一次，強制拿到最新的首頁。
+      window.addEventListener(
+        "error",
+        function (e) {
+          var t = e.target;
+          if (!t || (t.tagName !== "SCRIPT" && t.tagName !== "LINK")) return;
+          try {
+            if (sessionStorage.getItem("asset-reload")) return;
+            sessionStorage.setItem("asset-reload", "1");
+          } catch (_) {
+            return;
+          }
+          location.replace(location.pathname + "?v=" + Date.now());
+        },
+        true
+      );
+    </script>
   </head>
   <body>
     <div id="root"></div>
