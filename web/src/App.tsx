@@ -3,10 +3,21 @@ import { MapContainer, TileLayer } from "react-leaflet";
 import { useAppData } from "./data";
 import { computeScores, DEFAULT_WEIGHTS, pickRecommendations } from "./lib/score";
 import { hexCenter } from "./lib/hex";
-import { FlyTo, MapPanes } from "./map/layers";
+import { FlyTo, MapClick, MapPanes } from "./map/layers";
+import { latLngToCell } from "h3-js";
+import {
+  H3_RES,
+  addLocalReport,
+  clearLocalReports,
+  createReport,
+  loadLocalReports,
+  removeLocalReport,
+  type Category,
+} from "./lib/reports";
+import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
 import { DEFAULT_LAYERS, PoiLayers, RecommendLayers, RecommendPanel, type LayerVisibility } from "./tabs/Recommend";
 import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
-import type { Weights } from "./types";
+import type { Report, Weights } from "./types";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
@@ -29,23 +40,27 @@ export default function App() {
   const [selected, setSelected] = useState<number | null>(null);
   const [layers, setLayers] = useState<LayerVisibility>(DEFAULT_LAYERS);
   const [focus, setFocus] = useState<Focus>(null);
+  const [localReports, setLocalReports] = useState<Report[]>(loadLocalReports);
+  const [draft, setDraft] = useState<Draft | null>(null);
+  const [reportCell, setReportCell] = useState<number | null>(null);
   const [fillState, setFillState] = useState<FillState>({ hour: 18, strategy: "A" }) // 週一 18:00 下班尖峰;
 
   const flyTo = useCallback((lat: number, lng: number, zoom = 16) => {
     setFocus({ lat, lng, zoom, key: Date.now() });
   }, []);
 
-  // 每格通報數（之後市民通報分頁會加上本機新增的通報）
+  const cellIndex = useMemo(() => new Map((data?.grid ?? []).map((c, i) => [c.h3, i])), [data]);
+  const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...localReports], [data, localReports]);
+
+  // 每格通報數：歷史通報＋這台裝置新增的通報。增設建議的「市民通報」特徵也用這個，所以通報會即時影響缺口
   const reportCounts = useMemo(() => {
-    if (!data) return [];
-    const index = new Map(data.grid.map((c, i) => [c.h3, i]));
-    const counts = new Array<number>(data.grid.length).fill(0);
-    for (const r of data.reportsSeed) {
-      const i = index.get(r.h3);
+    const counts = new Array<number>(data?.grid.length ?? 0).fill(0);
+    for (const r of allReports) {
+      const i = cellIndex.get(r.h3);
       if (i !== undefined) counts[i]++;
     }
     return counts;
-  }, [data]);
+  }, [data, allReports, cellIndex]);
 
   const scores = useMemo(
     () => (data ? computeScores(data.grid, weights, reportCounts) : []),
@@ -63,6 +78,23 @@ export default function App() {
       }
     },
     [data, flyTo]
+  );
+
+  const pickReportLocation = useCallback(
+    (lat: number, lng: number) => {
+      setDraft({ lat, lng });
+      setReportCell(cellIndex.get(latLngToCell(lat, lng, H3_RES)) ?? null);
+    },
+    [cellIndex]
+  );
+
+  const submitReport = useCallback(
+    (category: Category, note: string) => {
+      if (!draft) return;
+      setLocalReports((prev) => addLocalReport(prev, createReport({ category, note, ...draft })));
+      setDraft(null);
+    },
+    [draft]
   );
 
   const focusBin = useCallback(
@@ -99,6 +131,18 @@ export default function App() {
           <>
             <PoiLayers data={data} layers={{ mrt: true }} />
             <FillLayers data={data} state={fillState} onPick={focusBin} />
+          </>
+        ) : null}
+        {data && tab === "reports" ? (
+          <>
+            <MapClick onClick={pickReportLocation} />
+            <ReportLayers
+              data={data}
+              reports={allReports}
+              reportCounts={reportCounts}
+              selected={reportCell}
+              draft={draft}
+            />
           </>
         ) : null}
       </MapContainer>
@@ -143,7 +187,25 @@ export default function App() {
           {data && tab === "fill" ? (
             <FillPanel data={data} state={fillState} onChange={setFillState} onFocusBin={focusBin} />
           ) : null}
-          {data && (tab === "reports" || tab === "progress") ? <p className="muted">這個分頁還在開發中。</p> : null}
+          {data && tab === "reports" ? (
+            <ReportPanel
+              data={data}
+              reports={allReports}
+              localReports={localReports}
+              reportCounts={reportCounts}
+              selected={reportCell}
+              draft={draft}
+              onSubmit={submitReport}
+              onCancel={() => setDraft(null)}
+              onDelete={(id) => setLocalReports((prev) => removeLocalReport(prev, id))}
+              onClear={() => setLocalReports(clearLocalReports())}
+              onFocus={(lat, lng) => {
+                flyTo(lat, lng, 17);
+                setReportCell(cellIndex.get(latLngToCell(lat, lng, H3_RES)) ?? null);
+              }}
+            />
+          ) : null}
+          {data && tab === "progress" ? <p className="muted">這個分頁還在開發中。</p> : null}
         </section>
       </aside>
     </div>
