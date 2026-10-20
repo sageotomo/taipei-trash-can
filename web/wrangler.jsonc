@@ -1,0 +1,10 @@
+// Cloudflare Workers（靜態網站）設定：只上傳 npm run build 產生的 dist/，沒有後端程式。
+// name 必須和 Cloudflare 後台的 Worker 名稱相同。
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "taipei-trash-can",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist"
+  }
+}
