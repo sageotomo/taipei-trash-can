@@ -58,6 +58,13 @@ export interface Source {
 
 export type Strategy = "A" | "B";
 
+/** 智慧垃圾桶設備資料（pipeline/05_smart_bins.py，模擬）；順序和 bins.geojson 相同 */
+export interface SmartBin {
+  battery: number; // 0–100
+  brand: string;
+  sponsor: string;
+}
+
 export interface FillSummary {
   overflow_hours: number;
   trips: number;

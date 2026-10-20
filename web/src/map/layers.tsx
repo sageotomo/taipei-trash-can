@@ -138,3 +138,13 @@ export function MapClick({ onClick }: { onClick: (lat: number, lng: number) => v
   }, [map, ref]);
   return null;
 }
+
+/** 面板寬度改變後，讓 Leaflet 重新量地圖大小 */
+export function InvalidateSize({ dep }: { dep: unknown }) {
+  const map = useMap();
+  useEffect(() => {
+    const id = window.setTimeout(() => map.invalidateSize(), 50);
+    return () => window.clearTimeout(id);
+  }, [dep, map]);
+  return null;
+}

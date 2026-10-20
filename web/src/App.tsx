@@ -16,7 +16,7 @@ import { makePlacer } from "./lib/place";
 import { makeProgress } from "./lib/progress";
 import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
 import { cellCenter, latLngToCell } from "./lib/hexgrid";
-import { FlyTo, MapClick, MapPanes } from "./map/layers";
+import { FlyTo, InvalidateSize, MapClick, MapPanes } from "./map/layers";
 import { CellScale } from "./map/CellScale";
 import {
   addLocalReport,
@@ -29,7 +29,8 @@ import {
 import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
-import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
+import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tabs/FillLevel";
+import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import type { Report } from "./types";
 import { loadRole, saveRole, type Role } from "./lib/role";
@@ -39,7 +40,7 @@ export type TabId = "recommend" | "fill" | "reports" | "progress";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "recommend", label: "增設建議" },
-  { id: "fill", label: "填滿模擬" },
+  { id: "fill", label: "垃圾桶填滿度" },
   { id: "reports", label: "市民通報" },
   { id: "progress", label: "施政進度" },
 ];
@@ -63,7 +64,8 @@ export default function App() {
   const [reportCell, setReportCell] = useState<string | null>(null);
   const [district, setDistrict] = useState("全部");
   const [progressSelected, setProgressSelected] = useState<number | null>(null);
-  const [fillState, setFillState] = useState<FillState>({ hour: 18, strategy: "A" }); // 週一 18:00 下班尖峰
+  const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
+  const liveTime = useLiveTime();
 
   const [customLayers, setCustomLayers] = useState<DataLayer[]>(loadCustomLayers);
   const [storageOk, setStorageOk] = useState(true);
@@ -161,16 +163,27 @@ export default function App() {
     [data, flyTo]
   );
 
+  const pickFillBin = useCallback(
+    (i: number) => {
+      setFillState((s) => ({ ...s, selected: i }));
+      focusBin(i);
+    },
+    [focusBin]
+  );
+
   const ready = data && place;
+  // 政府單位看填滿度時，右側要放整張表格，面板加寬
+  const wide = tab === "fill" && role === "gov";
 
   return (
-    <div className="app">
+    <div className={wide ? "app wide" : "app"}>
       <RoleToggle role={role} onChange={setRole} />
       <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
         <BaseMap />
         <MapPanes />
         <FlyTo target={focus} />
         <CellScale />
+        <InvalidateSize dep={wide} />
         {ready && tab === "recommend" ? (
           <RecommendLayers
             data={data}
@@ -188,7 +201,14 @@ export default function App() {
         {ready && tab === "fill" ? (
           <>
             <PoiLayers data={data} layers={fixedLayers} visible={{ mrt: true }} />
-            <FillLayers data={data} state={fillState} onPick={focusBin} />
+            <FillLayers
+              data={data}
+              time={liveTime}
+              role={role}
+              state={fillState}
+              onPickBin={pickFillBin}
+              onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
+            />
           </>
         ) : null}
         {ready && tab === "reports" ? (
@@ -244,7 +264,15 @@ export default function App() {
             />
           ) : null}
           {ready && tab === "fill" ? (
-            <FillPanel data={data} state={fillState} onChange={setFillState} onFocusBin={focusBin} />
+            <FillPanel
+              data={data}
+              time={liveTime}
+              role={role}
+              state={fillState}
+              onChange={setFillState}
+              onFocusBin={focusBin}
+              onFocus={flyTo}
+            />
           ) : null}
           {ready && tab === "reports" ? (
             <ReportPanel

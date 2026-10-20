@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { BinProps, FeatureCollection, FillData, PoiProps, Report, Source } from "./types";
+import type { BinProps, FeatureCollection, FillData, PoiProps, Report, SmartBin, Source } from "./types";
 
 /** 住宅區：homes = 住家門牌數（真實資料時每格一點；模擬時每點 1） */
 export type ResidentialProps = { homes?: number; simulated: boolean };
@@ -10,6 +10,7 @@ export interface AppData {
   reportsSeed: Report[];
   sources: Source[];
   fill: FillData;
+  smartBins: SmartBin[];
   residential: FeatureCollection<ResidentialProps>;
 }
 
@@ -32,9 +33,10 @@ export function useAppData() {
       load<Source[]>("sources.json"),
       load<FillData>("fill.json"),
       load<FeatureCollection<ResidentialProps>>("residential.geojson"),
+      load<SmartBin[]>("smart_bins.json"),
     ])
-      .then(([bins, pois, reportsSeed, sources, fill, residential]) => {
-        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill, residential });
+      .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins]) => {
+        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill, residential, smartBins });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {

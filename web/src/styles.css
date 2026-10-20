@@ -140,7 +140,7 @@ textarea {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: 1fr 1.5fr 1fr 1fr; /* 「垃圾桶填滿度」字比較多 */
   gap: 4px;
   margin: 0 20px;
   padding: 4px;
@@ -149,7 +149,8 @@ textarea {
 }
 
 .tab {
-  padding: 7px 0;
+  padding: 7px 2px;
+  white-space: nowrap;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -521,6 +522,10 @@ textarea {
   font-family: var(--font-body);
 }
 
+.app.wide {
+  --panel-width: min(760px, 58vw);
+}
+
 @media (max-width: 800px) {
   .app {
     grid-template-columns: 1fr;
@@ -554,7 +559,330 @@ textarea {
   }
 }
 
-/* ---------- 填滿模擬 ---------- */
+/* ---------- 垃圾桶填滿度 ---------- */
+
+.live-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.live-head strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 18px;
+}
+
+.live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--full);
+  box-shadow: 0 0 0 0 rgba(209, 73, 91, 0.5);
+  animation: live-pulse 2s infinite;
+}
+
+@keyframes live-pulse {
+  70% { box-shadow: 0 0 0 8px rgba(209, 73, 91, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(209, 73, 91, 0); }
+}
+
+.fill-summary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.fill-summary > div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  column-gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.fill-summary.four {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.battery-icon {
+  width: 11px;
+  height: 7px;
+  border: 1.5px solid #8a6410;
+  border-radius: 2px;
+}
+
+.fill-summary strong {
+  grid-column: 1 / -1;
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--ink);
+}
+
+.tone-ok { color: #2a6e43 !important; }
+.tone-warn { color: #8a6410 !important; }
+.tone-full { color: #a52a3c !important; }
+.strong { font-weight: 700; }
+.warn-text { color: #8a6410; }
+
+.button.locate {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 15px;
+}
+
+.place-search {
+  margin-top: 10px;
+}
+
+.place-search input,
+.table-filters input {
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.place-results {
+  margin: 4px 0 0;
+  padding: 4px;
+  list-style: none;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+
+.place-results button {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+
+.place-results button:hover {
+  background: var(--paper);
+}
+
+.place-results small,
+.near-main small,
+.bin-table small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.near-from {
+  margin: 0 0 6px;
+  font-size: 13px;
+}
+
+.near-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.near-item {
+  display: grid;
+  grid-template-columns: 1fr 108px;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.near-item:hover {
+  background: var(--paper);
+}
+
+.near-item.suggested {
+  border-color: var(--action);
+  background: var(--action-soft);
+}
+
+.near-main {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.35;
+}
+
+.badge {
+  align-self: flex-start;
+  margin-bottom: 3px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--action);
+  color: #fff;
+  font-size: 12px;
+}
+
+.near-level {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+
+.fill-label {
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.fill-bar {
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--paper);
+}
+
+.fill-bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.table-tools .chips {
+  margin-top: 0;
+}
+
+.chip[aria-checked="true"] {
+  border-color: var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
+}
+
+.table-filters {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.bin-table-wrap {
+  max-height: 52vh;
+  overflow: auto;
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+}
+
+.bin-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13.5px;
+}
+
+.bin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 0;
+  background: var(--paper);
+  border-bottom: 1px solid var(--rule);
+  text-align: left;
+}
+
+.bin-table th button {
+  width: 100%;
+  padding: 7px 8px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bin-table th.num {
+  text-align: right;
+}
+
+.sort-mark {
+  display: inline-block;
+  width: 1em;
+  font-size: 9px;
+}
+
+.bin-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--paper);
+  vertical-align: top;
+}
+
+.bin-table td:first-child {
+  min-width: 170px;
+}
+
+.bin-table td small {
+  display: block;
+}
+
+.bin-table td.num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+.bin-table tbody tr {
+  cursor: pointer;
+}
+
+.bin-table tbody tr:hover td {
+  background: var(--paper);
+}
+
+.bin-table tbody tr.active td {
+  background: var(--action-soft);
+}
+
+.level-cell {
+  display: inline-grid;
+  grid-template-columns: 44px 3.2em;
+  gap: 6px;
+  align-items: center;
+}
+
+.level-cell .fill-bar {
+  height: 6px;
+}
+
+.empty {
+  padding: 16px;
+  text-align: center;
+}
+
+.compare {
+  margin-top: 20px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+}
+
+.compare summary {
+  font-family: var(--font-display);
+  cursor: pointer;
+}
+
+.compare .counter .footnote {
+  margin: 2px 0 0;
+}
 
 .segmented {
   display: grid;
