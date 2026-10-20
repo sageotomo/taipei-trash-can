@@ -11,15 +11,17 @@
 | `youbike.csv` | [YouBike2.0臺北市公共自行車即時資訊](https://data.taipei/dataset/detail?id=c6bc8aed-557d-41d5-bfb1-8da24f78f2fb) | 交通局 | 1,792 站 | 2026-10-19 的站點快照，只留營運中的站 |
 | `drink_shops.csv` | [臺北市飲料杯空杯回收點](https://data.taipei/dataset/detail?id=3ce36c6a-9c62-4082-8997-5df87fe37106) | 環保局 | 1,392 家 | 參加空杯回收的飲料店門市，未參加的飲料店不在名單內 |
 | `food_businesses.csv` | [設址臺北市所營事業含餐館業清冊](https://data.taipei/dataset/detail?id=178abc4e-fe32-4fc9-af3a-7baf1c15082c) | 產業局 | 20,285 家 | 營業項目含餐館業的商業登記，包含小吃店，也包含一般餐廳 |
+| `addresses_100m.csv` | [臺北市門牌位置數值資料](https://data.taipei/dataset/detail?id=b7c8e724-1e98-45ee-a0bd-f3840623ed97) | 民政局 | 1,157,763 筆 → 11,910 格 | 2026-10-02 版。原始 CSV 約 119 MB（UTF-8、TWD97 二度分帶），在瀏覽器裡串流彙總成 100 公尺方格：`bx`、`by`＝TWD97 座標 ÷ 100 取整，`n`＝門牌數。每層樓一筆門牌，接近戶數。已用店家位置交叉驗證座標是 TWD97（不位移時相關最高） |
 | `vendor_markets.csv` | [臺北市臨時攤販集中場](https://data.taipei/dataset/detail?id=c013d9ec-a550-46bd-ac60-45f085930706) | 產業局 | 47 處 | 下載備用，目前未使用 |
 
 ## 仍是模擬的資料
 
 - 行人專用垃圾桶位置（環保局正式名稱「行人專用清潔箱」；[data.gov.tw/dataset/121355](https://data.gov.tw/dataset/121355)，下載後存成 `bins.csv` 即可換成真實資料）
-- 住宅區：真實來源是民政局「[臺北市門牌位置數值資料](https://data.taipei/dataset/detail?id=b7c8e724-1e98-45ee-a0bd-f3840623ed97)」（每月更新，約 119 MB）。下載後存成 `addresses.csv` 即可換成真實資料（需要 `pip install pyproj`，用來把 TWD97 座標轉成經緯度）：每格的「住家門牌數」＝格內門牌數扣掉店家數。跑 `make all` 時會印出「市府路1號」轉換後的座標，用來確認座標系統正確。目前以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區，模擬 700 點
 - 歷史市民通報、智慧垃圾桶填滿紀錄、增設進度
 
 ## 已知限制
+
+- 住宅區用門牌數扣掉店家數估計，辦公大樓的樓層也有門牌，商辦區會被算進一部分；未辦商業登記的店家也扣不到。
 
 - 飲料店只有參加空杯回收的門市，實際家數更多。
 - 餐飲店是商業登記資料，未辦登記的攤販不在內；已歇業但未註銷的也可能還在。

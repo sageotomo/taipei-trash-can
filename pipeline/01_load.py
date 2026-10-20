@@ -75,29 +75,30 @@ def twd97_to_wgs84(x, y):
 
 
 def load_addresses() -> pd.DataFrame | None:
-    """門牌：data/raw/addresses.csv（民政局「臺北市門牌位置數值資料」，欄位含 街路段、號、橫座標、縱座標）
+    """門牌（民政局「臺北市門牌位置數值資料」），回傳 lat、lng、n（這個點代表幾個門牌）。兩種檔案擇一：
 
-    座標是 TWD97 二度分帶，轉成經緯度後只留臺北市範圍。
+      - data/raw/addresses.csv：原始檔（約 119 MB，不進 git；欄位含 街路段、號、橫座標、縱座標）
+      - data/raw/addresses_100m.csv：彙總檔（進 git；欄位 bx、by、n：TWD97 座標 ÷ 100 取整的方格與門牌數）
+        原始檔在瀏覽器裡串流彙總而成，方格中心當作點位
+
+    座標是 TWD97 二度分帶（已用店家位置交叉驗證，不是 TWD67），轉成經緯度後只留臺北市範圍。
+    注意：每一層樓是一筆門牌（例如「９１號」「９１號二樓」），所以門牌數接近戶數。
     """
-    path = RAW / "addresses.csv"
-    if not path.exists():
+    raw, agg = RAW / "addresses.csv", RAW / "addresses_100m.csv"
+    if raw.exists():
+        df = read_csv_any(raw)
+        x = pd.to_numeric(df[require(df, "門牌", "橫座標", "x", "TWD97X")], errors="coerce")
+        y = pd.to_numeric(df[require(df, "門牌", "縱座標", "y", "TWD97Y")], errors="coerce")
+        n = pd.Series(1, index=df.index)
+    elif agg.exists():
+        df = read_csv_any(agg)
+        x, y, n = df["bx"] * 100 + 50, df["by"] * 100 + 50, df["n"]
+    else:
         return None
-    df = read_csv_any(path)
-    x = pd.to_numeric(df[require(df, "門牌", "橫座標", "x", "TWD97X")], errors="coerce")
-    y = pd.to_numeric(df[require(df, "門牌", "縱座標", "y", "TWD97Y")], errors="coerce")
     ok = x.between(250_000, 350_000) & y.between(2_700_000, 2_800_000)  # TWD97 TM2 在台北的合理範圍
     lat, lng = twd97_to_wgs84(x[ok], y[ok])
-    out = pd.DataFrame({"lat": lat, "lng": lng})
-    out = out[out["lat"].between(24.95, 25.22) & out["lng"].between(121.45, 121.67)].reset_index(drop=True)
-
-    # 座標驗證：臺北市政府（市府路 1 號）應該在 25.0375, 121.5644 附近
-    road, no = find_col(df, "街路段"), find_col(df, "號")
-    if road and no:
-        hit = ok & df[road].astype(str).str.contains("市府路") & df[no].astype(str).str.fullmatch(r"1號?")
-        if hit.any():
-            la, ln = twd97_to_wgs84(x[hit].iloc[:1], y[hit].iloc[:1])
-            print(f"  門牌座標檢查：市府路1號 → {la[0]:.4f}, {ln[0]:.4f}（應在 25.0375, 121.5644 附近）")
-    return out
+    out = pd.DataFrame({"lat": lat, "lng": lng, "n": n[ok].astype(int).values})
+    return out[out["lat"].between(24.95, 25.22) & out["lng"].between(121.45, 121.67)].reset_index(drop=True)
 
 
 def load_mrt() -> tuple[pd.DataFrame, list[float]] | None:

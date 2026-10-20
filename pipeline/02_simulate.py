@@ -231,11 +231,12 @@ def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
 
 
 def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame) -> pd.DataFrame:
-    """真實門牌 → 每格一筆「住家門牌數」＝ 格內門牌數 − 格內店家數（不低於 0）。
+    """真實門牌（每點代表 n 個門牌）→ 每格一筆「住家門牌數」＝ 格內門牌數 − 格內店家數（不低於 0）。
 
     店家也有門牌，扣掉後比較接近住家；輸出的點放在格子中心。
     """
-    addr = pd.Series(latlng_to_cells(addresses["lat"].values, addresses["lng"].values)).value_counts()
+    n = addresses["n"] if "n" in addresses.columns else pd.Series(1, index=addresses.index)
+    addr = pd.Series(n.values, index=latlng_to_cells(addresses["lat"].values, addresses["lng"].values)).groupby(level=0).sum()
     shop = pd.Series(latlng_to_cells(shops["lat"].values, shops["lng"].values)).value_counts()
     homes = (addr - shop.reindex(addr.index, fill_value=0)).clip(lower=0)
     homes = homes[homes > 0].sort_index()

@@ -26,7 +26,7 @@ def test_load_addresses_converts_twd97(tmp_path, monkeypatch):
     monkeypatch.setattr(load, "RAW", tmp_path)
 
     out = load.load_addresses()
-    assert len(out) == 2
+    assert len(out) == 2 and out["n"].tolist() == [1, 1]
     assert out["lat"].iloc[0] == pytest.approx(25.0375, abs=1e-4)
     assert out["lng"].iloc[0] == pytest.approx(121.5644, abs=1e-4)
 
@@ -39,3 +39,19 @@ def test_homes_subtracts_shops_in_same_cell():
     homes = sim.homes_from_addresses(addresses, shops)
     by_cell = {latlng_to_cell(r.lat, r.lng): r.homes for r in homes.itertuples()}
     assert by_cell == {latlng_to_cell(*a): 3}   # 5 − 2；另一格 2 − 3 < 0 不輸出
+
+
+def test_load_aggregated_addresses(tmp_path, monkeypatch):
+    # 彙總檔：TWD97 ÷ 100 的方格與門牌數，方格中心當點位
+    pd.DataFrame({"bx": [3069], "by": [27700], "n": [42]}).to_csv(tmp_path / "addresses_100m.csv", index=False)
+    monkeypatch.setattr(load, "RAW", tmp_path)
+    out = load.load_addresses()
+    assert out["n"].tolist() == [42]
+    assert out["lat"].iloc[0] == pytest.approx(25.0375, abs=1e-3)
+
+
+def test_homes_uses_weights():
+    a = (25.0478, 121.517)
+    addresses = pd.DataFrame({"lat": [a[0], a[0]], "lng": [a[1], a[1]], "n": [30, 12]})
+    shops = pd.DataFrame({"lat": [a[0]] * 2, "lng": [a[1]] * 2})
+    assert sim.homes_from_addresses(addresses, shops)["homes"].tolist() == [40]
