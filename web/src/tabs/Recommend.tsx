@@ -9,6 +9,7 @@ import {
   indicatorUnit,
   isOn,
   levelOf,
+  curveOf,
   mainReason,
   methodText,
   type CellResult,
@@ -292,11 +293,13 @@ function Formula({ indicators }: { indicators: Indicator[] }) {
         {active.map((ind, j) => (
           <span key={ind.id} className={ind.sign > 0 ? "term plus" : "term minus"}>
             {ind.sign < 0 ? "− " : j > 0 ? "+ " : ""}
-            {ind.weight.toFixed(2)} × {ind.label}
+            {ind.weight.toFixed(2)} × {curveOf(ind) === "sqrt" ? `√${ind.label}` : ind.label}
           </span>
         ))}
       </div>
-      <p className="footnote">每一項的分數 ＝ 格內數值 ÷ 上限，超過上限算 1。只看格內的資料；結果低於 0 算 0。</p>
+      <p className="footnote">
+        每一項的分數 ＝ 格內數值 ÷ 上限，超過上限算 1；標 √ 的項目再開根號，讓數值小的格子不會被最大的那格壓到接近 0。只看格內的資料；結果低於 0 算 0。
+      </p>
     </div>
   );
 }
@@ -360,7 +363,9 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
                     <span className="muted">格內沒有</span>
                   ) : (
                     <>
+                      {curveOf(ind) === "sqrt" ? "√(" : ""}
                       {fmtValue(raw, unit)} {unit} ÷ {fmtValue(cap, unit)}
+                      {curveOf(ind) === "sqrt" ? ")" : ""}
                       {raw >= cap ? " → 滿分 1" : ` = ${r.score[j].toFixed(2)}`}
                       <span className="muted"> × {ind.weight.toFixed(2)}</span>
                     </>
@@ -518,8 +523,8 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
       </label>
       <div className="ind-meta">
         <span>
-          {methodText(ind, layer)}・上限 {fmtValue(stat.cap, unit)} {unit}
-          {stat.auto ? "（自動）" : ""}・{fmt(stat.fullShare * 100)}% 有資料的格子拿滿分
+          {methodText(ind, layer)}・{curveOf(ind) === "sqrt" ? "開根號・" : ""}上限 {fmtValue(stat.cap, unit)} {unit}
+          {stat.auto ? (curveOf(ind) === "sqrt" ? "（自動：最大值）" : "（自動）") : ""}・{fmt(stat.fullShare * 100)}% 有資料的格子拿滿分
         </span>
         <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? "收起" : "設定"}
@@ -541,6 +546,13 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
                 />
               </label>
               <label className="field-inline">
+                <span>換算</span>
+                <select value={curveOf(ind)} onChange={(e) => onChange({ curve: e.target.value === "sqrt" ? "sqrt" : "linear" })}>
+                  <option value="linear">直接相除</option>
+                  <option value="sqrt">相除後開根號</option>
+                </select>
+              </label>
+              <label className="field-inline">
                 <span>上限</span>
                 <input
                   type="number"
@@ -556,7 +568,9 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
                 />
                 <span className="muted">{unit}</span>
               </label>
-              <p className="footnote">上限留白＝自動：有資料的格子中第 90 百分位的數值。格內數值超過上限就算滿分 1。</p>
+              <p className="footnote">
+                上限留白＝自動。直接相除：有資料的格子中第 90 百分位的數值；相除後開根號：最大的那一格。格內數值超過上限就算滿分 1。開根號適合差距很大的數值，例如捷運人流。
+              </p>
             </>
           ) : null}
           <button className="link-button danger" onClick={onRemove}>

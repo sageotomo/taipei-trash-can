@@ -1,6 +1,7 @@
 // 缺桶指數：每一格只看「格內」的資料，不看鄰格。
 //
 //   每個指標的分數 = min(格內數值 ÷ 上限, 1)，所以所有指標都在 0～1 之間
+//                  開根號的指標（例如捷運人流）再取 √，讓中小站不會被最大站壓到接近 0
 //   缺桶指數     = Σ(正向權重 × 分數) − Σ(負向權重 × 分數)，低於 0 算 0
 //
 // 圖層（DataLayer）是一堆點；指標（Indicator）說明怎麼從圖層算出每格一個數字、是加分還是扣分、權重多少。
@@ -37,6 +38,25 @@ export interface DataLayer {
 
 export type Method = "count" | "sum";
 
+/**
+ * 分數換算：
+ *   linear = min(格內數值 ÷ 上限, 1)
+ *   sqrt   = √(min(格內數值 ÷ 上限, 1))
+ * 開根號適合差距很大的數值（捷運人流：台北車站約 30 萬、中位數約 2.5 萬），
+ * 順序不變，但中小站不會被壓到接近 0。
+ */
+export type Curve = "linear" | "sqrt";
+
+export function curveOf(ind: Pick<Indicator, "curve">): Curve {
+  return ind.curve === "sqrt" ? "sqrt" : "linear";
+}
+
+/** 原始數值 → 0～1 分數 */
+export function toScore(raw: number, cap: number, curve: Curve): number {
+  const ratio = Math.min(Math.max(raw, 0) / cap, 1);
+  return curve === "sqrt" ? Math.sqrt(ratio) : ratio;
+}
+
 export interface Indicator {
   id: string;
   label: string;
@@ -45,7 +65,8 @@ export interface Indicator {
   field?: string;          // method = "sum" 時加總的欄位
   sign: 1 | -1;            // 1 = 需要桶（加分），-1 = 不缺桶（扣分）
   weight: number;
-  cap: number | null;      // 上限；null = 自動（有資料格子的第 90 百分位）
+  cap: number | null;      // 上限；null = 自動（直接相除：第 90 百分位；開根號：最大值）
+  curve?: Curve;           // 分數換算；沒寫視為 "linear"
   enabled?: boolean;       // false = 暫時不算（保留權重，打開就恢復）；沒寫視為開啟
 }
 
@@ -66,7 +87,7 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
   { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
-  { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null },
+  { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null, curve: "sqrt" },
 ];
 
 export const TOP_N = 30;
@@ -152,10 +173,15 @@ export function niceNumber(v: number): number {
   return Math.round(v / p) * p;
 }
 
-/** 自動上限：有資料（> 0）的格子裡，第 90 百分位的數值 */
-export function autoCap(values: number[], method: Method): number {
+/**
+ * 自動上限：
+ *   直接相除 → 有資料（> 0）的格子裡，第 90 百分位的數值（前 10% 拿滿分）
+ *   開根號   → 最大值，也就是「這格 ÷ 全台北最多的那格」
+ */
+export function autoCap(values: number[], method: Method, curve: Curve = "linear"): number {
   const positive = values.filter((v) => v > 0).sort((a, b) => a - b);
   if (positive.length === 0) return 1;
+  if (curve === "sqrt") return positive[positive.length - 1];
   const v = positive[Math.floor(AUTO_CAP_PERCENTILE * (positive.length - 1))];
   const cap = method === "count" ? Math.max(1, Math.round(v)) : niceNumber(v);
   return cap > 0 ? cap : 1;
@@ -191,7 +217,7 @@ export function computeIndex(agg: Aggregated, cells: string[], indicators: Indic
   const raws = indicators.map((ind) => cells.map((c) => rawValue(agg, ind, c)));
   const stats: IndicatorStat[] = indicators.map((ind, k) => {
     const auto = ind.cap === null || !(ind.cap > 0);
-    const cap = auto ? autoCap(raws[k], ind.method) : (ind.cap as number);
+    const cap = auto ? autoCap(raws[k], ind.method, curveOf(ind)) : (ind.cap as number);
     const positive = raws[k].filter((v) => v > 0);
     const full = positive.filter((v) => v >= cap).length;
     return { cap, auto, cellsWithData: positive.length, fullShare: positive.length ? full / positive.length : 0 };
@@ -199,7 +225,7 @@ export function computeIndex(agg: Aggregated, cells: string[], indicators: Indic
 
   const results: CellResult[] = cells.map((cell, i) => {
     const raw = indicators.map((_, k) => raws[k][i]);
-    const score = raw.map((v, k) => Math.min(v / stats[k].cap, 1));
+    const score = raw.map((v, k) => toScore(v, stats[k].cap, curveOf(indicators[k])));
     const term = score.map((s, k) => indicators[k].sign * effectiveWeight(indicators[k]) * s);
     const sum = term.reduce((a, b) => a + b, 0);
     return { cell, raw, score, term, value: Math.max(0, sum), rank: 0 };

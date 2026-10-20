@@ -6,7 +6,8 @@ import { latLngToCell } from "./hexgrid";
 
 // v2：預設指標改成七個故事、飲料店與餐飲店拆成兩個圖層
 // v3：住宅區改成「住家門牌數」加總；舊版的設定不再讀取
-const INDICATORS_KEY = "trash-bins:indicators:v3";
+// v4：捷運人流改成開根號（√(這格 ÷ 最大的那格)）
+const INDICATORS_KEY = "trash-bins:indicators:v4";
 
 function isIndicator(x: unknown): x is Indicator {
   const i = x as Indicator;
@@ -17,7 +18,8 @@ function isIndicator(x: unknown): x is Indicator {
     (i.sign === 1 || i.sign === -1) &&
     typeof i.weight === "number" && Number.isFinite(i.weight) &&
     (i.cap === null || (typeof i.cap === "number" && i.cap > 0)) &&
-    (i.enabled === undefined || typeof i.enabled === "boolean")
+    (i.enabled === undefined || typeof i.enabled === "boolean") &&
+    (i.curve === undefined || i.curve === "linear" || i.curve === "sqrt")
   );
 }
 

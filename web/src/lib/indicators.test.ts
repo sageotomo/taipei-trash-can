@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cellCenter, gridDisk, latLngToCell } from "./hexgrid";
 import {
+  DEFAULT_INDICATORS,
   aggregate,
   autoCap,
   cellUniverse,
@@ -89,6 +90,26 @@ describe("computeIndex", () => {
       { id: "n", label: "站內有桶", layer: "mrt", method: "count", sign: -1, weight: 0.2, cap: 1 },
     ]);
     expect(result.byCell.get(C)!.value).toBeCloseTo(0.1);
+  });
+
+  it("開根號：分數 = √(格內數值 ÷ 上限)，自動上限取最大值", () => {
+    const [a, b, c] = gridDisk(C, 1);
+    const mrt = layer("mrt", [
+      { cell: a, values: { flow: 300_000 } },
+      { cell: b, values: { flow: 75_000 } },
+      { cell: c, values: { flow: 3_000 } },
+    ], [{ key: "flow", label: "人流", unit: "人次" }]);
+    const result = run([mrt], [
+      { id: "f", label: "人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 1, cap: null, curve: "sqrt" },
+    ]);
+    expect(result.stats[0].cap).toBe(300_000);              // 最大的那格
+    expect(result.byCell.get(a)!.score[0]).toBeCloseTo(1);
+    expect(result.byCell.get(b)!.score[0]).toBeCloseTo(0.5); // √(1/4)
+    expect(result.byCell.get(c)!.score[0]).toBeCloseTo(0.1); // √(1/100)
+  });
+
+  it("預設的捷運人流用開根號", () => {
+    expect(DEFAULT_INDICATORS.find((i) => i.id === "mrt_flow")!.curve).toBe("sqrt");
   });
 
   it("上限留白時自動取第 90 百分位", () => {
