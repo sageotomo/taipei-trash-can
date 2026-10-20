@@ -7,7 +7,7 @@ import type { AppData } from "../data";
 import type { DataLayer, LayerPoint } from "./indicators";
 import type { Report } from "../types";
 
-export const BUILTIN_LAYER_IDS = ["mrt", "bus", "youbike", "shops", "bins", "residential", "reports"] as const;
+export const BUILTIN_LAYER_IDS = ["mrt", "bus", "youbike", "drinks", "food", "bins", "residential", "reports"] as const;
 
 function point(lat: number, lng: number, name?: string, values?: Record<string, number>, tag?: string): LayerPoint {
   return { lat, lng, cell: latLngToCell(lat, lng), name, values, tag };
@@ -15,12 +15,13 @@ function point(lat: number, lng: number, name?: string, values?: Record<string, 
 
 /** 格子編號不會因為權重改變，所以清潔箱、捷運等固定圖層只算一次 */
 export function staticLayers(data: AppData): DataLayer[] {
-  const by: Record<string, LayerPoint[]> = { mrt: [], bus: [], youbike: [], shops: [] };
+  const by: Record<string, LayerPoint[]> = { mrt: [], bus: [], youbike: [], drinks: [], food: [] };
   for (const f of data.pois.features) {
     const [lng, lat] = f.geometry.coordinates;
     const p = f.properties;
     if (p.kind === "mrt") by.mrt.push(point(lat, lng, p.name, { flow: p.daily_flow ?? 0 }));
-    else if (p.kind === "shop") by.shops.push(point(lat, lng, p.name, undefined, p.type === "drink" ? "drink" : "food"));
+    // 飲料店和餐飲店分成兩個圖層：飲料店密集代表商圈（逛街手上有空杯），可以單獨當指標
+    else if (p.kind === "shop") (p.type === "drink" ? by.drinks : by.food).push(point(lat, lng, p.name));
     else by[p.kind].push(point(lat, lng, p.name));
   }
   const bins = data.bins.features.map((f) =>
@@ -34,7 +35,8 @@ export function staticLayers(data: AppData): DataLayer[] {
       fields: [{ key: "flow", label: "每日進出人次", unit: "人次" }] },
     { id: "bus", label: "公車站", unit: "站", icon: POI_TYPES.bus, source: "bus", points: by.bus, fields: [] },
     { id: "youbike", label: "YouBike 站", unit: "站", icon: POI_TYPES.youbike, source: "youbike", points: by.youbike, fields: [] },
-    { id: "shops", label: "飲料店、餐飲店", unit: "家", icon: POI_TYPES.food, source: "shops", points: by.shops, fields: [] },
+    { id: "drinks", label: "飲料店", unit: "家", icon: POI_TYPES.drink, source: "shops", points: by.drinks, fields: [] },
+    { id: "food", label: "餐飲店", unit: "家", icon: POI_TYPES.food, source: "shops", points: by.food, fields: [] },
     { id: "bins", label: "現有清潔箱", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時" }] },
     { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential, fields: [] },

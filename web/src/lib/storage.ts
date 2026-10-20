@@ -4,7 +4,8 @@
 import { DEFAULT_INDICATORS, dedupeIndicators, type DataLayer, type Indicator } from "./indicators";
 import { latLngToCell } from "./hexgrid";
 
-const INDICATORS_KEY = "trash-bins:indicators:v1";
+// v2：預設指標改成七個故事、飲料店與餐飲店拆成兩個圖層；舊版（v1）的設定不再讀取
+const INDICATORS_KEY = "trash-bins:indicators:v2";
 
 function isIndicator(x: unknown): x is Indicator {
   const i = x as Indicator;
@@ -14,7 +15,8 @@ function isIndicator(x: unknown): x is Indicator {
     (i.method === "count" || (i.method === "sum" && typeof i.field === "string")) &&
     (i.sign === 1 || i.sign === -1) &&
     typeof i.weight === "number" && Number.isFinite(i.weight) &&
-    (i.cap === null || (typeof i.cap === "number" && i.cap > 0))
+    (i.cap === null || (typeof i.cap === "number" && i.cap > 0)) &&
+    (i.enabled === undefined || typeof i.enabled === "boolean")
   );
 }
 

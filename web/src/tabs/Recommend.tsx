@@ -7,6 +7,7 @@ import {
   methodKey,
   usedMethods,
   indicatorUnit,
+  isOn,
   levelOf,
   mainReason,
   methodText,
@@ -17,9 +18,10 @@ import {
 } from "../lib/indicators";
 import { cellCenter } from "../lib/hexgrid";
 import { HexLayer, PANES } from "../map/layers";
-import { POI_TYPES, PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
+import { PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
-import { Section, SourceTag, Swatch, escapeHtml, fmt, fmtValue } from "../ui";
+import { Section, SourceTag, Swatch, Switch, escapeHtml, fmt, fmtValue } from "../ui";
+import { storyOf } from "../lib/stories";
 import type { AppData } from "../data";
 
 export type Visibility = Record<string, boolean>;
@@ -80,7 +82,7 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
   );
 }
 
-const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16 };
+const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16, food: 17 };
 
 function pointLabel(layer: DataLayer, p: DataLayer["points"][number], simulated: boolean, title = layer.label): string {
   const head = p.name ? `${escapeHtml(title)}：${escapeHtml(p.name)}` : escapeHtml(title);
@@ -95,21 +97,10 @@ function pointLabel(layer: DataLayer, p: DataLayer["points"][number], simulated:
 export function PoiLayers({ data, layers, visible }: { data: AppData; layers: DataLayer[]; visible: Visibility }) {
   const groups = useMemo(() => {
     const sim = (layer: DataLayer) => data.sources.find((s) => s.key === layer.source)?.real === false;
-    return layers.flatMap((layer) => {
-      if (layer.id === "shops") {
-        // 店家分成飲料店、餐飲店兩種圖示
-        return (["drink", "food"] as const).map((t) => ({
-          key: `shops-${t}`, layer, icon: POI_TYPES[t], label: POI_TYPES[t].label,
-          points: layer.points
-            .filter((p) => p.tag === t)
-            .map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer), POI_TYPES[t].label) })),
-        }));
-      }
-      return [{
-        key: layer.id, layer, icon: layer.icon, label: layer.label,
-        points: layer.points.map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer)) })),
-      }];
-    });
+    return layers.map((layer) => ({
+      key: layer.id, layer, icon: layer.icon, label: layer.label,
+      points: layer.points.map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer)) })),
+    }));
   }, [data.sources, layers]);
 
   // 捷運、清潔箱畫在最上面
@@ -125,7 +116,7 @@ export function PoiLayers({ data, layers, visible }: { data: AppData; layers: Da
               icon={g.icon}
               label={g.label}
               points={g.points}
-              iconZoom={g.key === "shops-food" ? 17 : (ICON_ZOOM[g.layer.id] ?? 15)}
+              iconZoom={ICON_ZOOM[g.layer.id] ?? 15}
               pane={order(g.layer.id) > 0 ? PANES.top : PANES.points}
               radius={g.layer.id === "mrt" ? 7 : g.layer.id === "bins" ? 4.5 : 3.5}
               zIndexOffset={order(g.layer.id) * 500}
@@ -161,6 +152,15 @@ export function RecommendPanel(props: PanelProps) {
   const selectedResult = selected ? result.byCell.get(selected) : undefined;
   const detailRef = useRef<HTMLDivElement>(null);
 
+  // 開關一個參數時，地圖上同步標出（或收起）它的資料點
+  const toggle = useCallback(
+    (k: number, on: boolean) => {
+      props.onIndicators(indicators.map((x, i) => (i === k ? { ...x, enabled: on } : x)));
+      props.onVisible({ ...props.visible, [indicators[k].layer]: on });
+    },
+    [indicators, props]
+  );
+
   // 從清單或地圖選了一格，就把明細捲到看得到的地方
   useEffect(() => {
     if (selected) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
@@ -193,6 +193,7 @@ export function RecommendPanel(props: PanelProps) {
       <IndicatorEditor
         indicators={indicators}
         onChange={props.onIndicators}
+        onToggle={toggle}
         result={result}
         layers={layers}
         sources={data.sources}
@@ -233,14 +234,7 @@ export function RecommendPanel(props: PanelProps) {
                   onChange={(e) => props.onVisible({ ...props.visible, [l.id]: e.target.checked })}
                 />
                 <span className="layer-icons">
-                  {l.id === "shops" ? (
-                    <>
-                      <PoiIcon icon={POI_TYPES.drink} />
-                      <PoiIcon icon={POI_TYPES.food} />
-                    </>
-                  ) : (
-                    <PoiIcon icon={l.icon} />
-                  )}
+                  <PoiIcon icon={l.icon} />
                 </span>
                 <span className="layer-name">
                   {l.label}
@@ -277,12 +271,13 @@ export function RecommendPanel(props: PanelProps) {
 // ---------------- 公式 ----------------
 
 function Formula({ indicators }: { indicators: Indicator[] }) {
-  const active = [...indicators.filter((i) => i.weight > 0 && i.sign > 0), ...indicators.filter((i) => i.weight > 0 && i.sign < 0)];
+  const counted = indicators.filter((i) => isOn(i) && i.weight > 0);
+  const active = [...counted.filter((i) => i.sign > 0), ...counted.filter((i) => i.sign < 0)];
   return (
     <div className="formula" aria-live="polite">
       <div className="formula-title">缺桶指數 ＝</div>
       <div className="formula-body">
-        {active.length === 0 ? <span className="muted">（所有權重都是 0）</span> : null}
+        {active.length === 0 ? <span className="muted">（沒有開啟中的指標）</span> : null}
         {active.map((ind, j) => (
           <span key={ind.id} className={ind.sign > 0 ? "term plus" : "term minus"}>
             {ind.sign < 0 ? "− " : j > 0 ? "+ " : ""}
@@ -308,7 +303,7 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
 }) {
   const k = levelOf(r.value, result.maxPossible);
   const sum = r.term.reduce((a, b) => a + b, 0);
-  const rows = indicators.map((ind, j) => ({ ind, j })).filter(({ ind }) => ind.weight > 0);
+  const rows = indicators.map((ind, j) => ({ ind, j })).filter(({ ind }) => isOn(ind) && ind.weight > 0);
 
   return (
     <div className="detail">
@@ -382,9 +377,10 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
 
 // ---------------- 指標設定 ----------------
 
-function IndicatorEditor({ indicators, onChange, result, layers, sources, importTool }: {
+function IndicatorEditor({ indicators, onChange, onToggle, result, layers, sources, importTool }: {
   indicators: Indicator[];
   onChange: (list: Indicator[]) => void;
+  onToggle: (k: number, on: boolean) => void;
   result: IndexResult;
   layers: DataLayer[];
   sources: AppData["sources"];
@@ -415,6 +411,7 @@ function IndicatorEditor({ indicators, onChange, result, layers, sources, import
             taken={usedMethods(indicators, ind.layer, ind.id)}
             sources={sources}
             onChange={(patch) => update(k, patch)}
+            onToggle={(on) => onToggle(k, on)}
             onRemove={() => onChange(indicators.filter((_, i) => i !== k))}
           />
         ))}
@@ -473,25 +470,30 @@ function MethodSelect({ layer, value, onChange, taken }: { layer: DataLayer; val
   );
 }
 
-function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onRemove }: {
+function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, onRemove }: {
   ind: Indicator;
   stat: IndexResult["stats"][number];
   layer?: DataLayer;
   taken: Set<string>;
   sources: AppData["sources"];
   onChange: (patch: Partial<Indicator>) => void;
+  onToggle: (on: boolean) => void;
   onRemove: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const unit = indicatorUnit(ind, layer);
+  const on = isOn(ind);
+  const story = storyOf(ind.id);
 
   return (
-    <li className={ind.weight > 0 ? "ind-card" : "ind-card off"}>
+    <li className={on && ind.weight > 0 ? "ind-card" : "ind-card off"}>
       <div className="ind-head">
+        <Switch on={on} onChange={onToggle} label={`使用「${ind.label}」`} />
         {layer ? <PoiIcon icon={layer.icon} size={18} /> : null}
         <span className="ind-label">
           {ind.label}
           {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === layer?.source)} />}
+          {story ? <small className="ind-story">故事 {story.no}：{story.title}</small> : null}
         </span>
         <SignToggle sign={ind.sign} onChange={(sign) => onChange({ sign })} />
       </div>

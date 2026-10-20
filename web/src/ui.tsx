@@ -26,6 +26,15 @@ export function SourceTag({ source }: { source?: Source }) {
   );
 }
 
+/** 開關（使用／不使用某個參數） */
+export function Switch({ on, onChange, label }: { on: boolean; onChange: (on: boolean) => void; label: string }) {
+  return (
+    <button type="button" role="switch" aria-checked={on} aria-label={label} className={on ? "switch on" : "switch"} onClick={() => onChange(!on)}>
+      <span className="switch-knob" />
+    </button>
+  );
+}
+
 export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
   return (
     <section className="section">

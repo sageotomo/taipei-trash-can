@@ -69,6 +69,19 @@ describe("computeIndex", () => {
     expect(result.byCell.get(next)!.value).toBe(0);
   });
 
+  it("關掉的指標不計分，但權重保留；打開就恢復", () => {
+    const layers = [layer("shops", many(C, 10)), layer("bins", many(C, 1))];
+    const shops: Indicator = { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 10 };
+    const bins: Indicator = { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 1 };
+    const off = run(layers, [shops, { ...bins, enabled: false }]);
+    expect(off.byCell.get(C)!.value).toBeCloseTo(0.5);   // 清潔箱關掉，不扣分
+    expect(Math.abs(off.byCell.get(C)!.term[1])).toBe(0);
+    const offPlus = run(layers, [{ ...shops, enabled: false }, bins]);
+    expect(offPlus.maxPossible).toBe(0);                    // 關掉的正向指標不算進理論最大值
+    const back = run(layers, [shops, { ...bins, enabled: true }]);
+    expect(back.byCell.get(C)!.value).toBeCloseTo(0.1);
+  });
+
   it("欄位加總：同一個圖層可以有「人流加總」和「站數」兩個指標", () => {
     const mrt = layer("mrt", [{ cell: C, values: { flow: 60_000 } }], [{ key: "flow", label: "人流", unit: "人次" }]);
     const result = run([mrt], [

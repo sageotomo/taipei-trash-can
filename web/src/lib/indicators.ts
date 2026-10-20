@@ -46,17 +46,27 @@ export interface Indicator {
   sign: 1 | -1;            // 1 = 需要桶（加分），-1 = 不缺桶（扣分）
   weight: number;
   cap: number | null;      // 上限；null = 自動（有資料格子的第 90 百分位）
+  enabled?: boolean;       // false = 暫時不算（保留權重，打開就恢復）；沒寫視為開啟
 }
 
+/** 關掉的指標權重視為 0，但不改動設定裡的權重 */
+export function isOn(ind: Indicator): boolean {
+  return ind.enabled !== false;
+}
+
+export function effectiveWeight(ind: Indicator): number {
+  return isOn(ind) ? ind.weight : 0;
+}
+
+// 預設指標就是展示用的七個故事（說明文字在 lib/stories.ts），順序就是故事順序
 export const DEFAULT_INDICATORS: Indicator[] = [
-  { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null },
-  { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
+  { id: "drinks", label: "飲料店（商圈）", layer: "drinks", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "youbike", label: "YouBike 站", layer: "youbike", method: "count", sign: 1, weight: 0.1, cap: null },
-  { id: "shops", label: "飲料店、餐飲店", layer: "shops", method: "count", sign: 1, weight: 0.2, cap: null },
+  { id: "residential", label: "住宅區", layer: "residential", method: "count", sign: -1, weight: 0.2, cap: null },
+  { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
-  { id: "fill", label: "現有桶填滿速度", layer: "bins", method: "sum", field: "fill", sign: 1, weight: 0.05, cap: null },
-  { id: "mrt_station", label: "捷運站內有桶", layer: "mrt", method: "count", sign: -1, weight: 0.2, cap: null },
   { id: "bins", label: "現有清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
+  { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null },
 ];
 
 export const TOP_N = 30;
@@ -173,7 +183,7 @@ export interface IndexResult {
   cells: CellResult[];               // 和 cellUniverse 同順序
   byCell: Map<string, CellResult>;
   stats: IndicatorStat[];            // 和 indicators 同順序
-  maxPossible: number;               // 正向權重合計（理論最大值）
+  maxPossible: number;               // 開啟中的正向權重合計（理論最大值）
   ranked: number;                    // 指數 > 0 的格子數
 }
 
@@ -190,7 +200,7 @@ export function computeIndex(agg: Aggregated, cells: string[], indicators: Indic
   const results: CellResult[] = cells.map((cell, i) => {
     const raw = indicators.map((_, k) => raws[k][i]);
     const score = raw.map((v, k) => Math.min(v / stats[k].cap, 1));
-    const term = score.map((s, k) => indicators[k].sign * indicators[k].weight * s);
+    const term = score.map((s, k) => indicators[k].sign * effectiveWeight(indicators[k]) * s);
     const sum = term.reduce((a, b) => a + b, 0);
     return { cell, raw, score, term, value: Math.max(0, sum), rank: 0 };
   });
@@ -202,7 +212,7 @@ export function computeIndex(agg: Aggregated, cells: string[], indicators: Indic
     cells: results,
     byCell: new Map(results.map((r) => [r.cell, r])),
     stats,
-    maxPossible: indicators.reduce((s, ind) => s + (ind.sign > 0 ? ind.weight : 0), 0),
+    maxPossible: indicators.reduce((s, ind) => s + (ind.sign > 0 ? effectiveWeight(ind) : 0), 0),
     ranked: ranked.length,
   };
 }
