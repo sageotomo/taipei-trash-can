@@ -507,7 +507,7 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
         </span>
         <SignToggle sign={ind.sign} onChange={(sign) => onChange({ sign })} />
       </div>
-      {story ? <p className="ind-story">故事 {story.no}：{story.title}</p> : null}
+      {story ? <p className="ind-story">{story.title}</p> : null}
       <label className="ind-weight">
         <span className="sr-only">{ind.label}的權重</span>
         <input type="range" min={0} max={0.5} step={0.05} value={ind.weight} onChange={(e) => onChange({ weight: Number(e.target.value) })} />
