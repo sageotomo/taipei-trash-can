@@ -4,6 +4,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "taipei-trash-can",
   "compatibility_date": "2026-10-01",
+  // 明確開啟 workers.dev 網址與分支預覽網址（兩者都受 Cloudflare Access 保護）
+  "workers_dev": true,
+  "preview_urls": true,
   "assets": {
     "directory": "./dist"
   }
