@@ -31,16 +31,6 @@ def test_load_addresses_converts_twd97(tmp_path, monkeypatch):
     assert out["lng"].iloc[0] == pytest.approx(121.5644, abs=1e-4)
 
 
-def test_homes_subtracts_shops_in_same_cell():
-    a = (25.0478, 121.517)   # 台北車站附近
-    b = (25.0375, 121.5644)  # 市政府附近，另一格
-    addresses = pd.DataFrame({"lat": [a[0]] * 5 + [b[0]] * 2, "lng": [a[1]] * 5 + [b[1]] * 2})
-    shops = pd.DataFrame({"lat": [a[0]] * 2 + [b[0]] * 3, "lng": [a[1]] * 2 + [b[1]] * 3})
-    homes = sim.homes_from_addresses(addresses, shops)
-    by_cell = {latlng_to_cell(r.lat, r.lng): r.homes for r in homes.itertuples()}
-    assert by_cell == {latlng_to_cell(*a): 3}   # 5 − 2；另一格 2 − 3 < 0 不輸出
-
-
 def test_load_aggregated_addresses(tmp_path, monkeypatch):
     # 彙總檔：TWD97 ÷ 100 的方格與門牌數，方格中心當點位
     pd.DataFrame({"bx": [3069], "by": [27700], "n": [42]}).to_csv(tmp_path / "addresses_100m.csv", index=False)
@@ -50,8 +40,49 @@ def test_load_aggregated_addresses(tmp_path, monkeypatch):
     assert out["lat"].iloc[0] == pytest.approx(25.0375, abs=1e-3)
 
 
-def test_homes_uses_weights():
-    a = (25.0478, 121.517)
-    addresses = pd.DataFrame({"lat": [a[0], a[0]], "lng": [a[1], a[1]], "n": [30, 12]})
-    shops = pd.DataFrame({"lat": [a[0]] * 2, "lng": [a[1]] * 2})
-    assert sim.homes_from_addresses(addresses, shops)["homes"].tolist() == [40]
+A = (25.0590, 121.5590)   # 住宅格
+B = (25.0421, 121.5081)   # 商圈格（另一格）
+NO_STATIONS = pd.DataFrame({"lat": [], "lng": [], "daily_flow": []})
+NO_MARKETS = pd.DataFrame({"lat": [], "lng": []})
+
+
+def pts(p, k, **extra):
+    return pd.DataFrame({"lat": [p[0]] * k, "lng": [p[1]] * k, **{key: [v] * k for key, v in extra.items()}})
+
+
+def by_cell(df):
+    return {latlng_to_cell(r.lat, r.lng): r.homes for r in df.itertuples()}
+
+
+def test_residential_keeps_homes_and_drops_commercial_cells():
+    addresses = pd.concat([pts(A, 1, n=300), pts(B, 1, n=300)])
+    shops = pd.concat([pts(A, 2, type="food"), pts(B, 10, type="drink")])
+    # B 格有 10 家飲料店，就是飲料店的 P90 → 商圈程度 1 → 不算住宅區
+    out = by_cell(sim.homes_from_addresses(addresses, shops, NO_STATIONS, NO_MARKETS))
+    assert latlng_to_cell(*B) not in out
+
+
+def test_residential_value_discounted_by_commercial_level():
+    # 三格都住 400 戶；C 格有 1 家飲料店、D 格有 4 家（P90）→ C 打折、D 歸零、A 沒店不打折
+    C, D = (25.0735, 121.5900), (24.9990, 121.5680)
+    addresses = pd.concat([pts(A, 1, n=400), pts(C, 1, n=400), pts(D, 1, n=400)])
+    shops = pd.concat([pts(C, 1, type="drink"), pts(D, 4, type="drink")])
+    out = by_cell(sim.homes_from_addresses(addresses, shops, NO_STATIONS, NO_MARKETS))
+    assert out[latlng_to_cell(*A)] == 400
+    assert 100 <= out[latlng_to_cell(*C)] < 400
+    assert latlng_to_cell(*D) not in out
+
+
+def test_night_markets_are_not_residential():
+    addresses = pts(A, 1, n=500)
+    market = pd.DataFrame({"lat": [A[0]], "lng": [A[1]]})
+    assert sim.homes_from_addresses(addresses, pts(B, 0, type="food"), NO_STATIONS, market).empty
+
+
+def test_small_values_are_dropped():
+    out = sim.homes_from_addresses(pts(A, 1, n=sim.MIN_RESIDENTIAL - 1), pts(B, 0, type="food"), NO_STATIONS, NO_MARKETS)
+    assert out.empty
+
+
+def test_parse_dms():
+    assert sim.parse_dms("121°29'29.7") == pytest.approx(121.49158, abs=1e-5)

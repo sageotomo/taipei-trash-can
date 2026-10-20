@@ -10,10 +10,12 @@
 
 from __future__ import annotations
 
+import re
+
 import numpy as np
 import pandas as pd
 
-from common import BUILD, REFERENCE, SEED, ensure_dirs, haversine_m, offset, read_json, write_json
+from common import BUILD, RAW, REFERENCE, SEED, ensure_dirs, haversine_m, offset, read_json, write_json
 from hexgrid import cell_center, grid_disk, latlng_to_cell, latlng_to_cells
 
 N_BINS = 800          # 主辦說明：目前約 800 組
@@ -230,18 +232,62 @@ def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
     return pd.DataFrame({"lat": lat, "lng": lng, "homes": 1})
 
 
-def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame) -> pd.DataFrame:
-    """真實門牌（每點代表 n 個門牌）→ 每格一筆「住家門牌數」＝ 格內門牌數 − 格內店家數（不低於 0）。
+MIN_RESIDENTIAL = 100   # 住宅值低於這個的格子不算住宅區（地圖也不標）
+MARKET_RADIUS_M = 300   # 夜市、攤販集中場周邊算商圈
 
-    店家也有門牌，扣掉後比較接近住家；輸出的點放在格子中心。
+
+def parse_dms(v) -> float:
+    """「121°29'29.7」→ 121.4916"""
+    d, m, sec = (float(x) for x in re.findall(r"[\d.]+", str(v))[:3])
+    return d + m / 60 + sec / 3600
+
+
+def markets(report) -> pd.DataFrame:
+    """夜市與臨時攤販集中場：攤販沒有商業登記，店家資料看不到，要另外標成商圈"""
+    rows = [(lat, lng) for _, lat, lng in NIGHT_MARKETS]
+    path = RAW / "vendor_markets.csv"
+    if path.exists():
+        vm = pd.read_csv(path)
+        rows += [(parse_dms(la), parse_dms(ln)) for la, ln in zip(vm["GTag_latitude"], vm["GTag_longitude"])]
+    return pd.DataFrame(rows, columns=["lat", "lng"])
+
+
+def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame, stations: pd.DataFrame,
+                         market_pts: pd.DataFrame) -> pd.DataFrame:
+    """真實門牌 → 每格一筆「住宅值」：住很多人，而且不是商圈。
+
+    台北住商混合，商圈裡也住很多人，所以只看門牌數會到處都是住宅區。這裡：
+      住家門牌 ＝ 格內門牌數（每點代表 n 個）－ 格內店家數
+      商圈程度 ＝ max(飲料店 ÷ P90, 餐飲店 ÷ P90, 捷運人流 ÷ P90, 夜市／攤販集中場 300m 內 → 1)，0～1
+      住宅值   ＝ 住家門牌 ×（1 − 商圈程度），低於 MIN_RESIDENTIAL 的格子不輸出
+    P90 是「有資料的格子」中第 90 百分位，和網站上指標的自動上限同一個做法。
     """
-    n = addresses["n"] if "n" in addresses.columns else pd.Series(1, index=addresses.index)
-    addr = pd.Series(n.values, index=latlng_to_cells(addresses["lat"].values, addresses["lng"].values)).groupby(level=0).sum()
-    shop = pd.Series(latlng_to_cells(shops["lat"].values, shops["lng"].values)).value_counts()
-    homes = (addr - shop.reindex(addr.index, fill_value=0)).clip(lower=0)
-    homes = homes[homes > 0].sort_index()
-    centers = np.array([cell_center(c) for c in homes.index]) if len(homes) else np.empty((0, 2))
-    return pd.DataFrame({"lat": centers[:, 0], "lng": centers[:, 1], "homes": homes.values.astype(int)})
+    def per_cell(df, weights=None):
+        w = np.ones(len(df)) if weights is None else np.asarray(weights)
+        return pd.Series(w, index=latlng_to_cells(df["lat"].values, df["lng"].values)).groupby(level=0).sum()
+
+    n = addresses["n"] if "n" in addresses.columns else None
+    addr = per_cell(addresses, n)
+    cells = addr.index
+    drinks = per_cell(shops[shops["type"] == "drink"]).reindex(cells, fill_value=0)
+    food = per_cell(shops[shops["type"] != "drink"]).reindex(cells, fill_value=0)
+    flow = per_cell(stations, stations["daily_flow"]).reindex(cells, fill_value=0)
+    homes = (addr - (drinks + food)).clip(lower=0)
+
+    def ratio(v):
+        pos = v[v > 0]
+        return np.clip(v / np.quantile(pos, 0.9), 0, 1) if len(pos) else v * 0
+
+    centers = np.array([cell_center(c) for c in cells]) if len(cells) else np.empty((0, 2))
+    near_market = np.zeros(len(cells), dtype=bool)
+    if len(cells) and len(market_pts):
+        d = haversine_m(centers[:, :1], centers[:, 1:], market_pts["lat"].values[None, :], market_pts["lng"].values[None, :])
+        near_market = d.min(axis=1) < MARKET_RADIUS_M
+    commercial = np.maximum.reduce([ratio(drinks).values, ratio(food).values, ratio(flow).values, near_market.astype(float)])
+
+    value = np.round(homes.values * (1 - commercial)).astype(int)
+    keep = value >= MIN_RESIDENTIAL
+    return pd.DataFrame({"lat": centers[keep, 0], "lng": centers[keep, 1], "homes": value[keep]})
 
 
 def build_sources(report: dict) -> list[dict]:
@@ -258,7 +304,7 @@ def build_sources(report: dict) -> list[dict]:
         {"key": "shops", "label": "飲料店、餐飲店", "real": real("shops"),
          "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
         {"key": "residential", "label": "住宅區", "real": real("residential"),
-         "note": "民政局臺北市門牌位置數值資料：格內門牌數扣掉店家數，當作住家門牌數" if real("residential")
+         "note": "民政局臺北市門牌位置數值資料：住家門牌（門牌扣掉店家）×（1 − 商圈程度），商圈程度看飲料店、餐飲店、捷運人流與夜市／攤販集中場" if real("residential")
          else "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：民政局臺北市門牌位置數值資料"},
         {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
         {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
@@ -279,7 +325,7 @@ def main() -> None:
     bins = pd.read_csv(BUILD / "real_bins.csv") if report.get("bins") else simulate_bins(rng, stations, bus)
     reports = simulate_reports(rng, shops, bins, stations)
     # 住宅區用另一個亂數產生器，加進來不會改變上面各資料的模擬結果
-    residential = (homes_from_addresses(pd.read_csv(BUILD / "real_addresses.csv"), shops) if report.get("residential")
+    residential = (homes_from_addresses(pd.read_csv(BUILD / "real_addresses.csv"), shops, stations, markets(report)) if report.get("residential")
                    else simulate_residential(np.random.default_rng(SEED + 1), bus, shops, stations))
 
     stations.to_csv(BUILD / "stations.csv", index=False)
