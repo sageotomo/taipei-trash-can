@@ -1,5 +1,5 @@
 // 確認 Python（pipeline/hexgrid.py）和瀏覽器（hexgrid.ts）算出的格子編號一樣。
-// 清潔箱的格子編號是 pipeline 算的，通報與指標是瀏覽器算的，兩邊必須一致。
+// 垃圾桶的格子編號是 pipeline 算的，通報與指標是瀏覽器算的，兩邊必須一致。
 
 import { readFileSync, existsSync } from "node:fs";
 import { describe, expect, it } from "vitest";

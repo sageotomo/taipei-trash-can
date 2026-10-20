@@ -9,7 +9,7 @@ import type { Report } from "../types";
 
 export const CATEGORY_COLORS: Record<string, string> = {
   亂丟垃圾: "#d1495b",
-  清潔箱滿溢: "#e3b23c",
+  垃圾桶滿溢: "#e3b23c",
   家戶垃圾棄置: "#7b4fa0",
 };
 
@@ -27,7 +27,7 @@ export interface Draft {
   lng: number;
 }
 
-/** 每格的清潔箱數與「現行固定排程下一週平均滿溢小時數」 */
+/** 每格的垃圾桶數與「現行固定排程下一週平均滿溢小時數」 */
 function useBinStats(data: AppData) {
   return useMemo(() => {
     const stats = new Map<string, { bins: number; overflowSum: number }>();
@@ -223,7 +223,7 @@ export function ReportPanel(props: PanelProps) {
               <dd>{advice.count} 件</dd>
             </div>
             <div>
-              <dt>清潔箱</dt>
+              <dt>垃圾桶</dt>
               <dd>{advice.bins} 個</dd>
             </div>
             <div>

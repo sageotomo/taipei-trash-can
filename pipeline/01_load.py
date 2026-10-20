@@ -46,13 +46,13 @@ def require(df: pd.DataFrame, name: str, *candidates: str) -> str:
 # ---------- 各資料集 ----------
 
 def load_bins() -> pd.DataFrame | None:
-    """行人專用清潔箱：data/raw/bins.csv（環保局，欄位含 行政區、路名、經度、緯度）"""
+    """行人專用垃圾桶：data/raw/bins.csv（環保局，欄位含 行政區、路名、經度、緯度）"""
     path = RAW / "bins.csv"
     if not path.exists():
         return None
     df = read_csv_any(path)
-    lat = require(df, "清潔箱", "緯度", "lat", "latitude")
-    lng = require(df, "清潔箱", "經度", "lng", "longitude")
+    lat = require(df, "垃圾桶", "緯度", "lat", "latitude")
+    lng = require(df, "垃圾桶", "經度", "lng", "longitude")
     district = find_col(df, "行政區", "district")
     road = find_col(df, "路名", "road")
     out = pd.DataFrame({

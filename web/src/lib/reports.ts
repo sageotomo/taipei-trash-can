@@ -6,14 +6,17 @@ import type { Report } from "../types";
 
 const KEY = "trash-bins:reports:v2"; // 格子系統換過，舊版通報的格子編號不相容
 
-export const CATEGORIES = ["亂丟垃圾", "清潔箱滿溢", "家戶垃圾棄置"] as const;
+export const CATEGORIES = ["亂丟垃圾", "垃圾桶滿溢", "家戶垃圾棄置"] as const;
 export type Category = (typeof CATEGORIES)[number];
+
+// 介面統一叫「垃圾桶」之前存下的通報類別，讀取時換成新名稱
+const RENAMED: Record<string, Category> = { 清潔箱滿溢: "垃圾桶滿溢" };
 
 export function loadLocalReports(): Report[] {
   try {
     const raw = localStorage.getItem(KEY);
     const parsed = raw ? (JSON.parse(raw) as Report[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map((r) => (RENAMED[r.category] ? { ...r, category: RENAMED[r.category] } : r)) : [];
   } catch {
     return [];
   }

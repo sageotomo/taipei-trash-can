@@ -3,7 +3,7 @@
 缺桶指數完全在瀏覽器裡算（web/src/lib/indicators.ts）：每一格只看格內的點，
 使用者可以自己加減指標、調整權重，所以這裡只負責把點位整理好：
   pois.geojson        捷運站（含每日人流、行政區）、公車站、YouBike、店家
-  bins.geojson        清潔箱（含格子編號、模擬的填滿速度）
+  bins.geojson        垃圾桶（含格子編號、模擬的填滿速度）
   reports_seed.json   歷史通報（模擬）
   residential.geojson 住宅區的代表點（沒有真實資料時為模擬）
   sources.json        每份資料是真實還是模擬
@@ -112,7 +112,7 @@ def main() -> None:
     write_json(OUT / "reports_seed.json", reports_out.to_dict(orient="records"))
     write_json(OUT / "sources.json", sources, compact=False)
 
-    print(f"  點位 {len(pois)} 個、清潔箱 {len(bins)} 個（{bins['cell'].nunique()} 格）、通報 {len(reports)} 件")
+    print(f"  點位 {len(pois)} 個、垃圾桶 {len(bins)} 個（{bins['cell'].nunique()} 格）、通報 {len(reports)} 件")
 
 
 if __name__ == "__main__":

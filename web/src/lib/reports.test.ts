@@ -1,5 +1,15 @@
-import { describe, expect, it } from "vitest";
-import { HIGH_REPORTS, OFTEN_FULL_HOURS, createReport, suggestAction } from "./reports";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { HIGH_REPORTS, OFTEN_FULL_HOURS, createReport, loadLocalReports, suggestAction } from "./reports";
+
+describe("loadLocalReports", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("舊版存的「清潔箱滿溢」讀進來會變成「垃圾桶滿溢」", () => {
+    const stored = [{ id: "L1", category: "清潔箱滿溢", lat: 25.05, lng: 121.52, cell: "0_0", created_at: "2026-10-01" }];
+    vi.stubGlobal("localStorage", { getItem: () => JSON.stringify(stored), setItem: () => {} });
+    expect(loadLocalReports().map((r) => r.category)).toEqual(["垃圾桶滿溢"]);
+  });
+});
 
 describe("suggestAction", () => {
   it("通報少：維持現狀", () => {

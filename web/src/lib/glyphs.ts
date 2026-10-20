@@ -26,7 +26,7 @@ export const CUSTOM_COLORS = ["#3d7fc1", "#7b4fa0", "#2a9d8f", "#e76f51", "#6d59
 export type PoiType = "bins" | "mrt" | "bus" | "youbike" | "drink" | "food" | "report" | "residential";
 
 export const POI_TYPES: Record<PoiType, IconSpec & { label: string }> = {
-  bins: { glyph: "bins", label: "現有清潔箱", color: "#2e6b4f" },
+  bins: { glyph: "bins", label: "現有垃圾桶", color: "#2e6b4f" },
   mrt: { glyph: "mrt", label: "捷運站", color: "#1d4e89" },
   bus: { glyph: "bus", label: "公車站", color: "#5f6f74" },
   youbike: { glyph: "youbike", label: "YouBike 站", color: "#d38b12" },

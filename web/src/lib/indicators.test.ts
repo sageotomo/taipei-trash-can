@@ -39,7 +39,7 @@ describe("computeIndex", () => {
     const bins = layer("bins", many(C, 1));
     const result = run([shops, bins], [
       { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 20 },
-      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
+      { id: "b", label: "垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
     ]);
     const r = result.byCell.get(C)!;
     expect(r.score).toEqual([1, 0.5]);          // 30 家超過上限 20 → 1；1 個 ÷ 2 → 0.5
@@ -52,7 +52,7 @@ describe("computeIndex", () => {
   it("結果低於 0 算 0，而且沒有名次", () => {
     const result = run([layer("shops", many(C, 1)), layer("bins", many(C, 3))], [
       { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.1, cap: 10 },
-      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
+      { id: "b", label: "垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
     ]);
     const r = result.byCell.get(C)!;
     expect(r.value).toBe(0);
@@ -63,7 +63,7 @@ describe("computeIndex", () => {
     const next = gridDisk(C, 1).find((c) => c !== C)!;
     const result = run([layer("shops", many(C, 5)), layer("bins", many(next, 5))], [
       { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 5 },
-      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.5, cap: 1 },
+      { id: "b", label: "垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.5, cap: 1 },
     ]);
     expect(result.byCell.get(C)!.value).toBeCloseTo(0.5);
     expect(result.byCell.get(next)!.value).toBe(0);
@@ -72,9 +72,9 @@ describe("computeIndex", () => {
   it("關掉的指標不計分，但權重保留；打開就恢復", () => {
     const layers = [layer("shops", many(C, 10)), layer("bins", many(C, 1))];
     const shops: Indicator = { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 10 };
-    const bins: Indicator = { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 1 };
+    const bins: Indicator = { id: "b", label: "垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 1 };
     const off = run(layers, [shops, { ...bins, enabled: false }]);
-    expect(off.byCell.get(C)!.value).toBeCloseTo(0.5);   // 清潔箱關掉，不扣分
+    expect(off.byCell.get(C)!.value).toBeCloseTo(0.5);   // 垃圾桶關掉，不扣分
     expect(Math.abs(off.byCell.get(C)!.term[1])).toBe(0);
     const offPlus = run(layers, [{ ...shops, enabled: false }, bins]);
     expect(offPlus.maxPossible).toBe(0);                    // 關掉的正向指標不算進理論最大值

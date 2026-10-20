@@ -13,7 +13,7 @@ function point(lat: number, lng: number, name?: string, values?: Record<string, 
   return { lat, lng, cell: latLngToCell(lat, lng), name, values, tag };
 }
 
-/** 格子編號不會因為權重改變，所以清潔箱、捷運等固定圖層只算一次 */
+/** 格子編號不會因為權重改變，所以垃圾桶、捷運等固定圖層只算一次 */
 export function staticLayers(data: AppData): DataLayer[] {
   const by: Record<string, LayerPoint[]> = { mrt: [], bus: [], youbike: [], drinks: [], food: [] };
   for (const f of data.pois.features) {
@@ -37,7 +37,7 @@ export function staticLayers(data: AppData): DataLayer[] {
     { id: "youbike", label: "YouBike 站", unit: "站", icon: POI_TYPES.youbike, source: "youbike", points: by.youbike, fields: [] },
     { id: "drinks", label: "飲料店", unit: "家", icon: POI_TYPES.drink, source: "shops", points: by.drinks, fields: [] },
     { id: "food", label: "餐飲店", unit: "家", icon: POI_TYPES.food, source: "shops", points: by.food, fields: [] },
-    { id: "bins", label: "現有清潔箱", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
+    { id: "bins", label: "現有垃圾桶", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時" }] },
     { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential, fields: [] },
   ];

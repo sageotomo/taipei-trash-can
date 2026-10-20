@@ -108,7 +108,7 @@ export function PoiLayers({ data, layers, visible }: { data: AppData; layers: Da
     }));
   }, [data.sources, layers]);
 
-  // 捷運、清潔箱畫在最上面
+  // 捷運、垃圾桶畫在最上面
   const order = (id: string) => (id === "mrt" ? 2 : id === "bins" ? 1 : 0);
   return (
     <>
@@ -445,7 +445,7 @@ function IndicatorEditor({ indicators, onChange, onToggle, result, layers, sourc
         </div>
       ) : null}
       {importTool}
-      <p className="footnote">公車站權重較高，依據是環保局過去的設置作業程序：清潔箱優先設在公車站牌多的地點。</p>
+      <p className="footnote">公車站權重較高，依據是環保局過去的設置作業程序：垃圾桶優先設在公車站牌多的地點。</p>
     </Section>
   );
 }

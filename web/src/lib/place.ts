@@ -45,7 +45,7 @@ export function makePlacer(data: AppData): Placer {
   return place;
 }
 
-/** 每個清潔箱的地點描述，和 bins.geojson 同順序 */
+/** 每個垃圾桶的地點描述，和 bins.geojson 同順序 */
 export function binPlaceNames(data: AppData): string[] {
   const place = makePlacer(data);
   return data.bins.features.map((f) => {

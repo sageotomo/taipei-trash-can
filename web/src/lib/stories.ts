@@ -36,8 +36,8 @@ export const STORIES: Record<string, Story> = {
   },
   bins: {
     no: 6,
-    title: "這裡已經有清潔箱了",
-    detail: "格子裡的清潔箱越多，就越不缺。",
+    title: "這裡已經有垃圾桶了",
+    detail: "格子裡的垃圾桶越多，就越不缺。",
   },
   mrt_flow: {
     no: 7,

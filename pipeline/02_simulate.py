@@ -31,7 +31,7 @@ NIGHT_MARKETS = [
     ("華西街夜市", 25.0371, 121.4983),
 ]
 
-REPORT_CATEGORIES = ["亂丟垃圾", "清潔箱滿溢", "家戶垃圾棄置"]
+REPORT_CATEGORIES = ["亂丟垃圾", "垃圾桶滿溢", "家戶垃圾棄置"]
 REPORT_WEIGHTS = [0.5, 0.25, 0.25]
 
 
@@ -206,8 +206,8 @@ def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
 def build_sources(report: dict) -> list[dict]:
     real = lambda key: bool(report.get(key))  # noqa: E731
     return [
-        {"key": "bins", "label": "行人專用清潔箱", "real": real("bins"),
-         "note": "環保局開放資料" if real("bins") else "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口"},
+        {"key": "bins", "label": "行人專用垃圾桶", "real": real("bins"),
+         "note": "環保局開放資料（正式名稱「行人專用清潔箱」）" if real("bins") else "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口"},
         {"key": "mrt", "label": "捷運站與人流", "real": real("mrt"),
          "note": "捷運公司車站資料（座標）＋各站分時進出量 2026 年 9 月（人流）" if real("mrt") else "站點座標為近似值，每日人流為模擬"},
         {"key": "bus", "label": "公車站牌", "real": real("bus"),
@@ -253,7 +253,7 @@ def main() -> None:
     write_json(BUILD / "sources.json", build_sources(report), compact=False)
 
     print(f"  捷運站 {len(stations)}、公車站 {len(bus)}、YouBike {len(youbike)}、店家 {len(shops)}")
-    print(f"  清潔箱 {len(bins)}、通報 {len(reports)}、住宅區 {len(residential)} 點、研究範圍 {len(area)} 格")
+    print(f"  垃圾桶 {len(bins)}、通報 {len(reports)}、住宅區 {len(residential)} 點、研究範圍 {len(area)} 格")
 
 
 if __name__ == "__main__":

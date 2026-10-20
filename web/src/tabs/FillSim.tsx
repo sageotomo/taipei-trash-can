@@ -117,7 +117,7 @@ export function FillPanel({ data, state, onChange, onFocusBin }: Props) {
   return (
     <>
       <p className="lead">
-        假設每個清潔箱都裝了填滿感測器<SourceTag source={fillSource} />。比較「定時巡邏」和「滿了才派車」一週下來的差別。
+        假設每個垃圾桶都裝了填滿感測器<SourceTag source={fillSource} />。比較「定時巡邏」和「滿了才派車」一週下來的差別。
       </p>
 
       <div className="segmented" role="radiogroup" aria-label="清運策略">

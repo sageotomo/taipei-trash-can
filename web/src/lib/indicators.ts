@@ -65,7 +65,7 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "residential", label: "住宅區", layer: "residential", method: "count", sign: -1, weight: 0.2, cap: null },
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
-  { id: "bins", label: "現有清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
+  { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
   { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null },
 ];
 
