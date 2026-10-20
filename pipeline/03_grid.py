@@ -1,15 +1,11 @@
-"""步驟 3：把所有點位分到六角網格（pipeline/hexgrid.py），算出每格的特徵，輸出網站要用的 JSON。
+"""步驟 3：輸出網站要用的點位資料。
 
-每格的 6 個需求特徵：
-  mrt      捷運人流：500 m 內各站每日進出人次，依距離線性衰減
-  bus      公車站數：本格＋相鄰 6 格（約步行 300 m）
-  youbike  YouBike 站數：同上
-  food     飲料店、小吃店數：同上
-  reports  市民通報數：只算本格（網頁會再加上使用者新增的通報）
-  fill     現有桶的平均填滿速度：本格＋相鄰格，沒有桶就是 0
-
-前 5 個在這裡先標準化成 0–1（*_n 欄位）；reports 要和網頁新增的通報一起算，
-所以在瀏覽器裡標準化。需求、缺口都在瀏覽器裡用權重即時算（web/src/lib/score.ts）。
+缺桶指數完全在瀏覽器裡算（web/src/lib/indicators.ts）：每一格只看格內的點，
+使用者可以自己加減指標、調整權重，所以這裡只負責把點位整理好：
+  pois.geojson        捷運站（含每日人流、行政區）、公車站、YouBike、店家
+  bins.geojson        清潔箱（含格子編號、模擬的填滿速度）
+  reports_seed.json   歷史通報（模擬）
+  sources.json        每份資料是真實還是模擬
 """
 
 from __future__ import annotations
@@ -19,8 +15,8 @@ import math
 import numpy as np
 import pandas as pd
 
-from common import BUILD, OUT, ensure_dirs, haversine_m, normalize_positive, read_json, write_json
-from hexgrid import cell_center, grid_disk, latlng_to_cells
+from common import BUILD, OUT, ensure_dirs, haversine_m, read_json, write_json
+from hexgrid import latlng_to_cells
 
 MRT_RADIUS_M = 500
 BASE_FILL = 0.02        # 最冷門的桶每小時填 2%
@@ -29,15 +25,6 @@ EXTRA_FILL = 0.12       # 最熱門的桶每小時再多 12%
 
 def to_cell(df: pd.DataFrame) -> pd.Series:
     return pd.Series(latlng_to_cells(df["lat"].values, df["lng"].values), index=df.index)
-
-
-def count_by_cell(cells: pd.Series) -> dict[str, int]:
-    return cells.value_counts().to_dict()
-
-
-def with_neighbors(area: list[str], counts: dict[str, float]) -> dict[str, float]:
-    """本格＋相鄰 6 格的加總。"""
-    return {c: sum(counts.get(n, 0) for n in grid_disk(c, 1)) for c in area}
 
 
 def bin_fill_rates(bins, stations, shops) -> np.ndarray:
@@ -51,36 +38,6 @@ def bin_fill_rates(bins, stations, shops) -> np.ndarray:
     raw = pd.Series(pressure + 5_000 * shops_near)
     score = raw.rank(pct=True).values
     return BASE_FILL + EXTRA_FILL * score
-
-
-def build_grid(area, stations, bins, bus, youbike, shops, reports) -> pd.DataFrame:
-    centers = np.array([cell_center(c) for c in area])
-    grid = pd.DataFrame({"cell": area, "lat": centers[:, 0], "lng": centers[:, 1]})
-
-    # 捷運人流（距離衰減）
-    d = haversine_m(grid["lat"].values[:, None], grid["lng"].values[:, None],
-                    stations["lat"].values[None, :], stations["lng"].values[None, :])
-    grid["mrt"] = (np.clip(1 - d / MRT_RADIUS_M, 0, None) * stations["daily_flow"].values[None, :]).sum(axis=1)
-    grid["district"] = stations["district"].values[d.argmin(axis=1)]
-
-    for name, df in (("bus", bus), ("youbike", youbike), ("food", shops)):
-        nb = with_neighbors(area, count_by_cell(to_cell(df)))
-        grid[name] = grid["cell"].map(nb).fillna(0)
-
-    grid["reports"] = grid["cell"].map(count_by_cell(reports["cell"])).fillna(0).astype(int)
-
-    bin_counts = count_by_cell(bins["cell"])
-    grid["bins"] = grid["cell"].map(bin_counts).fillna(0).astype(int)
-    grid["nbins"] = grid["cell"].map(with_neighbors(area, bin_counts)).fillna(0).astype(int) - grid["bins"]
-
-    fill_sum = bins.groupby("cell")["fill_rate"].sum().to_dict()
-    sums = with_neighbors(area, fill_sum)
-    n = grid["bins"] + grid["nbins"]
-    grid["fill"] = np.where(n > 0, grid["cell"].map(sums).fillna(0) / n.clip(lower=1), 0.0)
-
-    for name in ("mrt", "bus", "youbike", "food", "fill"):
-        grid[f"{name}_n"] = normalize_positive(grid[name])
-    return grid
 
 
 def with_name(df: pd.DataFrame) -> pd.DataFrame:
@@ -115,7 +72,6 @@ def main() -> None:
     youbike = pd.read_csv(BUILD / "youbike.csv")
     shops = pd.read_csv(BUILD / "shops.csv")
     reports = pd.read_csv(BUILD / "reports.csv")
-    area = read_json(BUILD / "area.json")
     sources = read_json(BUILD / "sources.json")
 
     # 先四捨五入到輸出用的精度（約 1 m），格子編號才會和網頁用輸出座標算出來的一致
@@ -124,18 +80,10 @@ def main() -> None:
     bins["cell"] = to_cell(bins)
     bins["fill_rate"] = bin_fill_rates(bins, stations, shops).round(4)
     reports["cell"] = to_cell(reports)
-    grid = build_grid(area, stations, bins, bus, youbike, shops, reports)
 
-    # ---- 輸出 ----
-    keep = ["cell", "district", "bins", "nbins", "mrt", "bus", "youbike", "food", "reports", "fill",
-            "mrt_n", "bus_n", "youbike_n", "food_n", "fill_n"]
-    rows = grid[keep].copy()
-    rows["mrt"] = rows["mrt"].round(0).astype(int)
-    for c in ("bus", "youbike", "food"):
-        rows[c] = rows[c].astype(int)
-    for c in ("fill", "mrt_n", "bus_n", "youbike_n", "food_n", "fill_n"):
-        rows[c] = rows[c].round(4)
-    write_json(OUT / "grid.json", rows.to_dict(orient="records"))
+    # 舊版的網格檔，現在改由瀏覽器計算
+    for old in ("grid.json", "progress.json"):
+        (OUT / old).unlink(missing_ok=True)
 
     sim = {s["key"]: not s["real"] for s in sources}
     bins_out = bins.assign(simulated=sim["bins"])
@@ -146,7 +94,7 @@ def main() -> None:
 
     stations_out = stations.assign(daily_flow=stations["daily_flow"].round(0).astype(int), simulated=sim["mrt"])
     pois = (
-        point_features(stations_out, ["name", "daily_flow", "simulated"], "mrt")
+        point_features(stations_out, ["name", "daily_flow", "district", "simulated"], "mrt")
         + point_features(with_name(bus).assign(simulated=sim["bus"]), ["name", "simulated"], "bus")
         + point_features(with_name(youbike).assign(simulated=sim["youbike"]), ["name", "simulated"], "youbike")
         + point_features(with_name(shops).assign(simulated=sim["shops"]), ["name", "type", "simulated"], "shop")
@@ -157,8 +105,7 @@ def main() -> None:
     write_json(OUT / "reports_seed.json", reports_out.to_dict(orient="records"))
     write_json(OUT / "sources.json", sources, compact=False)
 
-    print(f"  網格 {len(grid)} 格，有桶的格子 {(grid['bins'] > 0).sum()} 格")
-    print(f"  每格平均：公車站 {grid['bus'].mean():.1f}、店家 {grid['food'].mean():.1f}")
+    print(f"  點位 {len(pois)} 個、清潔箱 {len(bins)} 個（{bins['cell'].nunique()} 格）、通報 {len(reports)} 件")
 
 
 if __name__ == "__main__":

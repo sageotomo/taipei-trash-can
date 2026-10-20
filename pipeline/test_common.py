@@ -1,19 +1,6 @@
 import numpy as np
-import pandas as pd
 
-from common import haversine_m, normalize_positive, offset
-
-
-def test_normalize_keeps_zero_and_ranks_positive_values():
-    s = pd.Series([0, 0, 0, 5, 10, 20])
-    out = normalize_positive(s)
-    assert list(out[:3]) == [0, 0, 0]
-    assert list(out[3:].round(3)) == [0.333, 0.667, 1.0]
-
-
-def test_normalize_all_zero():
-    out = normalize_positive(pd.Series([0, 0]))
-    assert list(out) == [0, 0]
+from common import haversine_m, offset
 
 
 def test_offset_moves_about_the_requested_distance():

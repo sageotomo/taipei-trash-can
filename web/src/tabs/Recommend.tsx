@@ -1,105 +1,134 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type L from "leaflet";
-import { FEATURES, DEFAULT_WEIGHTS, mainReason, type CellScore } from "../lib/score";
-import { classOf, quantileBreaks } from "../lib/hex";
+import {
+  DEFAULT_INDICATORS,
+  LEVELS,
+  indicatorUnit,
+  levelOf,
+  mainReason,
+  methodText,
+  type CellResult,
+  type DataLayer,
+  type Indicator,
+  type IndexResult,
+} from "../lib/indicators";
+import { cellCenter } from "../lib/hexgrid";
 import { HexLayer, PANES } from "../map/layers";
-import { POI_TYPES, PoiIcon, PoiPointLayer, type PoiType } from "../map/icons";
-import { placeNames } from "../lib/place";
-import { Section, SourceTag, Swatch, fmt } from "../ui";
+import { POI_TYPES, PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
+import type { Placer } from "../lib/place";
+import { Section, SourceTag, Swatch, escapeHtml, fmt, fmtValue } from "../ui";
 import type { AppData } from "../data";
-import type { FeatureKey, GridCell, Weights } from "../types";
 
-export const GAP_COLORS = ["#fbeccc", "#f6cf86", "#ee9f47", "#d4662a", "#9e3412"];
+export type Visibility = Record<string, boolean>;
+export const DEFAULT_VISIBILITY: Visibility = { bins: true, mrt: true };
 
-export type LayerKey = "bins" | "mrt" | "bus" | "youbike" | "shop";
-export type LayerVisibility = Record<LayerKey, boolean>;
-
-export const DEFAULT_LAYERS: LayerVisibility = { bins: true, mrt: true, bus: false, youbike: false, shop: false };
-
-const LAYER_INFO: { key: LayerKey; icons: PoiType[]; label: string; source: string }[] = [
-  { key: "bins", icons: ["bins"], label: "現有清潔箱", source: "bins" },
-  { key: "mrt", icons: ["mrt"], label: "捷運站", source: "mrt" },
-  { key: "bus", icons: ["bus"], label: "公車站", source: "bus" },
-  { key: "youbike", icons: ["youbike"], label: "YouBike 站", source: "youbike" },
-  { key: "shop", icons: ["drink", "food"], label: "飲料店、餐飲店", source: "shops" },
-];
+const PLUS = "#2e6b4f";
+const MINUS = "#b23a48";
 
 // ---------------- 地圖圖層 ----------------
 
 interface LayersProps {
   data: AppData;
-  scores: CellScore[];
-  recommended: Set<number>;
-  selected: number | null;
-  onSelect: (index: number) => void;
-  layers: LayerVisibility;
+  layers: DataLayer[];
+  cells: string[];
+  result: IndexResult;
+  recommended: Set<string>;
+  selected: string | null;
+  onSelect: (cell: string) => void;
+  visible: Visibility;
+  place: Placer;
 }
 
-export function RecommendLayers({ data, scores, recommended, selected, onSelect, layers }: LayersProps) {
-  const cells = useMemo(() => data.grid.map((c) => c.cell), [data.grid]);
-  const breaks = useMemo(() => quantileBreaks(scores.map((s) => s.gap), GAP_COLORS.length), [scores]);
-
+export function RecommendLayers({ data, layers, cells, result, recommended, selected, onSelect, visible, place }: LayersProps) {
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
-      const k = classOf(scores[i].gap, breaks);
-      const isSelected = i === selected;
-      const isRec = recommended.has(i);
+      const r = result.cells[i];
+      const k = levelOf(r.value, result.maxPossible);
+      const isSelected = r.cell === selected;
+      const isRec = recommended.has(r.cell);
       return {
-        fillColor: k < 0 ? "#ffffff" : GAP_COLORS[k],
-        fillOpacity: k < 0 ? 0.05 : 0.38,
+        fillColor: k < 0 ? "#ffffff" : LEVELS[k].color,
+        fillOpacity: k < 0 ? 0.04 : 0.42,
         color: isSelected ? "#1b2a2f" : isRec ? "#5b1a08" : "#ffffff",
         weight: isSelected ? 3 : isRec ? 2 : 0.5,
         opacity: isSelected || isRec ? 1 : 0.5,
       };
     },
-    [scores, breaks, selected, recommended]
+    [result, selected, recommended]
   );
 
   const tooltip = useCallback(
-    (i: number) => `${data.grid[i].district}・缺桶指數第 ${scores[i].rank} 名`,
-    [data.grid, scores]
+    (i: number) => {
+      const r = result.cells[i];
+      const k = levelOf(r.value, result.maxPossible);
+      const d = place.district(cellCenter(r.cell));
+      return k < 0 ? `${d}・不缺（缺桶指數 0）` : `${d}・缺桶指數 ${r.value.toFixed(2)}（${LEVELS[k].label}）`;
+    },
+    [result, place]
   );
+
+  const onClick = useCallback((i: number) => onSelect(cells[i]), [cells, onSelect]);
 
   return (
     <>
-      <HexLayer cells={cells} style={hexStyle} onClick={onSelect} tooltip={tooltip} />
-      <PoiLayers data={data} layers={layers} />
+      <HexLayer cells={cells} style={hexStyle} onClick={onClick} tooltip={tooltip} />
+      <PoiLayers data={data} layers={layers} visible={visible} />
     </>
   );
 }
 
-/** 各種點位圖層，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
-export function PoiLayers({ data, layers }: { data: AppData; layers: Partial<LayerVisibility> }) {
-  const groups = useMemo(() => {
-    const out: Record<PoiType, { lat: number; lng: number; label: string }[]> = {
-      bins: [], mrt: [], bus: [], youbike: [], drink: [], food: [],
-    };
-    const tag = (simulated: boolean) => (simulated ? "（模擬）" : "");
-    for (const f of data.pois.features) {
-      const [lng, lat] = f.geometry.coordinates;
-      const p = f.properties;
-      const named = (kindLabel: string) => (p.name ? `${kindLabel}：${p.name}` : kindLabel) + tag(p.simulated);
-      if (p.kind === "mrt") out.mrt.push({ lat, lng, label: `捷運${p.name}${p.name?.endsWith("站") ? "" : "站"}・每日進出約 ${fmt(p.daily_flow ?? 0)} 人次${tag(p.simulated)}` });
-      else if (p.kind === "shop") {
-        const t = p.type === "drink" ? "drink" : "food";
-        out[t].push({ lat, lng, label: named(POI_TYPES[t].label) });
-      } else out[p.kind].push({ lat, lng, label: named(POI_TYPES[p.kind].label) });
-    }
-    for (const f of data.bins.features) {
-      const [lng, lat] = f.geometry.coordinates;
-      out.bins.push({ lat, lng, label: `清潔箱 ${f.properties.id}${tag(f.properties.simulated)}` });
-    }
-    return out;
-  }, [data.pois, data.bins]);
+const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16 };
 
+function pointLabel(layer: DataLayer, p: DataLayer["points"][number], simulated: boolean, title = layer.label): string {
+  const head = p.name ? `${escapeHtml(title)}：${escapeHtml(p.name)}` : escapeHtml(title);
+  const extra = layer.fields
+    .filter((f) => p.values?.[f.key] !== undefined)
+    .map((f) => escapeHtml(`${f.label} ${fmtValue(p.values![f.key], f.unit)} ${f.unit}`))
+    .join("・");
+  return head + (extra ? `<br>${extra}` : "") + (simulated ? "（模擬）" : "");
+}
+
+/** 各圖層的點，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
+export function PoiLayers({ data, layers, visible }: { data: AppData; layers: DataLayer[]; visible: Visibility }) {
+  const groups = useMemo(() => {
+    const sim = (layer: DataLayer) => data.sources.find((s) => s.key === layer.source)?.real === false;
+    return layers.flatMap((layer) => {
+      if (layer.id === "shops") {
+        // 店家分成飲料店、餐飲店兩種圖示
+        return (["drink", "food"] as const).map((t) => ({
+          key: `shops-${t}`, layer, icon: POI_TYPES[t], label: POI_TYPES[t].label,
+          points: layer.points
+            .filter((p) => p.tag === t)
+            .map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer), POI_TYPES[t].label) })),
+        }));
+      }
+      return [{
+        key: layer.id, layer, icon: layer.icon, label: layer.label,
+        points: layer.points.map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer)) })),
+      }];
+    });
+  }, [data.sources, layers]);
+
+  // 捷運、清潔箱畫在最上面
+  const order = (id: string) => (id === "mrt" ? 2 : id === "bins" ? 1 : 0);
   return (
     <>
-      {layers.bus ? <PoiPointLayer type="bus" points={groups.bus} iconZoom={16} /> : null}
-      {layers.youbike ? <PoiPointLayer type="youbike" points={groups.youbike} iconZoom={16} /> : null}
-      {layers.shop ? <PoiPointLayer type="food" points={groups.food} iconZoom={17} /> : null}
-      {layers.shop ? <PoiPointLayer type="drink" points={groups.drink} iconZoom={16} /> : null}
-      {layers.bins ? <PoiPointLayer type="bins" points={groups.bins} iconZoom={15} pane={PANES.top} /> : null}
-      {layers.mrt ? <PoiPointLayer type="mrt" points={groups.mrt} iconZoom={13} pane={PANES.top} /> : null}
+      {[...groups]
+        .sort((a, b) => order(a.layer.id) - order(b.layer.id))
+        .map((g) =>
+          visible[g.layer.id] ? (
+            <PoiPointLayer
+              key={g.key}
+              icon={g.icon}
+              label={g.label}
+              points={g.points}
+              iconZoom={g.key === "shops-food" ? 17 : (ICON_ZOOM[g.layer.id] ?? 15)}
+              pane={order(g.layer.id) > 0 ? PANES.top : PANES.points}
+              radius={g.layer.id === "mrt" ? 7 : g.layer.id === "bins" ? 4.5 : 3.5}
+              zIndexOffset={order(g.layer.id) * 500}
+            />
+          ) : null
+        )}
     </>
   );
 }
@@ -108,67 +137,73 @@ export function PoiLayers({ data, layers }: { data: AppData; layers: Partial<Lay
 
 interface PanelProps {
   data: AppData;
-  scores: CellScore[];
-  recommendations: CellScore[];
-  weights: Weights;
-  onWeights: (w: Weights) => void;
-  selected: number | null;
-  onSelect: (index: number | null, fly?: boolean) => void;
-  layers: LayerVisibility;
-  onLayers: (l: LayerVisibility) => void;
-  reportCounts: number[];
+  layers: DataLayer[];
+  indicators: Indicator[];
+  onIndicators: (list: Indicator[]) => void;
+  result: IndexResult;
+  recommendations: CellResult[];
+  selected: string | null;
+  onSelect: (cell: string | null, fly?: boolean) => void;
+  visible: Visibility;
+  onVisible: (v: Visibility) => void;
+  place: Placer;
+  /** 地圖圖層清單下方的額外內容（匯入資料） */
+  layerTools?: ReactNode;
 }
 
 export function RecommendPanel(props: PanelProps) {
-  const { data, scores, recommendations, selected, onSelect } = props;
-  const source = (key: string) => data.sources.find((s) => s.key === key);
-  const places = useMemo(() => placeNames(data), [data]);
+  const { data, layers, indicators, result, recommendations, selected, onSelect, place } = props;
+  const layerOf = (id: string) => layers.find((l) => l.id === id);
+  const selectedResult = selected ? result.byCell.get(selected) : undefined;
+  const detailRef = useRef<HTMLDivElement>(null);
+
+  // 從清單或地圖選了一格，就把明細捲到看得到的地方
+  useEffect(() => {
+    if (selected) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, [selected]);
 
   return (
     <>
       <p className="lead">
-        顏色越深，代表人越多、垃圾桶越少。拖動權重看看不同的考量會讓建議點移到哪裡。
+        每一格只看格內的資料：人潮、店家越多越需要垃圾桶，已經有桶的地方就扣分。調整下面的指標，看看建議點怎麼移動。
       </p>
 
-      {selected !== null ? (
-        <CellDetail
-          cell={data.grid[selected]}
-          place={places[selected]}
-          score={scores[selected]}
-          total={scores.length}
-          isRecommended={recommendations.some((r) => r.index === selected)}
-          reportCount={props.reportCounts[selected]}
-          onClose={() => onSelect(null)}
-        />
-      ) : (
-        <p className="hint-box">點地圖上任一格，看它的缺桶指數排名和原因。</p>
-      )}
+      <Formula indicators={indicators} />
 
-      <WeightSliders weights={props.weights} onChange={props.onWeights} sources={data.sources} />
+      <div ref={detailRef} className="detail-anchor">
+        {selected && selectedResult ? (
+          <CellDetail
+            result={result}
+            r={selectedResult}
+            indicators={indicators}
+            layerOf={layerOf}
+            place={place(cellCenter(selected))}
+            isRecommended={recommendations.some((x) => x.cell === selected)}
+            onClose={() => onSelect(null)}
+          />
+        ) : (
+          <p className="hint-box">點地圖上任一格，看它的缺桶指數怎麼算出來的。</p>
+        )}
+      </div>
+
+      <IndicatorEditor indicators={indicators} onChange={props.onIndicators} result={result} layers={layers} sources={data.sources} />
 
       <Section title={`建議增設前 ${recommendations.length} 名`}>
         {recommendations.length === 0 ? (
-          <p className="hint-box">
-            {Object.values(props.weights).every((w) => w === 0)
-              ? "權重全部是 0，沒有任何需求可以計算。調高至少一項權重，就會出現建議點。"
-              : "目前的權重下，沒有格子的需求達到門檻。"}
-          </p>
+          <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。調高「需要桶」指標的權重，就會出現建議點。</p>
         ) : null}
         <ol className="rank-list">
           {recommendations.map((r, i) => {
-            const reason = FEATURES.find((f) => f.key === mainReason(r))!;
+            const k = mainReason(r);
             return (
               <li key={r.cell}>
-                <button
-                  className={r.index === selected ? "rank-item active" : "rank-item"}
-                  onClick={() => onSelect(r.index, true)}
-                >
+                <button className={r.cell === selected ? "rank-item active" : "rank-item"} onClick={() => onSelect(r.cell, true)}>
                   <span className="rank-no">{i + 1}</span>
                   <span className="rank-main">
-                    {places[r.index]}
-                    <small>主因：{reason.label}</small>
+                    {place(cellCenter(r.cell))}
+                    {k >= 0 ? <small>主因：{indicators[k].label}</small> : null}
                   </span>
-                  <span className="rank-score">附近 {data.grid[r.index].bins + data.grid[r.index].nbins} 桶</span>
+                  <span className="rank-score">{r.value.toFixed(2)}</span>
                 </button>
               </li>
             );
@@ -176,130 +211,109 @@ export function RecommendPanel(props: PanelProps) {
         </ol>
       </Section>
 
-      <Section title="圖層">
+      <Section title="地圖圖層">
         <ul className="layer-list">
-          {LAYER_INFO.map((l) => (
-            <li key={l.key}>
+          {layers.map((l) => (
+            <li key={l.id}>
               <label>
                 <input
                   type="checkbox"
-                  checked={props.layers[l.key]}
-                  onChange={(e) => props.onLayers({ ...props.layers, [l.key]: e.target.checked })}
+                  checked={!!props.visible[l.id]}
+                  onChange={(e) => props.onVisible({ ...props.visible, [l.id]: e.target.checked })}
                 />
                 <span className="layer-icons">
-                  {l.icons.map((t) => (
-                    <PoiIcon key={t} type={t} />
-                  ))}
+                  {l.id === "shops" ? (
+                    <>
+                      <PoiIcon icon={POI_TYPES.drink} />
+                      <PoiIcon icon={POI_TYPES.food} />
+                    </>
+                  ) : (
+                    <PoiIcon icon={l.icon} />
+                  )}
                 </span>
-                {l.label}
-                <SourceTag source={source(l.source)} />
+                <span className="layer-name">
+                  {l.label}
+                  <small>{fmt(l.points.length)}</small>
+                </span>
+                {l.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === l.source)} />}
               </label>
             </li>
           ))}
         </ul>
+        {props.layerTools}
         <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
-          <span>還夠用</span>
-          {GAP_COLORS.map((c) => (
-            <Swatch key={c} color={c} shape="hex" />
+          <span className="legend-item">
+            <Swatch color="#ffffff" shape="hex" />
+            不缺
+          </span>
+          {LEVELS.map((l) => (
+            <span key={l.label} className="legend-item">
+              <Swatch color={l.color} shape="hex" />
+              {l.label}
+            </span>
           ))}
-          <span>很缺</span>
         </div>
       </Section>
     </>
   );
 }
 
-function WeightSliders({ weights, onChange, sources }: { weights: Weights; onChange: (w: Weights) => void; sources: AppData["sources"] }) {
-  const sourceKey: Record<FeatureKey, string> = { mrt: "mrt", bus: "bus", youbike: "youbike", food: "shops", reports: "reports", fill: "fill" };
-  const changed = FEATURES.some((f) => weights[f.key] !== DEFAULT_WEIGHTS[f.key]);
+// ---------------- 公式 ----------------
+
+function Formula({ indicators }: { indicators: Indicator[] }) {
+  const active = [...indicators.filter((i) => i.weight > 0 && i.sign > 0), ...indicators.filter((i) => i.weight > 0 && i.sign < 0)];
   return (
-    <Section
-      title="權重"
-      aside={
-        <button className="link-button" onClick={() => onChange(DEFAULT_WEIGHTS)} disabled={!changed}>
-          重設
-        </button>
-      }
-    >
-      <div className="sliders">
-        {FEATURES.map((f) => (
-          <label key={f.key} className="slider">
-            <span className="slider-label">
-              {f.label}
-              <SourceTag source={sources.find((s) => s.key === sourceKey[f.key])} />
-            </span>
-            <input
-              type="range"
-              min={0}
-              max={0.5}
-              step={0.05}
-              value={weights[f.key]}
-              onChange={(e) => onChange({ ...weights, [f.key]: Number(e.target.value) })}
-            />
-            <output>{weights[f.key].toFixed(2)}</output>
-          </label>
+    <div className="formula" aria-live="polite">
+      <div className="formula-title">缺桶指數 ＝</div>
+      <div className="formula-body">
+        {active.length === 0 ? <span className="muted">（所有權重都是 0）</span> : null}
+        {active.map((ind, j) => (
+          <span key={ind.id} className={ind.sign > 0 ? "term plus" : "term minus"}>
+            {ind.sign < 0 ? "− " : j > 0 ? "+ " : ""}
+            {ind.weight.toFixed(2)} × {ind.label}
+          </span>
         ))}
       </div>
-      <p className="footnote">公車站權重較高，依據是環保局過去的設置作業程序：清潔箱優先設在公車站牌多的地點。</p>
-    </Section>
+      <p className="footnote">每一項的分數 ＝ 格內數值 ÷ 上限，超過上限算 1。只看格內的資料；結果低於 0 算 0。</p>
+    </div>
   );
 }
 
-const FEATURE_COLORS: Record<FeatureKey, string> = {
-  mrt: "#1d4e89",
-  bus: "#5f6f74",
-  youbike: "#e3b23c",
-  food: "#c0577a",
-  reports: "#d1495b",
-  fill: "#2e6b4f",
-};
+// ---------------- 格子明細 ----------------
 
-function rawText(key: FeatureKey, cell: GridCell, reports: number): string {
-  switch (key) {
-    case "mrt":
-      return cell.mrt > 0 ? `約 ${fmt(cell.mrt)} 人次/日` : "500 m 內沒有捷運站";
-    case "bus":
-      return `附近 ${cell.bus} 站`;
-    case "youbike":
-      return `附近 ${cell.youbike} 站`;
-    case "food":
-      return `附近 ${cell.food} 家`;
-    case "reports":
-      return `本格 ${reports} 件`;
-    case "fill":
-      return cell.fill > 0 ? `每小時填 ${fmt(cell.fill * 100, 1)}%` : "附近沒有桶";
-  }
-}
-
-function CellDetail({
-  cell, place, score, total, isRecommended, reportCount, onClose,
-}: {
-  cell: GridCell;
+function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onClose }: {
+  result: IndexResult;
+  r: CellResult;
+  indicators: Indicator[];
+  layerOf: (id: string) => DataLayer | undefined;
   place: string;
-  score: CellScore;
-  total: number;
   isRecommended: boolean;
-  reportCount: number;
   onClose: () => void;
 }) {
+  const k = levelOf(r.value, result.maxPossible);
+  const sum = r.term.reduce((a, b) => a + b, 0);
+  const rows = indicators.map((ind, j) => ({ ind, j })).filter(({ ind }) => ind.weight > 0);
+
   return (
     <div className="detail">
       <div className="detail-head">
         <div>
           <div className="detail-rank">
-            {score.gap > 0 ? (
+            {k >= 0 ? (
               <>
-                第 {fmt(score.rank)} 名<small> / {fmt(total)} 格</small>
+                缺桶指數 {r.value.toFixed(2)}
+                <small>（{LEVELS[k].label}）</small>
               </>
             ) : (
-              "沒有需求"
+              "不缺"
             )}
           </div>
           <div className="muted">
             {place}
             <br />
-            {isRecommended ? "列入建議增設" : score.gap > 0 ? "未列入前 30 名" : "目前的權重下，這一格的需求是 0"}
+            {k >= 0 ? `全台北第 ${fmt(r.rank)} 名 / ${fmt(result.ranked)} 格` : "缺桶指數 0"}
+            {isRecommended ? "・列入建議增設" : ""}
           </div>
         </div>
         <button className="icon-button" onClick={onClose} aria-label="關閉">
@@ -307,43 +321,269 @@ function CellDetail({
         </button>
       </div>
 
-      <div className="stack-bar" role="img" aria-label="需求來源比例">
-        {FEATURES.map((f) =>
-          score.contributions[f.key] > 0 ? (
-            <span key={f.key} style={{ width: `${score.contributions[f.key] * 100}%`, background: FEATURE_COLORS[f.key] }} />
-          ) : null
-        )}
-      </div>
-
-      <table className="reason-table">
+      <table className="calc-table">
         <tbody>
-          {FEATURES.map((f) => (
-            <tr key={f.key}>
-              <th>
-                <Swatch color={FEATURE_COLORS[f.key]} />
-                {f.label}
-              </th>
-              <td className="num">{fmt(score.contributions[f.key] * 100)}%</td>
-              <td className="muted">{rawText(f.key, cell, reportCount)}</td>
-            </tr>
-          ))}
+          {rows.map(({ ind, j }) => {
+            const layer = layerOf(ind.layer);
+            const unit = indicatorUnit(ind, layer);
+            const cap = result.stats[j].cap;
+            const raw = r.raw[j];
+            return (
+              <tr key={ind.id}>
+                <th>
+                  <Swatch color={ind.sign > 0 ? PLUS : MINUS} />
+                  {ind.label}
+                </th>
+                <td className="calc">
+                  {raw === 0 ? (
+                    <span className="muted">格內沒有</span>
+                  ) : (
+                    <>
+                      {fmtValue(raw, unit)} {unit} ÷ {fmtValue(cap, unit)}
+                      {raw >= cap ? " → 滿分 1" : ` = ${r.score[j].toFixed(2)}`}
+                      <span className="muted"> × {ind.weight.toFixed(2)}</span>
+                    </>
+                  )}
+                </td>
+                <td className={r.term[j] > 0 ? "num plus" : r.term[j] < 0 ? "num minus" : "num muted"}>
+                  {r.term[j] > 0 ? "+" : r.term[j] < 0 ? "−" : ""}
+                  {Math.abs(r.term[j]).toFixed(2)}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
+        <tfoot>
+          <tr>
+            <th>缺桶指數</th>
+            <td className="calc muted">{sum < 0 ? `合計 −${Math.abs(sum).toFixed(2)}，低於 0 算 0` : "合計"}</td>
+            <td className="num">{r.value.toFixed(2)}</td>
+          </tr>
+        </tfoot>
       </table>
+    </div>
+  );
+}
 
-      <dl className="supply">
-        <div>
-          <dt>本格清潔箱</dt>
-          <dd>{cell.bins} 個</dd>
+// ---------------- 指標設定 ----------------
+
+function IndicatorEditor({ indicators, onChange, result, layers, sources }: {
+  indicators: Indicator[];
+  onChange: (list: Indicator[]) => void;
+  result: IndexResult;
+  layers: DataLayer[];
+  sources: AppData["sources"];
+}) {
+  const [adding, setAdding] = useState(false);
+  const isDefault = JSON.stringify(indicators) === JSON.stringify(DEFAULT_INDICATORS);
+  const update = (k: number, patch: Partial<Indicator>) => onChange(indicators.map((x, i) => (i === k ? { ...x, ...patch } : x)));
+
+  return (
+    <Section
+      title="指標與權重"
+      aside={
+        <button className="link-button" onClick={() => onChange(DEFAULT_INDICATORS)} disabled={isDefault}>
+          恢復預設
+        </button>
+      }
+    >
+      <ul className="ind-list">
+        {indicators.map((ind, k) => (
+          <IndicatorCard
+            key={ind.id}
+            ind={ind}
+            stat={result.stats[k]}
+            layer={layers.find((l) => l.id === ind.layer)}
+            sources={sources}
+            onChange={(patch) => update(k, patch)}
+            onRemove={() => onChange(indicators.filter((_, i) => i !== k))}
+          />
+        ))}
+      </ul>
+      {adding ? (
+        <AddIndicator
+          layers={layers}
+          onAdd={(ind) => {
+            onChange([...indicators, ind]);
+            setAdding(false);
+          }}
+          onCancel={() => setAdding(false)}
+        />
+      ) : (
+        <button className="button add-button" onClick={() => setAdding(true)}>
+          ＋ 新增指標
+        </button>
+      )}
+      <p className="footnote">公車站權重較高，依據是環保局過去的設置作業程序：清潔箱優先設在公車站牌多的地點。</p>
+    </Section>
+  );
+}
+
+function SignToggle({ sign, onChange }: { sign: 1 | -1; onChange: (s: 1 | -1) => void }) {
+  return (
+    <div className="sign-toggle" role="group" aria-label="方向">
+      <button className={sign > 0 ? "on plus" : ""} aria-pressed={sign > 0} onClick={() => onChange(1)}>
+        ＋ 需要桶
+      </button>
+      <button className={sign < 0 ? "on minus" : ""} aria-pressed={sign < 0} onClick={() => onChange(-1)}>
+        − 不缺桶
+      </button>
+    </div>
+  );
+}
+
+function MethodSelect({ layer, value, onChange }: { layer: DataLayer; value: string; onChange: (v: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)}>
+      <option value="count">格內有幾{layer.unit}</option>
+      {layer.fields.map((f) => (
+        <option key={f.key} value={`sum:${f.key}`}>
+          格內「{f.label}」加總
+        </option>
+      ))}
+    </select>
+  );
+}
+
+function IndicatorCard({ ind, stat, layer, sources, onChange, onRemove }: {
+  ind: Indicator;
+  stat: IndexResult["stats"][number];
+  layer?: DataLayer;
+  sources: AppData["sources"];
+  onChange: (patch: Partial<Indicator>) => void;
+  onRemove: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const unit = indicatorUnit(ind, layer);
+
+  return (
+    <li className={ind.weight > 0 ? "ind-card" : "ind-card off"}>
+      <div className="ind-head">
+        {layer ? <PoiIcon icon={layer.icon} size={18} /> : null}
+        <span className="ind-label">
+          {ind.label}
+          {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === layer?.source)} />}
+        </span>
+        <SignToggle sign={ind.sign} onChange={(sign) => onChange({ sign })} />
+      </div>
+      <label className="ind-weight">
+        <span className="sr-only">{ind.label}的權重</span>
+        <input type="range" min={0} max={0.5} step={0.05} value={ind.weight} onChange={(e) => onChange({ weight: Number(e.target.value) })} />
+        <output className={ind.sign > 0 ? "plus" : "minus"}>
+          {ind.sign > 0 ? "+" : "−"}
+          {ind.weight.toFixed(2)}
+        </output>
+      </label>
+      <div className="ind-meta">
+        <span>
+          {methodText(ind, layer)}・上限 {fmtValue(stat.cap, unit)} {unit}
+          {stat.auto ? "（自動）" : ""}・{fmt(stat.fullShare * 100)}% 有資料的格子拿滿分
+        </span>
+        <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
+          {open ? "收起" : "設定"}
+        </button>
+      </div>
+      {open ? (
+        <div className="ind-settings">
+          {layer ? (
+            <>
+              <label className="field-inline">
+                <span>怎麼算</span>
+                <MethodSelect
+                  layer={layer}
+                  value={ind.method === "count" ? "count" : `sum:${ind.field}`}
+                  onChange={(v) =>
+                    onChange(v === "count" ? { method: "count", field: undefined, cap: null } : { method: "sum", field: v.slice(4), cap: null })
+                  }
+                />
+              </label>
+              <label className="field-inline">
+                <span>上限</span>
+                <input
+                  type="number"
+                  min={0}
+                  step="any"
+                  inputMode="decimal"
+                  placeholder={`自動：${fmtValue(stat.cap, unit)}`}
+                  value={ind.cap ?? ""}
+                  onChange={(e) => {
+                    const v = Number(e.target.value);
+                    onChange({ cap: e.target.value === "" || !(v > 0) ? null : v });
+                  }}
+                />
+                <span className="muted">{unit}</span>
+              </label>
+              <p className="footnote">上限留白＝自動：有資料的格子中第 90 百分位的數值。格內數值超過上限就算滿分 1。</p>
+            </>
+          ) : null}
+          <button className="link-button danger" onClick={onRemove}>
+            刪除這個指標
+          </button>
         </div>
-        <div>
-          <dt>相鄰 6 格</dt>
-          <dd>{cell.nbins} 個</dd>
-        </div>
-        <div>
-          <dt>缺桶指數</dt>
-          <dd>{score.gap.toFixed(3)}</dd>
-        </div>
-      </dl>
+      ) : null}
+    </li>
+  );
+}
+
+function AddIndicator({ layers, onAdd, onCancel }: { layers: DataLayer[]; onAdd: (ind: Indicator) => void; onCancel: () => void }) {
+  const [layerId, setLayerId] = useState(layers[0]?.id ?? "");
+  const [method, setMethod] = useState("count");
+  const [sign, setSign] = useState<1 | -1>(1);
+  const layer = layers.find((l) => l.id === layerId);
+
+  const add = () => {
+    if (!layer) return;
+    const field = method.startsWith("sum:") ? method.slice(4) : undefined;
+    const fieldLabel = layer.fields.find((f) => f.key === field)?.label;
+    onAdd({
+      id: `c${Date.now().toString(36)}`,
+      label: fieldLabel ? `${layer.label}${fieldLabel}` : layer.label,
+      layer: layer.id,
+      method: field ? "sum" : "count",
+      field,
+      sign,
+      weight: 0.1,
+      cap: null,
+    });
+  };
+
+  return (
+    <div className="detail add-form">
+      <div className="form-title">新增指標</div>
+      <label className="field-inline">
+        <span>圖層</span>
+        <select
+          value={layerId}
+          onChange={(e) => {
+            setLayerId(e.target.value);
+            setMethod("count");
+          }}
+        >
+          {layers.map((l) => (
+            <option key={l.id} value={l.id}>
+              {l.label}
+            </option>
+          ))}
+        </select>
+      </label>
+      {layer ? (
+        <label className="field-inline">
+          <span>怎麼算</span>
+          <MethodSelect layer={layer} value={method} onChange={setMethod} />
+        </label>
+      ) : null}
+      <div className="field-inline">
+        <span>方向</span>
+        <SignToggle sign={sign} onChange={setSign} />
+      </div>
+      <div className="form-actions">
+        <button className="button" onClick={onCancel}>
+          取消
+        </button>
+        <button className="button primary" onClick={add} disabled={!layer}>
+          新增
+        </button>
+      </div>
     </div>
   );
 }

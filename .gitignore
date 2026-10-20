@@ -12,3 +12,4 @@ data/raw/*
 !data/raw/*.csv
 data/raw/mrt_od.csv
 .wrangler/
+*.tsbuildinfo

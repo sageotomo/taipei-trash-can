@@ -1,10 +1,10 @@
 import { useCallback, useMemo } from "react";
 import type L from "leaflet";
 import { HexLayer, PointLayer, PANES } from "../map/layers";
-import { makePlacer } from "../lib/place";
+import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch } from "../ui";
 import type { AppData } from "../data";
-import type { ProgressStatus } from "../types";
+import type { ProgressItem, ProgressStatus } from "../types";
 
 export const STATUS_ORDER: ProgressStatus[] = ["已設置", "施工中", "規劃中", "未處理"];
 export const STATUS_COLORS: Record<ProgressStatus, string> = {
@@ -16,13 +16,13 @@ export const STATUS_COLORS: Record<ProgressStatus, string> = {
 
 // ---------------- 地圖 ----------------
 
-export function ProgressLayers({ data, district, selected, onSelect }: {
+export function ProgressLayers({ data, items, district, selected, onSelect }: {
   data: AppData;
+  items: ProgressItem[];
   district: string;
   selected: number | null;
   onSelect: (i: number) => void;
 }) {
-  const items = data.progress;
   const cells = useMemo(() => items.map((p) => p.cell), [items]);
 
   const hexStyle = useCallback(
@@ -76,15 +76,15 @@ export function ProgressLayers({ data, district, selected, onSelect }: {
 
 // ---------------- 面板 ----------------
 
-export function ProgressPanel({ data, district, onDistrict, selected, onSelect }: {
+export function ProgressPanel({ data, items, place, district, onDistrict, selected, onSelect }: {
   data: AppData;
+  items: ProgressItem[];
+  place: Placer;
   district: string;
   onDistrict: (d: string) => void;
   selected: number | null;
   onSelect: (i: number) => void;
 }) {
-  const items = data.progress;
-  const place = useMemo(() => makePlacer(data), [data]);
   const districts = useMemo(() => ["全部", ...Array.from(new Set(items.map((p) => p.district))).sort()], [items]);
 
   const scope = district === "全部" ? items : items.filter((p) => p.district === district);

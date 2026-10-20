@@ -1,0 +1,124 @@
+import { describe, expect, it } from "vitest";
+import { cellCenter, gridDisk, latLngToCell } from "./hexgrid";
+import {
+  aggregate,
+  autoCap,
+  cellUniverse,
+  computeIndex,
+  levelOf,
+  niceNumber,
+  pickRecommendations,
+  type DataLayer,
+  type Indicator,
+} from "./indicators";
+
+const icon = { glyph: "pin", color: "#000" };
+const C = latLngToCell(25.0478, 121.517); // 台北車站那一格
+
+function layer(id: string, pts: { cell: string; values?: Record<string, number> }[], fields: DataLayer["fields"] = []): DataLayer {
+  return {
+    id, label: id, unit: "個", icon, fields,
+    points: pts.map((p) => {
+      const [lat, lng] = cellCenter(p.cell);
+      return { lat, lng, cell: p.cell, values: p.values };
+    }),
+  };
+}
+const many = (cell: string, n: number, values?: Record<string, number>) => Array.from({ length: n }, () => ({ cell, values }));
+
+function run(layers: DataLayer[], indicators: Indicator[]) {
+  const agg = aggregate(layers);
+  return computeIndex(agg, cellUniverse(agg), indicators);
+}
+
+describe("computeIndex", () => {
+  it("分數 = min(格內數值 ÷ 上限, 1)，正向加、負向扣", () => {
+    const shops = layer("shops", many(C, 30));
+    const bins = layer("bins", many(C, 1));
+    const result = run([shops, bins], [
+      { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 20 },
+      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
+    ]);
+    const r = result.byCell.get(C)!;
+    expect(r.score).toEqual([1, 0.5]);          // 30 家超過上限 20 → 1；1 個 ÷ 2 → 0.5
+    expect(r.term[0]).toBeCloseTo(0.5);
+    expect(r.term[1]).toBeCloseTo(-0.2);
+    expect(r.value).toBeCloseTo(0.3);
+    expect(result.maxPossible).toBeCloseTo(0.5);
+  });
+
+  it("結果低於 0 算 0，而且沒有名次", () => {
+    const result = run([layer("shops", many(C, 1)), layer("bins", many(C, 3))], [
+      { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.1, cap: 10 },
+      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: 2 },
+    ]);
+    const r = result.byCell.get(C)!;
+    expect(r.value).toBe(0);
+    expect(r.rank).toBe(0);
+  });
+
+  it("只算格內：隔壁格的桶不會扣這一格的分", () => {
+    const next = gridDisk(C, 1).find((c) => c !== C)!;
+    const result = run([layer("shops", many(C, 5)), layer("bins", many(next, 5))], [
+      { id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 0.5, cap: 5 },
+      { id: "b", label: "清潔箱", layer: "bins", method: "count", sign: -1, weight: 0.5, cap: 1 },
+    ]);
+    expect(result.byCell.get(C)!.value).toBeCloseTo(0.5);
+    expect(result.byCell.get(next)!.value).toBe(0);
+  });
+
+  it("欄位加總：同一個圖層可以有「人流加總」和「站數」兩個指標", () => {
+    const mrt = layer("mrt", [{ cell: C, values: { flow: 60_000 } }], [{ key: "flow", label: "人流", unit: "人次" }]);
+    const result = run([mrt], [
+      { id: "f", label: "人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: 30_000 },
+      { id: "n", label: "站內有桶", layer: "mrt", method: "count", sign: -1, weight: 0.2, cap: 1 },
+    ]);
+    expect(result.byCell.get(C)!.value).toBeCloseTo(0.1);
+  });
+
+  it("上限留白時自動取第 90 百分位", () => {
+    const cells = gridDisk(C, 1); // 7 格，各有 1~7 家
+    const shops = layer("shops", cells.flatMap((c, i) => many(c, i + 1)));
+    const result = run([shops], [{ id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 1, cap: null }]);
+    expect(result.stats[0].auto).toBe(true);
+    expect(result.stats[0].cap).toBe(6);
+    expect(result.stats[0].fullShare).toBeCloseTo(2 / 7);
+  });
+});
+
+describe("autoCap / niceNumber", () => {
+  it("取整成好讀的數字", () => {
+    expect(niceNumber(31_250)).toBe(31_000);
+    expect(niceNumber(23.4)).toBe(23);
+    expect(niceNumber(0.137)).toBe(0.14);
+  });
+  it("計數至少是 1；全部是 0 時上限是 1", () => {
+    expect(autoCap([0, 0, 0.2], "count")).toBe(1);
+    expect(autoCap([0, 0], "sum")).toBe(1);
+  });
+});
+
+describe("pickRecommendations", () => {
+  const ind: Indicator[] = [{ id: "s", label: "店家", layer: "shops", method: "count", sign: 1, weight: 1, cap: 10 }];
+
+  it("不會挑到相鄰的格子", () => {
+    const disk = gridDisk(C, 1);
+    const shops = layer("shops", disk.flatMap((c) => many(c, c === C ? 10 : 9)));
+    expect(pickRecommendations(run([shops], ind)).map((p) => p.cell)).toEqual([C]);
+  });
+
+  it("權重全為 0 時沒有建議點", () => {
+    const shops = layer("shops", many(C, 5));
+    expect(pickRecommendations(run([shops], [{ ...ind[0], weight: 0 }]))).toEqual([]);
+  });
+});
+
+describe("levelOf", () => {
+  it("依佔理論最大值的比例分級，0 是不缺", () => {
+    expect(levelOf(0, 1)).toBe(-1);
+    expect(levelOf(0.1, 1)).toBe(0);
+    expect(levelOf(0.2, 1)).toBe(1);
+    expect(levelOf(0.4, 1)).toBe(2);
+    expect(levelOf(0.9, 1)).toBe(3);
+  });
+});

@@ -1,26 +1,9 @@
-// pipeline 輸出的 JSON 格式（見 pipeline/03_grid.py）
+// pipeline 輸出的 JSON 格式（見 pipeline/03_grid.py），以及共用型別
 
-export type FeatureKey = "mrt" | "bus" | "youbike" | "food" | "reports" | "fill";
-export type Weights = Record<FeatureKey, number>;
-
-export interface GridCell {
-  cell: string;
-  district: string;
-  bins: number;   // 本格清潔箱數
-  nbins: number;  // 相鄰 6 格清潔箱數
-  // 原始值
-  mrt: number;
-  bus: number;
-  youbike: number;
-  food: number;
-  reports: number;
-  fill: number;
-  // 已標準化 0–1（reports 在瀏覽器裡標準化）
-  mrt_n: number;
-  bus_n: number;
-  youbike_n: number;
-  food_n: number;
-  fill_n: number;
+/** 地圖圖示：圖形＋底色 */
+export interface IconSpec {
+  glyph: string;  // map/icons.tsx 的 GLYPHS key
+  color: string;
 }
 
 export interface PointFeature<P> {
@@ -48,6 +31,7 @@ export interface PoiProps {
   kind: PoiKind;
   name?: string;
   daily_flow?: number;
+  district?: string;  // 只有捷運站有
   type?: "drink" | "food";
   simulated: boolean;
 }
@@ -94,7 +78,7 @@ export interface FillData {
 
 export type ProgressStatus = "已設置" | "施工中" | "規劃中" | "未處理";
 
-/** pipeline/05_progress.py 的輸出（模擬） */
+/** 施政進度（模擬，lib/progress.ts 產生） */
 export interface ProgressItem {
   rank: number;
   cell: string;

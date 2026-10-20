@@ -1,9 +1,9 @@
 import { useCallback, useMemo, useState } from "react";
 import type L from "leaflet";
 import { HexLayer, PointLayer, PANES } from "../map/layers";
-import { makePlacer } from "../lib/place";
+import type { Placer } from "../lib/place";
 import { ACTIONS, CATEGORIES, HIGH_REPORTS, suggestAction, type Category } from "../lib/reports";
-import { Section, SourceTag, Swatch, fmt } from "../ui";
+import { Section, SourceTag, Swatch, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Report } from "../types";
 
@@ -46,18 +46,23 @@ function useBinStats(data: AppData) {
 interface LayersProps {
   data: AppData;
   reports: Report[];
-  reportCounts: number[];
-  selected: number | null;
+  reportCounts: Map<string, number>;
+  selected: string | null;
   draft: Draft | null;
 }
 
 export function ReportLayers({ data, reports, reportCounts, selected, draft }: LayersProps) {
-  const cells = useMemo(() => data.grid.map((c) => c.cell), [data.grid]);
+  // 有通報的格子＋目前選的格子
+  const cells = useMemo(() => {
+    const set = new Set(reportCounts.keys());
+    if (selected) set.add(selected);
+    return [...set].sort();
+  }, [reportCounts, selected]);
 
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
-      const k = hotClass(reportCounts[i] ?? 0);
-      const isSelected = i === selected;
+      const k = hotClass(reportCounts.get(cells[i]) ?? 0);
+      const isSelected = cells[i] === selected;
       return {
         fillColor: k < 0 ? "#ffffff" : HOT_COLORS[k],
         fillOpacity: k < 0 ? 0.04 : 0.4,
@@ -66,9 +71,9 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft }: L
         opacity: isSelected ? 1 : 0.5,
       };
     },
-    [reportCounts, selected]
+    [cells, reportCounts, selected]
   );
-  const tooltip = useCallback((i: number) => `通報 ${reportCounts[i] ?? 0} 件`, [reportCounts]);
+  const tooltip = useCallback((i: number) => `通報 ${reportCounts.get(cells[i]) ?? 0} 件`, [cells, reportCounts]);
 
   const bins = useMemo(
     () => data.bins.features.map((f) => ({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] })),
@@ -112,18 +117,15 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft }: L
   );
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-}
-
 // ---------------- 面板 ----------------
 
 interface PanelProps {
   data: AppData;
+  place: Placer;
   reports: Report[];
   localReports: Report[];
-  reportCounts: number[];
-  selected: number | null;
+  reportCounts: Map<string, number>;
+  selected: string | null;
   draft: Draft | null;
   onSubmit: (category: Category, note: string) => void;
   onCancel: () => void;
@@ -133,12 +135,11 @@ interface PanelProps {
 }
 
 export function ReportPanel(props: PanelProps) {
-  const { data, reports, localReports, reportCounts, selected, draft } = props;
+  const { data, place, reports, localReports, reportCounts, selected, draft } = props;
   const [category, setCategory] = useState<Category>("亂丟垃圾");
   const [note, setNote] = useState("");
   const [sent, setSent] = useState(false);
   const binStats = useBinStats(data);
-  const place = useMemo(() => makePlacer(data), [data]);
 
   const byCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -146,15 +147,14 @@ export function ReportPanel(props: PanelProps) {
     return counts;
   }, [reports]);
 
-  const cell = selected !== null ? data.grid[selected] : null;
   const advice = useMemo(() => {
-    if (!cell || selected === null) return null;
-    const s = binStats.get(cell.cell);
+    if (selected === null) return null;
+    const s = binStats.get(selected);
     const bins = s?.bins ?? 0;
     const avgOverflow = s && s.bins > 0 ? s.overflowSum / s.bins : 0;
-    const count = reportCounts[selected] ?? 0;
+    const count = reportCounts.get(selected) ?? 0;
     return { count, bins, avgOverflow, action: suggestAction(count, bins, avgOverflow) };
-  }, [cell, selected, binStats, reportCounts]);
+  }, [selected, binStats, reportCounts]);
 
   const submit = () => {
     props.onSubmit(category, note);
@@ -173,7 +173,7 @@ export function ReportPanel(props: PanelProps) {
           <div className="detail-head">
             <div>
               <div className="form-title">新增通報</div>
-              <div className="muted">{place([draft.lat, draft.lng], cell?.district ?? "研究範圍外")}</div>
+              <div className="muted">{place([draft.lat, draft.lng])}</div>
             </div>
             <button className="icon-button" onClick={props.onCancel} aria-label="取消">
               ×
@@ -212,7 +212,7 @@ export function ReportPanel(props: PanelProps) {
         <p className="hint-box">{sent ? "已送出通報。地圖上有黑框的點就是你的通報。" : "點地圖選一個位置開始通報。"}</p>
       )}
 
-      {cell && advice ? (
+      {advice ? (
         <div className={`advice advice-${advice.action}`}>
           <div className="advice-label">這一格的處置建議</div>
           <div className="advice-action">{ACTIONS[advice.action].label}</div>

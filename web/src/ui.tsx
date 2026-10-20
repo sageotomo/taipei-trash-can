@@ -30,3 +30,15 @@ export function Swatch({ color, shape = "dot" }: { color: string; shape?: "dot" 
 export function fmt(n: number, digits = 0): string {
   return n.toLocaleString("zh-TW", { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
+
+/** Leaflet 的 tooltip 會把字串當 HTML，匯入的名稱要先跳脫 */
+export function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+/** 依單位決定小數位數 */
+export function fmtValue(v: number, unit = ""): string {
+  if (unit.startsWith("%")) return fmt(v, 1);
+  if (!Number.isInteger(v) && Math.abs(v) < 10) return fmt(v, 2);
+  return fmt(v);
+}
