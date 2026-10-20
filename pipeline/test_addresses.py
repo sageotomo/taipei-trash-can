@@ -86,3 +86,15 @@ def test_small_values_are_dropped():
 
 def test_parse_dms():
     assert sim.parse_dms("121°29'29.7") == pytest.approx(121.49158, abs=1e-5)
+
+
+def test_load_bins_strips_stray_characters(tmp_path, monkeypatch):
+    # 環保局原始檔：Big5、欄位「地址」，有一筆經度前面多了「?」
+    pd.DataFrame({
+        "行政區": ["中正區", "文山區"], "地址": ["中山南路20號", "指南路3段40巷"],
+        "經度": ["121.5169444", "?121.595369"], "緯度": [25.0375, 24.968972], "備註": ["", ""],
+    }).to_csv(tmp_path / "bins.csv", index=False, encoding="cp950")
+    monkeypatch.setattr(load, "RAW", tmp_path)
+    out = load.load_bins()
+    assert out["lng"].tolist() == pytest.approx([121.5169444, 121.595369])
+    assert out["road"].tolist() == ["中山南路20號", "指南路3段40巷"]
