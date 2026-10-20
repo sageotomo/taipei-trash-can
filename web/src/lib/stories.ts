@@ -41,8 +41,8 @@ export const STORIES: Record<string, Story> = {
   },
   mrt_flow: {
     no: 7,
-    title: "捷運站一出來，人潮最多",
-    detail: "捷運進出人次越多，越像商圈。",
+    title: "捷運站的人流量",
+    detail: "依每站每天的進出人次加權計算：進出的人越多，加的分數越多；人少的小站只加一點點。不是有捷運站就加分，而是看實際有多少人進出。",
   },
 };
 
