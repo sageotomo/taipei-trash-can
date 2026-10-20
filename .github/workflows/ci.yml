@@ -1,0 +1,36 @@
+# 每次 push 或開 PR：跑測試並確認可以 build。
+# 部署由 Cloudflare Pages 負責（連接 GitHub repo，push 到 main 後自動部署），這裡不部署。
+
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test-pipeline:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install numpy pandas pytest
+      - run: python -m pytest -q
+        working-directory: pipeline
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+        working-directory: web
+      - run: npm test
+        working-directory: web
+      - run: npm run build
+        working-directory: web
