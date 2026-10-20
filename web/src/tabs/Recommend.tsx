@@ -56,7 +56,7 @@ export function RecommendLayers({ data, scores, recommended, selected, onSelect,
   );
 
   const tooltip = useCallback(
-    (i: number) => `${data.grid[i].district}・缺口第 ${scores[i].rank} 名`,
+    (i: number) => `${data.grid[i].district}・缺桶指數第 ${scores[i].rank} 名`,
     [data.grid, scores]
   );
 
@@ -141,7 +141,7 @@ export function RecommendPanel(props: PanelProps) {
           onClose={() => onSelect(null)}
         />
       ) : (
-        <p className="hint-box">點地圖上任一格，看它的缺口排名和原因。</p>
+        <p className="hint-box">點地圖上任一格，看它的缺桶指數排名和原因。</p>
       )}
 
       <WeightSliders weights={props.weights} onChange={props.onWeights} sources={data.sources} />
@@ -199,11 +199,11 @@ export function RecommendPanel(props: PanelProps) {
         </ul>
         <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
-          <span>缺口小</span>
+          <span>還夠用</span>
           {GAP_COLORS.map((c) => (
             <Swatch key={c} color={c} shape="hex" />
           ))}
-          <span>缺口大</span>
+          <span>很缺</span>
         </div>
       </Section>
     </>
@@ -340,7 +340,7 @@ function CellDetail({
           <dd>{cell.nbins} 個</dd>
         </div>
         <div>
-          <dt>缺口分數</dt>
+          <dt>缺桶指數</dt>
           <dd>{score.gap.toFixed(3)}</dd>
         </div>
       </dl>
