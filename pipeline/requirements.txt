@@ -1,5 +1,7 @@
 numpy>=2.0
 pandas>=2.2
 pytest>=8.0
+# 只有在 data/raw/ 放了門牌資料（addresses.csv）時才需要：TWD97 座標轉經緯度
+pyproj>=3.6
 # 只有在 data/raw/ 放了公車站牌 SHP 時才需要：
 # geopandas>=1.0

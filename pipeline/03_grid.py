@@ -5,7 +5,7 @@
   pois.geojson        捷運站（含每日人流、行政區）、公車站、YouBike、店家
   bins.geojson        垃圾桶（含格子編號、模擬的填滿速度）
   reports_seed.json   歷史通報（模擬）
-  residential.geojson 住宅區的代表點（沒有真實資料時為模擬）
+  residential.geojson 住宅區：有門牌資料時每格一點（住家門牌數），沒有時為模擬點（每點 1）
   sources.json        每份資料是真實還是模擬
 """
 
@@ -105,7 +105,7 @@ def main() -> None:
 
     write_json(OUT / "residential.geojson", {
         "type": "FeatureCollection",
-        "features": point_features(residential.assign(simulated=sim["residential"]), ["simulated"]),
+        "features": point_features(residential.assign(simulated=sim["residential"]), ["homes", "simulated"]),
     })
 
     reports_out = reports.assign(lat=reports["lat"].round(5), lng=reports["lng"].round(5), simulated=True)

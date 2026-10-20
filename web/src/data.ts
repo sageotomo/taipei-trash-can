@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, Source } from "./types";
 
-/** 住宅區只有座標與是否模擬 */
-export type ResidentialProps = { simulated: boolean };
+/** 住宅區：homes = 住家門牌數（真實資料時每格一點；模擬時每點 1） */
+export type ResidentialProps = { homes?: number; simulated: boolean };
 
 export interface AppData {
   bins: FeatureCollection<BinProps>;

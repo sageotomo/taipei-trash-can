@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import numpy as np
 import pandas as pd
 
 from common import BUILD, RAW, ensure_dirs, write_json
@@ -65,20 +66,38 @@ def load_bins() -> pd.DataFrame | None:
     return out
 
 
-def load_residential() -> pd.DataFrame | None:
-    """住宅區：data/raw/residential.csv（每列一個點，欄位含 緯度、經度）
+def twd97_to_wgs84(x, y):
+    """TWD97 二度分帶（TM2，中央經線 121°，EPSG:3826）→ 經緯度"""
+    from pyproj import Transformer  # 只有放了門牌資料才需要
+    t = Transformer.from_crs("EPSG:3826", "EPSG:4326", always_xy=True)
+    lng, lat = t.transform(np.asarray(x, dtype=float), np.asarray(y, dtype=float))
+    return lat, lng
 
-    建議來源：臺北市都市計畫土地使用分區圖，取「住宅區」的多邊形，
-    在每個多邊形內每隔約 100 公尺取一點（或取街廓中心點）後存成 CSV。
+
+def load_addresses() -> pd.DataFrame | None:
+    """門牌：data/raw/addresses.csv（民政局「臺北市門牌位置數值資料」，欄位含 街路段、號、橫座標、縱座標）
+
+    座標是 TWD97 二度分帶，轉成經緯度後只留臺北市範圍。
     """
-    path = RAW / "residential.csv"
+    path = RAW / "addresses.csv"
     if not path.exists():
         return None
     df = read_csv_any(path)
-    return pd.DataFrame({
-        "lat": pd.to_numeric(df[require(df, "住宅區", "緯度", "lat", "latitude")], errors="coerce"),
-        "lng": pd.to_numeric(df[require(df, "住宅區", "經度", "lng", "longitude")], errors="coerce"),
-    }).dropna(subset=["lat", "lng"])
+    x = pd.to_numeric(df[require(df, "門牌", "橫座標", "x", "TWD97X")], errors="coerce")
+    y = pd.to_numeric(df[require(df, "門牌", "縱座標", "y", "TWD97Y")], errors="coerce")
+    ok = x.between(250_000, 350_000) & y.between(2_700_000, 2_800_000)  # TWD97 TM2 在台北的合理範圍
+    lat, lng = twd97_to_wgs84(x[ok], y[ok])
+    out = pd.DataFrame({"lat": lat, "lng": lng})
+    out = out[out["lat"].between(24.95, 25.22) & out["lng"].between(121.45, 121.67)].reset_index(drop=True)
+
+    # 座標驗證：臺北市政府（市府路 1 號）應該在 25.0375, 121.5644 附近
+    road, no = find_col(df, "街路段"), find_col(df, "號")
+    if road and no:
+        hit = ok & df[road].astype(str).str.contains("市府路") & df[no].astype(str).str.fullmatch(r"1號?")
+        if hit.any():
+            la, ln = twd97_to_wgs84(x[hit].iloc[:1], y[hit].iloc[:1])
+            print(f"  門牌座標檢查：市府路1號 → {la[0]:.4f}, {ln[0]:.4f}（應在 25.0375, 121.5644 附近）")
+    return out
 
 
 def load_mrt() -> tuple[pd.DataFrame, list[float]] | None:
@@ -240,14 +259,14 @@ def main() -> None:
     if shops is not None:
         shops.to_csv(BUILD / "real_shops.csv", index=False)
 
-    residential = load_residential()
-    report["residential"] = residential is not None
-    if residential is not None:
-        residential.to_csv(BUILD / "real_residential.csv", index=False)
+    addresses = load_addresses()
+    report["residential"] = addresses is not None
+    if addresses is not None:
+        addresses.to_csv(BUILD / "real_addresses.csv", index=False)
 
     write_json(BUILD / "load_report.json", report, compact=False)
     counts = {"bins": bins, "mrt": mrt[0] if mrt else None, "bus": bus, "youbike": youbike, "shops": shops,
-              "residential": residential}
+              "residential": addresses}
     for key, ok in report.items():
         n = len(counts[key]) if counts.get(key) is not None else 0
         print(f"  {key:8s} {f'真實資料 {n} 筆' if ok else '找不到，改用模擬'}")

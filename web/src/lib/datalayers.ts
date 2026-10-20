@@ -28,7 +28,9 @@ export function staticLayers(data: AppData): DataLayer[] {
     point(f.geometry.coordinates[1], f.geometry.coordinates[0], f.properties.id, { fill: Math.round(f.properties.fill_rate * 1000) / 10 })
   );
 
-  const residential = data.residential.features.map((f) => point(f.geometry.coordinates[1], f.geometry.coordinates[0]));
+  const residential = data.residential.features.map((f) =>
+    point(f.geometry.coordinates[1], f.geometry.coordinates[0], undefined, { homes: f.properties.homes ?? 1 })
+  );
 
   return [
     { id: "mrt", label: "捷運站", unit: "站", icon: POI_TYPES.mrt, source: "mrt", points: by.mrt,
@@ -39,7 +41,8 @@ export function staticLayers(data: AppData): DataLayer[] {
     { id: "food", label: "餐飲店", unit: "家", icon: POI_TYPES.food, source: "shops", points: by.food, fields: [] },
     { id: "bins", label: "現有垃圾桶", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時" }] },
-    { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential, fields: [] },
+    { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential,
+      fields: [{ key: "homes", label: "住家門牌", unit: "個" }] },
   ];
 }
 

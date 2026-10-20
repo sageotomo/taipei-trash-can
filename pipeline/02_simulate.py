@@ -227,7 +227,20 @@ def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
     picks = rng.choice(len(bus), size=N_RESIDENTIAL, replace=True, p=weight / weight.sum())
     lat, lng = offset(bus["lat"].values[picks], bus["lng"].values[picks],
                       rng.normal(0, 80, N_RESIDENTIAL), rng.normal(0, 80, N_RESIDENTIAL))
-    return pd.DataFrame({"lat": lat, "lng": lng})
+    return pd.DataFrame({"lat": lat, "lng": lng, "homes": 1})
+
+
+def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame) -> pd.DataFrame:
+    """真實門牌 → 每格一筆「住家門牌數」＝ 格內門牌數 − 格內店家數（不低於 0）。
+
+    店家也有門牌，扣掉後比較接近住家；輸出的點放在格子中心。
+    """
+    addr = pd.Series(latlng_to_cells(addresses["lat"].values, addresses["lng"].values)).value_counts()
+    shop = pd.Series(latlng_to_cells(shops["lat"].values, shops["lng"].values)).value_counts()
+    homes = (addr - shop.reindex(addr.index, fill_value=0)).clip(lower=0)
+    homes = homes[homes > 0].sort_index()
+    centers = np.array([cell_center(c) for c in homes.index]) if len(homes) else np.empty((0, 2))
+    return pd.DataFrame({"lat": centers[:, 0], "lng": centers[:, 1], "homes": homes.values.astype(int)})
 
 
 def build_sources(report: dict) -> list[dict]:
@@ -244,8 +257,8 @@ def build_sources(report: dict) -> list[dict]:
         {"key": "shops", "label": "飲料店、餐飲店", "real": real("shops"),
          "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
         {"key": "residential", "label": "住宅區", "real": real("residential"),
-         "note": "臺北市都市計畫土地使用分區（住宅區）" if real("residential")
-         else "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：臺北市都市計畫土地使用分區圖"},
+         "note": "民政局臺北市門牌位置數值資料：格內門牌數扣掉店家數，當作住家門牌數" if real("residential")
+         else "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：民政局臺北市門牌位置數值資料"},
         {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
         {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
         {"key": "progress", "label": "增設進度", "real": False, "note": "從建議前 30 名隨機指定狀態"},
@@ -265,7 +278,7 @@ def main() -> None:
     bins = pd.read_csv(BUILD / "real_bins.csv") if report.get("bins") else simulate_bins(rng, stations, bus)
     reports = simulate_reports(rng, shops, bins, stations)
     # 住宅區用另一個亂數產生器，加進來不會改變上面各資料的模擬結果
-    residential = (pd.read_csv(BUILD / "real_residential.csv") if report.get("residential")
+    residential = (homes_from_addresses(pd.read_csv(BUILD / "real_addresses.csv"), shops) if report.get("residential")
                    else simulate_residential(np.random.default_rng(SEED + 1), bus, shops, stations))
 
     stations.to_csv(BUILD / "stations.csv", index=False)
@@ -280,7 +293,7 @@ def main() -> None:
     write_json(BUILD / "sources.json", build_sources(report), compact=False)
 
     print(f"  捷運站 {len(stations)}、公車站 {len(bus)}、YouBike {len(youbike)}、店家 {len(shops)}")
-    print(f"  垃圾桶 {len(bins)}、通報 {len(reports)}、住宅區 {len(residential)} 點、研究範圍 {len(area)} 格")
+    print(f"  垃圾桶 {len(bins)}、通報 {len(reports)}、住宅區 {len(residential)} 點（住家門牌 {int(residential['homes'].sum())}）、研究範圍 {len(area)} 格")
 
 
 if __name__ == "__main__":

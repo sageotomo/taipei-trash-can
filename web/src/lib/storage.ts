@@ -4,8 +4,9 @@
 import { DEFAULT_INDICATORS, dedupeIndicators, type DataLayer, type Indicator } from "./indicators";
 import { latLngToCell } from "./hexgrid";
 
-// v2：預設指標改成七個故事、飲料店與餐飲店拆成兩個圖層；舊版（v1）的設定不再讀取
-const INDICATORS_KEY = "trash-bins:indicators:v2";
+// v2：預設指標改成七個故事、飲料店與餐飲店拆成兩個圖層
+// v3：住宅區改成「住家門牌數」加總；舊版的設定不再讀取
+const INDICATORS_KEY = "trash-bins:indicators:v3";
 
 function isIndicator(x: unknown): x is Indicator {
   const i = x as Indicator;

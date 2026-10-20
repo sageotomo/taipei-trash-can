@@ -62,7 +62,7 @@ export function effectiveWeight(ind: Indicator): number {
 export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "drinks", label: "飲料店（商圈）", layer: "drinks", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "youbike", label: "YouBike 站", layer: "youbike", method: "count", sign: 1, weight: 0.1, cap: null },
-  { id: "residential", label: "住宅區", layer: "residential", method: "count", sign: -1, weight: 0.2, cap: null },
+  { id: "residential", label: "住宅區", layer: "residential", method: "sum", field: "homes", sign: -1, weight: 0.2, cap: null },
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
   { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
