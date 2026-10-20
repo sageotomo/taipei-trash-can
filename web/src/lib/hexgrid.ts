@@ -9,6 +9,11 @@ const M_PER_DEG_LAT = (6_371_000 * Math.PI) / 180; // 球面地球，和距離�
 const M_PER_DEG_LNG = M_PER_DEG_LAT * Math.cos((LAT0 * Math.PI) / 180);
 const SQRT3 = Math.sqrt(3);
 
+/** 一格的實際尺寸（尖頂朝北）：寬＝平邊到平邊，高＝頂點到頂點 */
+export const CELL_WIDTH_M = SQRT3 * SIZE_M;
+export const CELL_HEIGHT_M = 2 * SIZE_M;
+export const CELL_AREA_KM2 = ((3 * SQRT3) / 2) * SIZE_M ** 2 / 1e6;
+
 export function cellId(q: number, r: number): string {
   return `${q}_${r}`;
 }

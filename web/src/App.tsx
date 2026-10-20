@@ -17,6 +17,7 @@ import { makeProgress } from "./lib/progress";
 import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
 import { cellCenter, latLngToCell } from "./lib/hexgrid";
 import { FlyTo, MapClick, MapPanes } from "./map/layers";
+import { CellScale } from "./map/CellScale";
 import {
   addLocalReport,
   clearLocalReports,
@@ -169,6 +170,7 @@ export default function App() {
         <BaseMap />
         <MapPanes />
         <FlyTo target={focus} />
+        <CellScale />
         {ready && tab === "recommend" ? (
           <RecommendLayers
             data={data}
