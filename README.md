@@ -100,7 +100,13 @@ make test
 
 ## 部署
 
-push 到 `main` 後，GitHub Actions 會跑測試、build，並部署到 GitHub Pages（`.github/workflows/deploy.yml`）。第一次使用前，到 repo 的 Settings → Pages，把 Source 設成「GitHub Actions」。
+網站由 **Cloudflare Pages** 部署，並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
+
+- Cloudflare Pages 連接這個 GitHub repo，push 到 `main` 後自動 build 與部署；其他分支會產生預覽網址。
+- Build 設定：Root directory `web`、Build command `npm run build`、Build output directory `dist`、環境變數 `NODE_VERSION=22`。
+- GitHub Actions（`.github/workflows/ci.yml`）只負責跑測試與確認可以 build。
+
+**比賽當天提交前**：到 Cloudflare Zero Trust → Access → Applications，刪除或停用這個網站的 Access 應用程式，網站才會公開，評審與投票者才看得到。
 
 ## 使用的開源套件與 AI 工具
 
