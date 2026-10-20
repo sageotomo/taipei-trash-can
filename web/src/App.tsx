@@ -182,6 +182,7 @@ export default function App() {
             onSelect={selectCell}
             visible={visible}
             place={place}
+            role={role}
           />
         ) : null}
         {ready && tab === "fill" ? (
@@ -238,6 +239,7 @@ export default function App() {
               onVisible={setVisible}
               place={place}
               onRemoveLayer={removeLayer}
+              role={role}
               importTool={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
             />
           ) : null}
