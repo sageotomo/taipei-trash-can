@@ -345,6 +345,8 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
         </button>
       </div>
 
+      <AddReasons r={r} k={k} indicators={indicators} layerOf={layerOf} />
+
       <table className="calc-table">
         <tbody>
           {rows.map(({ ind, j }) => {
@@ -387,6 +389,54 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
           </tr>
         </tfoot>
       </table>
+    </div>
+  );
+}
+
+// ---------------- 建議增設的原因 ----------------
+
+/** 有點缺以上的格子才顯示：列出把這格推高的情境（加分項），依影響大小排序 */
+function AddReasons({ r, k, indicators, layerOf, showValue = true }: {
+  r: CellResult;
+  k: number;
+  indicators: Indicator[];
+  layerOf: (id: string) => DataLayer | undefined;
+  showValue?: boolean;
+}) {
+  if (k < 1) return null;
+  const plus = indicators
+    .map((ind, j) => ({ ind, j }))
+    .filter(({ j }) => r.term[j] > 0)
+    .sort((a, b) => r.term[b.j] - r.term[a.j]);
+  const minus = indicators.map((ind, j) => ({ ind, j })).filter(({ j }) => r.term[j] < 0);
+  if (plus.length === 0) return null;
+  return (
+    <div className="add-reasons" style={{ borderColor: LEVELS[k].color }}>
+      <div className="add-reasons-title">建議增設垃圾桶的原因</div>
+      <ol className="add-reasons-list">
+        {plus.map(({ ind, j }) => {
+          const story = storyOf(ind.id);
+          const layer = layerOf(ind.layer);
+          const unit = indicatorUnit(ind, layer);
+          return (
+            <li key={ind.id}>
+              <div className="add-reasons-head">
+                {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
+                <span>{story ? story.title : ind.label}</span>
+              </div>
+              <p className="add-reasons-detail">
+                {showValue ? `這一格有${ind.label} ${fmtValue(r.raw[j], unit)} ${unit}。` : ""}
+                {story ? story.detail : ""}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+      {minus.length > 0 ? (
+        <p className="footnote">
+          已扣掉：{minus.map(({ ind }) => storyOf(ind.id)?.title ?? ind.label).join("、")}，扣完仍然{LEVELS[k].label}。
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -814,6 +864,7 @@ function CitizenCellDetail({ result, r, indicators, layerOf, place, isRecommende
           ×
         </button>
       </div>
+      <AddReasons r={r} k={k} indicators={indicators} layerOf={layerOf} showValue={false} />
       {rows.length === 0 ? (
         <p className="muted">這一格裡沒有開啟中的情境資料。</p>
       ) : (
