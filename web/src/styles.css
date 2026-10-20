@@ -198,6 +198,15 @@ textarea {
   font-size: 14px;
 }
 
+.hint-box .hint-text {
+  margin: 0;
+}
+
+.hint-box .legend {
+  flex-wrap: wrap;
+  row-gap: 6px;
+}
+
 .footnote {
   margin: 10px 0 0;
   color: var(--muted);

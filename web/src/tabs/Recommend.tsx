@@ -689,7 +689,21 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             onClose={() => onSelect(null)}
           />
         ) : (
-          <p className="hint-box">點地圖上任一格，看看那裡為什麼缺（或不缺）垃圾桶。</p>
+          <div className="hint-box">
+            <p className="hint-text">點地圖上任一格，看看那裡為什麼缺（或不缺）垃圾桶。</p>
+            <div className="legend">
+              <span className="legend-item">
+                <Swatch color="#e4e8e5" shape="hex" />
+                不缺
+              </span>
+              {LEVELS.map((l) => (
+                <span key={l.label} className="legend-item">
+                  <Swatch color={l.color} shape="hex" />
+                  {l.label}
+                </span>
+              ))}
+            </div>
+          </div>
         )}
       </div>
 
@@ -766,19 +780,6 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
           })}
         </ol>
       </Section>
-
-      <div className="legend">
-        <span className="legend-item">
-          <Swatch color="#e4e8e5" shape="hex" />
-          不缺
-        </span>
-        {LEVELS.map((l) => (
-          <span key={l.label} className="legend-item">
-            <Swatch color={l.color} shape="hex" />
-            {l.label}
-          </span>
-        ))}
-      </div>
     </>
   );
 }
