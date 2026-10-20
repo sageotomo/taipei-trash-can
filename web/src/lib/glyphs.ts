@@ -9,6 +9,7 @@ export const GLYPHS: Record<string, { label: string; path: string }> = {
   youbike: { label: "自行車", path: '<circle cx="6.5" cy="15.5" r="3.5"/><circle cx="17.5" cy="15.5" r="3.5"/><path d="M6.5 15.5 10 9h6l1.5 6.5M10 9l3.5 6.5h-7M9 6.5h3"/>' },
   drink: { label: "飲料", path: '<path d="M7 8.5h10l-1.3 12H8.3zM6 8.5h12M13 8.5l2.5-5.5"/>' },
   food: { label: "餐飲", path: '<path d="M4 12h16a8 7 0 0 1-16 0zM9 4l3.5 7M14.5 3.5l1.5 7.5"/>' },
+  home: { label: "住宅", path: '<path d="M4 11 12 4l8 7M6.5 9.5V20h11V9.5M10 20v-5.5h4V20"/>' },
   report: { label: "通報", path: '<path d="M12 4 3 20h18zM12 10v4.5"/><circle cx="12" cy="17.3" r=".6"/>' },
   toilet: { label: "廁所", path: '<circle cx="8" cy="5" r="1.6"/><circle cx="16" cy="5" r="1.6"/><path d="M8 8.5v12M5.5 9h5v6M16 8.5l-3 7h6zM15 15.5v5M17 15.5v5"/>' },
   store: { label: "商店", path: '<path d="M4 9.5 5.5 4h13L20 9.5M4 9.5h16M5 9.5V20h14V9.5M10 20v-5h4v5"/>' },
@@ -22,7 +23,7 @@ export const GLYPHS: Record<string, { label: string; path: string }> = {
 export const CUSTOM_GLYPHS = ["toilet", "store", "tree", "school", "star", "pin", "food", "drink"];
 export const CUSTOM_COLORS = ["#3d7fc1", "#7b4fa0", "#2a9d8f", "#e76f51", "#6d597a", "#b5651d"];
 
-export type PoiType = "bins" | "mrt" | "bus" | "youbike" | "drink" | "food" | "report";
+export type PoiType = "bins" | "mrt" | "bus" | "youbike" | "drink" | "food" | "report" | "residential";
 
 export const POI_TYPES: Record<PoiType, IconSpec & { label: string }> = {
   bins: { glyph: "bins", label: "現有清潔箱", color: "#2e6b4f" },
@@ -32,5 +33,6 @@ export const POI_TYPES: Record<PoiType, IconSpec & { label: string }> = {
   drink: { glyph: "drink", label: "飲料店", color: "#c0577a" },
   food: { glyph: "food", label: "餐飲店", color: "#8e5a2b" },
   report: { glyph: "report", label: "市民通報", color: "#d1495b" },
+  residential: { glyph: "home", label: "住宅區", color: "#7b6d5a" },
 };
 

@@ -65,6 +65,22 @@ def load_bins() -> pd.DataFrame | None:
     return out
 
 
+def load_residential() -> pd.DataFrame | None:
+    """住宅區：data/raw/residential.csv（每列一個點，欄位含 緯度、經度）
+
+    建議來源：臺北市都市計畫土地使用分區圖，取「住宅區」的多邊形，
+    在每個多邊形內每隔約 100 公尺取一點（或取街廓中心點）後存成 CSV。
+    """
+    path = RAW / "residential.csv"
+    if not path.exists():
+        return None
+    df = read_csv_any(path)
+    return pd.DataFrame({
+        "lat": pd.to_numeric(df[require(df, "住宅區", "緯度", "lat", "latitude")], errors="coerce"),
+        "lng": pd.to_numeric(df[require(df, "住宅區", "經度", "lng", "longitude")], errors="coerce"),
+    }).dropna(subset=["lat", "lng"])
+
+
 def load_mrt() -> tuple[pd.DataFrame, list[float]] | None:
     """捷運：站點座標 data/raw/mrt_stations.csv（name、lat、lng、district）＋ 人流，人流二選一：
 
@@ -224,8 +240,14 @@ def main() -> None:
     if shops is not None:
         shops.to_csv(BUILD / "real_shops.csv", index=False)
 
+    residential = load_residential()
+    report["residential"] = residential is not None
+    if residential is not None:
+        residential.to_csv(BUILD / "real_residential.csv", index=False)
+
     write_json(BUILD / "load_report.json", report, compact=False)
-    counts = {"bins": bins, "mrt": mrt[0] if mrt else None, "bus": bus, "youbike": youbike, "shops": shops}
+    counts = {"bins": bins, "mrt": mrt[0] if mrt else None, "bus": bus, "youbike": youbike, "shops": shops,
+              "residential": residential}
     for key, ok in report.items():
         n = len(counts[key]) if counts.get(key) is not None else 0
         print(f"  {key:8s} {f'真實資料 {n} 筆' if ok else '找不到，改用模擬'}")

@@ -1,12 +1,16 @@
 import { useEffect, useState } from "react";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, Source } from "./types";
 
+/** 住宅區只有座標與是否模擬 */
+export type ResidentialProps = { simulated: boolean };
+
 export interface AppData {
   bins: FeatureCollection<BinProps>;
   pois: FeatureCollection<PoiProps>;
   reportsSeed: Report[];
   sources: Source[];
   fill: FillData;
+  residential: FeatureCollection<ResidentialProps>;
 }
 
 async function load<T>(name: string): Promise<T> {
@@ -27,9 +31,10 @@ export function useAppData() {
       load<Report[]>("reports_seed.json"),
       load<Source[]>("sources.json"),
       load<FillData>("fill.json"),
+      load<FeatureCollection<ResidentialProps>>("residential.geojson"),
     ])
-      .then(([bins, pois, reportsSeed, sources, fill]) => {
-        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill });
+      .then(([bins, pois, reportsSeed, sources, fill, residential]) => {
+        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill, residential });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {

@@ -4,7 +4,7 @@
 公車站、店家越多，所以熱點會落在合理的位置。固定 seed，每次結果都一樣。
 
 輸出到 pipeline/build/：
-  stations.csv  bins.csv  bus.csv  youbike.csv  shops.csv  reports.csv
+  stations.csv  bins.csv  bus.csv  youbike.csv  shops.csv  reports.csv  residential.csv
   hourly.json   area.json（研究範圍的格子）  sources.json
 """
 
@@ -14,11 +14,12 @@ import numpy as np
 import pandas as pd
 
 from common import BUILD, REFERENCE, SEED, ensure_dirs, haversine_m, offset, read_json, write_json
-from hexgrid import cell_center, grid_disk, latlng_to_cell
+from hexgrid import cell_center, grid_disk, latlng_to_cell, latlng_to_cells
 
 N_BINS = 800          # 主辦說明：目前約 800 組
 N_SPREAD_BUS = 1200   # 研究範圍內平均撒的公車站
 N_REPORTS = 260
+N_RESIDENTIAL = 700   # 住宅街廓的代表點
 AREA_RINGS = 5        # 每個捷運站往外 5 圈（約 1.6 公里）當研究範圍
 
 NIGHT_MARKETS = [
@@ -180,6 +181,28 @@ def simulate_reports(rng, shops, bins, stations) -> pd.DataFrame:
     })
 
 
+def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
+    """住宅街廓的代表點（模擬）。
+
+    候選點是公車站（有站牌代表附近有人住、有人搭車）；
+    同一格裡店家不多（不是商圈）、離大型捷運站越遠，越像住宅區，被挑中的機率越高。
+    用自己的亂數產生器，不影響其他模擬資料的結果。
+    """
+    shop_cells = pd.Series(latlng_to_cells(shops["lat"].values, shops["lng"].values)).value_counts()
+    bus_cells = latlng_to_cells(bus["lat"].values, bus["lng"].values)
+    shops_here = np.array([shop_cells.get(c, 0) for c in bus_cells], dtype=float)
+
+    pressure = station_pressure(bus["lat"], bus["lng"], stations, radius_m=800.0)
+    busy = np.clip(pressure / np.quantile(pressure[pressure > 0], 0.9), 0, 1) if (pressure > 0).any() else 0
+
+    # 住宅區通常有些巷口小店，但不是商圈：格內店家約 0～25 家最像，太多就是商圈
+    weight = np.exp(-(((shops_here - 12) / 25) ** 2)) * (1 - 0.8 * busy) + 1e-6
+    picks = rng.choice(len(bus), size=N_RESIDENTIAL, replace=True, p=weight / weight.sum())
+    lat, lng = offset(bus["lat"].values[picks], bus["lng"].values[picks],
+                      rng.normal(0, 80, N_RESIDENTIAL), rng.normal(0, 80, N_RESIDENTIAL))
+    return pd.DataFrame({"lat": lat, "lng": lng})
+
+
 def build_sources(report: dict) -> list[dict]:
     real = lambda key: bool(report.get(key))  # noqa: E731
     return [
@@ -193,6 +216,9 @@ def build_sources(report: dict) -> list[dict]:
          "note": "交通局 YouBike2.0 臺北市公共自行車即時資訊（站點快照）" if real("youbike") else "捷運站與部分公車站旁撒點"},
         {"key": "shops", "label": "飲料店、餐飲店", "real": real("shops"),
          "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
+        {"key": "residential", "label": "住宅區", "real": real("residential"),
+         "note": "臺北市都市計畫土地使用分區（住宅區）" if real("residential")
+         else "以公車站為候選點，店家不多、離捷運大站較遠的地方視為住宅區。真實資料：臺北市都市計畫土地使用分區圖"},
         {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
         {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
         {"key": "progress", "label": "增設進度", "real": False, "note": "從建議前 30 名隨機指定狀態"},
@@ -211,6 +237,9 @@ def main() -> None:
     shops = pd.read_csv(BUILD / "real_shops.csv", keep_default_na=False) if report.get("shops") else simulate_shops(rng, stations)
     bins = pd.read_csv(BUILD / "real_bins.csv") if report.get("bins") else simulate_bins(rng, stations, bus)
     reports = simulate_reports(rng, shops, bins, stations)
+    # 住宅區用另一個亂數產生器，加進來不會改變上面各資料的模擬結果
+    residential = (pd.read_csv(BUILD / "real_residential.csv") if report.get("residential")
+                   else simulate_residential(np.random.default_rng(SEED + 1), bus, shops, stations))
 
     stations.to_csv(BUILD / "stations.csv", index=False)
     bus.to_csv(BUILD / "bus.csv", index=False)
@@ -218,12 +247,13 @@ def main() -> None:
     shops.to_csv(BUILD / "shops.csv", index=False)
     bins.to_csv(BUILD / "bins.csv", index=False)
     reports.to_csv(BUILD / "reports.csv", index=False)
+    residential.to_csv(BUILD / "residential.csv", index=False)
     write_json(BUILD / "hourly.json", get_hourly(report))
     write_json(BUILD / "area.json", area)
     write_json(BUILD / "sources.json", build_sources(report), compact=False)
 
     print(f"  捷運站 {len(stations)}、公車站 {len(bus)}、YouBike {len(youbike)}、店家 {len(shops)}")
-    print(f"  清潔箱 {len(bins)}、通報 {len(reports)}、研究範圍 {len(area)} 格")
+    print(f"  清潔箱 {len(bins)}、通報 {len(reports)}、住宅區 {len(residential)} 點、研究範圍 {len(area)} 格")
 
 
 if __name__ == "__main__":

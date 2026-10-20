@@ -5,6 +5,7 @@
   pois.geojson        捷運站（含每日人流、行政區）、公車站、YouBike、店家
   bins.geojson        清潔箱（含格子編號、模擬的填滿速度）
   reports_seed.json   歷史通報（模擬）
+  residential.geojson 住宅區的代表點（沒有真實資料時為模擬）
   sources.json        每份資料是真實還是模擬
 """
 
@@ -72,6 +73,7 @@ def main() -> None:
     youbike = pd.read_csv(BUILD / "youbike.csv")
     shops = pd.read_csv(BUILD / "shops.csv")
     reports = pd.read_csv(BUILD / "reports.csv")
+    residential = pd.read_csv(BUILD / "residential.csv")
     sources = read_json(BUILD / "sources.json")
 
     # 先四捨五入到輸出用的精度（約 1 m），格子編號才會和網頁用輸出座標算出來的一致
@@ -100,6 +102,11 @@ def main() -> None:
         + point_features(with_name(shops).assign(simulated=sim["shops"]), ["name", "type", "simulated"], "shop")
     )
     write_json(OUT / "pois.geojson", {"type": "FeatureCollection", "features": pois})
+
+    write_json(OUT / "residential.geojson", {
+        "type": "FeatureCollection",
+        "features": point_features(residential.assign(simulated=sim["residential"]), ["simulated"]),
+    })
 
     reports_out = reports.assign(lat=reports["lat"].round(5), lng=reports["lng"].round(5), simulated=True)
     write_json(OUT / "reports_seed.json", reports_out.to_dict(orient="records"))

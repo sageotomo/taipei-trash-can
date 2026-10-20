@@ -7,7 +7,7 @@ import type { AppData } from "../data";
 import type { DataLayer, LayerPoint } from "./indicators";
 import type { Report } from "../types";
 
-export const BUILTIN_LAYER_IDS = ["mrt", "bus", "youbike", "shops", "bins", "reports"] as const;
+export const BUILTIN_LAYER_IDS = ["mrt", "bus", "youbike", "shops", "bins", "residential", "reports"] as const;
 
 function point(lat: number, lng: number, name?: string, values?: Record<string, number>, tag?: string): LayerPoint {
   return { lat, lng, cell: latLngToCell(lat, lng), name, values, tag };
@@ -27,6 +27,8 @@ export function staticLayers(data: AppData): DataLayer[] {
     point(f.geometry.coordinates[1], f.geometry.coordinates[0], f.properties.id, { fill: Math.round(f.properties.fill_rate * 1000) / 10 })
   );
 
+  const residential = data.residential.features.map((f) => point(f.geometry.coordinates[1], f.geometry.coordinates[0]));
+
   return [
     { id: "mrt", label: "捷運站", unit: "站", icon: POI_TYPES.mrt, source: "mrt", points: by.mrt,
       fields: [{ key: "flow", label: "每日進出人次", unit: "人次" }] },
@@ -35,6 +37,7 @@ export function staticLayers(data: AppData): DataLayer[] {
     { id: "shops", label: "飲料店、餐飲店", unit: "家", icon: POI_TYPES.food, source: "shops", points: by.shops, fields: [] },
     { id: "bins", label: "現有清潔箱", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時" }] },
+    { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential, fields: [] },
   ];
 }
 
