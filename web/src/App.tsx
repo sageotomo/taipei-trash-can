@@ -31,6 +31,8 @@ import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Vi
 import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import type { Report } from "./types";
+import { loadRole, saveRole, type Role } from "./lib/role";
+import { RoleToggle } from "./ui";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
@@ -49,6 +51,8 @@ export type Focus = { lat: number; lng: number; zoom?: number; key: number } | n
 export default function App() {
   const { data, error } = useAppData();
   const [tab, setTab] = useState<TabId>("recommend");
+  const [role, setRole] = useState<Role>(loadRole);
+  useEffect(() => saveRole(role), [role]);
   const [indicators, setIndicators] = useState<Indicator[]>(loadIndicators);
   const [selected, setSelected] = useState<string | null>(null);
   const [visible, setVisible] = useState<Visibility>(DEFAULT_VISIBILITY);
@@ -160,6 +164,7 @@ export default function App() {
 
   return (
     <div className="app">
+      <RoleToggle role={role} onChange={setRole} />
       <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
         <BaseMap />
         <MapPanes />
