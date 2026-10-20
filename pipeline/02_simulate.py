@@ -20,6 +20,21 @@ N_BINS = 800          # 主辦說明：目前約 800 組
 N_SPREAD_BUS = 1200   # 研究範圍內平均撒的公車站
 N_REPORTS = 260
 N_RESIDENTIAL = 700   # 住宅街廓的代表點
+
+# 站名看得出附近明顯不是住宅的公車站，不當住宅區的候選點
+NON_RESIDENTIAL = {
+    "學校": ["國小", "國中", "高中", "高職", "中學", "大學", "學院", "科大", "實小", "附中", "商工", "工商",
+             "家商", "高工", "女中", "小學", "學校", "師大", "台大", "臺大", "政大"],
+    "公家單位": ["市政府", "區公所", "公所", "派出所", "分局", "警察局", "消防", "戶政", "地政", "國稅", "稅捐",
+                 "法院", "地檢", "監理", "衛生所", "健康服務中心", "立法院", "總統府", "行政院", "市議會", "營區",
+                 "監獄", "看守所"],
+    "公園綠地": ["公園", "植物園", "動物園", "河濱", "運動中心", "體育館", "運動場", "綠地", "森林", "步道",
+                 "登山口", "花園", "農場", "風景區"],
+    "醫院": ["醫院", "榮總", "醫學中心", "療養院"],
+    "其他": ["殯儀館", "公墓", "墓園", "機場", "轉運站"],
+}
+# 站名有這些字代表就是住宅區（例如「南港花園社區」「榮光新村(榮總)」），即使也含上面的字仍然保留
+RESIDENTIAL_HINTS = ["社區", "新村", "新城", "國宅", "山莊", "眷村", "大廈", "華廈"]
 AREA_RINGS = 5        # 每個捷運站往外 5 圈（約 1.6 公里）當研究範圍
 
 NIGHT_MARKETS = [
@@ -181,10 +196,20 @@ def simulate_reports(rng, shops, bins, stations) -> pd.DataFrame:
     })
 
 
+def non_residential_mask(names: pd.Series) -> np.ndarray:
+    """站名看得出是學校、公家單位、公園、醫院等明顯不是住宅的地方 → True"""
+    names = names.fillna("").astype(str)
+    words = [w for ws in NON_RESIDENTIAL.values() for w in ws]
+    hit = names.apply(lambda n: any(w in n for w in words))
+    home = names.apply(lambda n: any(w in n for w in RESIDENTIAL_HINTS))
+    return (hit & ~home).values
+
+
 def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
     """住宅街廓的代表點（模擬）。
 
-    候選點是公車站（有站牌代表附近有人住、有人搭車）；
+    候選點是公車站（有站牌代表附近有人住、有人搭車），
+    但站名看得出是學校、公家單位、公園、醫院等的站不算（見 NON_RESIDENTIAL）；
     同一格裡店家不多（不是商圈）、離大型捷運站越遠，越像住宅區，被挑中的機率越高。
     用自己的亂數產生器，不影響其他模擬資料的結果。
     """
@@ -197,6 +222,8 @@ def simulate_residential(rng, bus, shops, stations) -> pd.DataFrame:
 
     # 住宅區通常有些巷口小店，但不是商圈：格內店家約 0～25 家最像，太多就是商圈
     weight = np.exp(-(((shops_here - 12) / 25) ** 2)) * (1 - 0.8 * busy) + 1e-6
+    if "name" in bus.columns:
+        weight = np.where(non_residential_mask(bus["name"]), 0.0, weight)
     picks = rng.choice(len(bus), size=N_RESIDENTIAL, replace=True, p=weight / weight.sum())
     lat, lng = offset(bus["lat"].values[picks], bus["lng"].values[picks],
                       rng.normal(0, 80, N_RESIDENTIAL), rng.normal(0, 80, N_RESIDENTIAL))
@@ -218,7 +245,7 @@ def build_sources(report: dict) -> list[dict]:
          "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
         {"key": "residential", "label": "住宅區", "real": real("residential"),
          "note": "臺北市都市計畫土地使用分區（住宅區）" if real("residential")
-         else "以公車站為候選點，店家不多、離捷運大站較遠的地方視為住宅區。真實資料：臺北市都市計畫土地使用分區圖"},
+         else "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：臺北市都市計畫土地使用分區圖"},
         {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
         {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
         {"key": "progress", "label": "增設進度", "real": False, "note": "從建議前 30 名隨機指定狀態"},
