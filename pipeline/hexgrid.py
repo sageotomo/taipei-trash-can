@@ -17,7 +17,7 @@ import math
 
 import numpy as np
 
-SIZE_M = 190.0          # 中心到頂點的距離
+SIZE_M = 150.0          # 中心到頂點的距離
 LAT0, LNG0 = 25.05, 121.55
 M_PER_DEG_LAT = 6_371_000 * math.pi / 180  # 球面地球，和距離計算（haversine）一致
 M_PER_DEG_LNG = M_PER_DEG_LAT * math.cos(math.radians(LAT0))

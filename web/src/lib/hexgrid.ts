@@ -2,7 +2,7 @@
 // 和 pipeline/hexgrid.py 是同一套演算法，常數必須相同；parity.test.ts 會檢查兩邊算出的格子一致。
 // 演算法參考 https://www.redblobgames.com/grids/hexagons/
 
-export const SIZE_M = 190; // 中心到頂點的距離（公尺）
+export const SIZE_M = 150; // 中心到頂點的距離（公尺）
 const LAT0 = 25.05;
 const LNG0 = 121.55;
 const M_PER_DEG_LAT = (6_371_000 * Math.PI) / 180; // 球面地球，和距離計算（haversine）一致
