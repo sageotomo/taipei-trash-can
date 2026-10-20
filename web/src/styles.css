@@ -1151,3 +1151,81 @@ textarea {
   font-size: 12px;
 }
 .detail-anchor { scroll-margin-top: 8px; }
+
+/* ---------- 匯入資料 ---------- */
+
+.import {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.import .footnote a {
+  margin-left: 6px;
+  color: var(--action);
+}
+
+.field-inline input[type="text"] {
+  flex: 1;
+}
+
+.field-inline input.short {
+  flex: none;
+  width: 70px;
+}
+
+.picker {
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.picker legend {
+  float: left;
+  width: 52px;
+  margin-right: 8px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pick {
+  display: inline-flex;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.pick.active {
+  border-color: var(--ink);
+}
+
+.pick:has(input:focus-visible) {
+  outline: 2px solid var(--action);
+}
+
+.color-dot {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.check input {
+  accent-color: var(--action);
+}
+
+.layer-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}

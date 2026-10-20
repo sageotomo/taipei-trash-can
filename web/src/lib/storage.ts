@@ -1,7 +1,8 @@
-// 使用者的指標設定存在這台裝置的瀏覽器（localStorage），重新整理後還在。
+// 使用者的指標設定與匯入的圖層存在這台裝置的瀏覽器（localStorage），重新整理後還在。
 // 無痕模式或封鎖網站資料時讀寫可能失敗，都包在 try/catch 裡；失敗就用預設值。
 
-import { DEFAULT_INDICATORS, type Indicator } from "./indicators";
+import { DEFAULT_INDICATORS, type DataLayer, type Indicator } from "./indicators";
+import { latLngToCell } from "./hexgrid";
 
 const INDICATORS_KEY = "trash-bins:indicators:v1";
 
@@ -33,5 +34,48 @@ export function saveIndicators(list: Indicator[]): void {
     localStorage.setItem(INDICATORS_KEY, JSON.stringify(list));
   } catch {
     // 存不了就只在這次瀏覽有效
+  }
+}
+
+// ---------------- 匯入的圖層 ----------------
+
+const LAYERS_KEY = "trash-bins:layers:v1";
+
+type StoredPoint = [number, number, string?, Record<string, number>?];
+interface StoredLayer extends Omit<DataLayer, "points"> {
+  points: StoredPoint[];
+}
+
+export function loadCustomLayers(): DataLayer[] {
+  try {
+    const raw = localStorage.getItem(LAYERS_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as StoredLayer[];
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((l) => typeof l?.id === "string" && Array.isArray(l.points) && Array.isArray(l.fields) && l.icon)
+      .map((l) => ({
+        ...l,
+        custom: true,
+        points: l.points
+          .filter((p) => Array.isArray(p) && Number.isFinite(p[0]) && Number.isFinite(p[1]))
+          .map(([lat, lng, name, values]) => ({ lat, lng, cell: latLngToCell(lat, lng), name, values })),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+/** 回傳是否存成功（檔案太大時瀏覽器可能拒絕） */
+export function saveCustomLayers(layers: DataLayer[]): boolean {
+  try {
+    const stored: StoredLayer[] = layers.map(({ points, ...rest }) => ({
+      ...rest,
+      points: points.map((p): StoredPoint => [p.lat, p.lng, p.name, p.values]),
+    }));
+    localStorage.setItem(LAYERS_KEY, JSON.stringify(stored));
+    return true;
+  } catch {
+    return false;
   }
 }

@@ -149,6 +149,7 @@ interface PanelProps {
   place: Placer;
   /** 地圖圖層清單下方的額外內容（匯入資料） */
   layerTools?: ReactNode;
+  onRemoveLayer?: (id: string) => void;
 }
 
 export function RecommendPanel(props: PanelProps) {
@@ -237,6 +238,11 @@ export function RecommendPanel(props: PanelProps) {
                 </span>
                 {l.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === l.source)} />}
               </label>
+              {l.custom && props.onRemoveLayer ? (
+                <button className="link-button danger" onClick={() => props.onRemoveLayer!(l.id)} aria-label={`移除匯入的${l.label}`}>
+                  移除
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -244,7 +250,7 @@ export function RecommendPanel(props: PanelProps) {
         <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span className="legend-item">
-            <Swatch color="#ffffff" shape="hex" />
+            <Swatch color="#e4e8e5" shape="hex" />
             不缺
           </span>
           {LEVELS.map((l) => (
@@ -419,7 +425,7 @@ function IndicatorEditor({ indicators, onChange, result, layers, sources }: {
   );
 }
 
-function SignToggle({ sign, onChange }: { sign: 1 | -1; onChange: (s: 1 | -1) => void }) {
+export function SignToggle({ sign, onChange }: { sign: 1 | -1; onChange: (s: 1 | -1) => void }) {
   return (
     <div className="sign-toggle" role="group" aria-label="方向">
       <button className={sign > 0 ? "on plus" : ""} aria-pressed={sign > 0} onClick={() => onChange(1)}>

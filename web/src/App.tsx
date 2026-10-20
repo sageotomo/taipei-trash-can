@@ -8,12 +8,13 @@ import {
   cellUniverse,
   computeIndex,
   pickRecommendations,
+  type DataLayer,
   type Indicator,
 } from "./lib/indicators";
 import { reportsLayer, staticLayers } from "./lib/datalayers";
 import { makePlacer } from "./lib/place";
 import { makeProgress } from "./lib/progress";
-import { loadIndicators, saveIndicators } from "./lib/storage";
+import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
 import { cellCenter, latLngToCell } from "./lib/hexgrid";
 import { FlyTo, MapClick, MapPanes } from "./map/layers";
 import {
@@ -28,6 +29,7 @@ import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
 import { FillLayers, FillPanel, type FillState } from "./tabs/FillSim";
+import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import type { Report } from "./types";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
@@ -58,7 +60,11 @@ export default function App() {
   const [progressSelected, setProgressSelected] = useState<number | null>(null);
   const [fillState, setFillState] = useState<FillState>({ hour: 18, strategy: "A" }); // 週一 18:00 下班尖峰
 
+  const [customLayers, setCustomLayers] = useState<DataLayer[]>(loadCustomLayers);
+  const [storageOk, setStorageOk] = useState(true);
+
   useEffect(() => saveIndicators(indicators), [indicators]);
+  useEffect(() => setStorageOk(saveCustomLayers(customLayers)), [customLayers]);
 
   const flyTo = useCallback((lat: number, lng: number, zoom = 16) => {
     setFocus({ lat, lng, zoom, key: Date.now() });
@@ -70,7 +76,7 @@ export default function App() {
   // ---- 圖層與缺桶指數 ----
   // 固定圖層只建一次；通報圖層隨使用者新增而變；權重改變時只重算分數，不重新分格
   const fixedLayers = useMemo(() => (data ? staticLayers(data) : []), [data]);
-  const layers = useMemo(() => [...fixedLayers, reportsLayer(allReports)], [fixedLayers, allReports]);
+  const layers = useMemo(() => [...fixedLayers, reportsLayer(allReports), ...customLayers], [fixedLayers, allReports, customLayers]);
   const agg = useMemo(() => aggregate(layers), [layers]);
   const cells = useMemo(() => cellUniverse(agg), [agg]);
   const result = useMemo(() => computeIndex(agg, cells, indicators), [agg, cells, indicators]);
@@ -91,6 +97,22 @@ export default function App() {
     const a = aggregate(base);
     return makeProgress(pickRecommendations(computeIndex(a, cellUniverse(a), DEFAULT_INDICATORS)), place.district);
   }, [data, fixedLayers, place]);
+
+  const importLayer = useCallback(({ layer, addIndicator, sign }: ImportOptions) => {
+    setCustomLayers((prev) => [...prev, layer]);
+    setVisible((v) => ({ ...v, [layer.id]: true }));
+    if (addIndicator) {
+      setIndicators((prev) => [
+        ...prev,
+        { id: `i${layer.id}`, label: layer.label, layer: layer.id, method: "count", sign, weight: 0.1, cap: null },
+      ]);
+    }
+  }, []);
+
+  const removeLayer = useCallback((id: string) => {
+    setCustomLayers((prev) => prev.filter((l) => l.id !== id));
+    setIndicators((prev) => prev.filter((i) => i.layer !== id));
+  }, []);
 
   const selectCell = useCallback(
     (cell: string | null, fly = false) => {
@@ -208,6 +230,8 @@ export default function App() {
               visible={visible}
               onVisible={setVisible}
               place={place}
+              onRemoveLayer={removeLayer}
+              layerTools={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
             />
           ) : null}
           {ready && tab === "fill" ? (
