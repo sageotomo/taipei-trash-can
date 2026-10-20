@@ -17,8 +17,8 @@ import {
   type Indicator,
   type IndexResult,
 } from "../lib/indicators";
-import { cellCenter } from "../lib/hexgrid";
-import { HexLayer, PANES } from "../map/layers";
+import { cellCenter, latLngToCell } from "../lib/hexgrid";
+import { HexLayer, MapClick, PANES } from "../map/layers";
 import { PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, escapeHtml, fmt, fmtValue } from "../ui";
@@ -80,9 +80,21 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
 
   const onClick = useCallback((i: number) => onSelect(cells[i]), [cells, onSelect]);
 
+  // 點的圖層是蓋滿整張地圖的 canvas，會擋住下面六角格的 click；
+  // 所以在地圖層級接 click，用座標換算是哪一格
+  const cellSet = useMemo(() => new Set(cells), [cells]);
+  const onMapClick = useCallback(
+    (lat: number, lng: number) => {
+      const cell = latLngToCell(lat, lng);
+      if (cellSet.has(cell)) onSelect(cell);
+    },
+    [cellSet, onSelect]
+  );
+
   return (
     <>
       <HexLayer cells={cells} style={hexStyle} onClick={onClick} tooltip={tooltip} />
+      <MapClick onClick={onMapClick} />
       <PoiLayers data={data} layers={layers} visible={visible} />
     </>
   );
