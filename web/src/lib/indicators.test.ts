@@ -4,6 +4,8 @@ import {
   aggregate,
   autoCap,
   cellUniverse,
+  dedupeIndicators,
+  freeMethods,
   computeIndex,
   levelOf,
   niceNumber,
@@ -120,5 +122,21 @@ describe("levelOf", () => {
     expect(levelOf(0.2, 1)).toBe(1);
     expect(levelOf(0.4, 1)).toBe(2);
     expect(levelOf(0.9, 1)).toBe(3);
+  });
+});
+
+describe("同一圖層、同一算法不重複", () => {
+  const base: Indicator = { id: "a", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null };
+
+  it("dedupeIndicators 保留第一個", () => {
+    const list = [base, { ...base, id: "b", sign: -1 as const }, { ...base, id: "c", layer: "mrt" }];
+    expect(dedupeIndicators(list).map((i) => i.id)).toEqual(["a", "c"]);
+  });
+
+  it("freeMethods 只回傳還沒用過的算法", () => {
+    const mrt = layer("mrt", [], [{ key: "flow", label: "人流", unit: "人次" }]);
+    expect(freeMethods(mrt, [])).toEqual(["count", "sum:flow"]);
+    expect(freeMethods(mrt, [{ ...base, layer: "mrt" }])).toEqual(["sum:flow"]);
+    expect(freeMethods(layer("bus", []), [base])).toEqual([]);
   });
 });

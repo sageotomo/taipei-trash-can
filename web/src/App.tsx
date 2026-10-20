@@ -231,7 +231,7 @@ export default function App() {
               onVisible={setVisible}
               place={place}
               onRemoveLayer={removeLayer}
-              layerTools={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
+              importTool={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
             />
           ) : null}
           {ready && tab === "fill" ? (

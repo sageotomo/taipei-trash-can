@@ -3,6 +3,9 @@ import type L from "leaflet";
 import {
   DEFAULT_INDICATORS,
   LEVELS,
+  freeMethods,
+  methodKey,
+  usedMethods,
   indicatorUnit,
   levelOf,
   mainReason,
@@ -147,8 +150,8 @@ interface PanelProps {
   visible: Visibility;
   onVisible: (v: Visibility) => void;
   place: Placer;
-  /** 地圖圖層清單下方的額外內容（匯入資料） */
-  layerTools?: ReactNode;
+  /** 匯入資料的元件，放在「新增指標」旁邊 */
+  importTool?: ReactNode;
   onRemoveLayer?: (id: string) => void;
 }
 
@@ -187,7 +190,14 @@ export function RecommendPanel(props: PanelProps) {
         )}
       </div>
 
-      <IndicatorEditor indicators={indicators} onChange={props.onIndicators} result={result} layers={layers} sources={data.sources} />
+      <IndicatorEditor
+        indicators={indicators}
+        onChange={props.onIndicators}
+        result={result}
+        layers={layers}
+        sources={data.sources}
+        importTool={props.importTool}
+      />
 
       <Section title={`建議增設前 ${recommendations.length} 名`}>
         {recommendations.length === 0 ? (
@@ -246,7 +256,6 @@ export function RecommendPanel(props: PanelProps) {
             </li>
           ))}
         </ul>
-        {props.layerTools}
         <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span className="legend-item">
@@ -373,14 +382,17 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
 
 // ---------------- 指標設定 ----------------
 
-function IndicatorEditor({ indicators, onChange, result, layers, sources }: {
+function IndicatorEditor({ indicators, onChange, result, layers, sources, importTool }: {
   indicators: Indicator[];
   onChange: (list: Indicator[]) => void;
   result: IndexResult;
   layers: DataLayer[];
   sources: AppData["sources"];
+  importTool?: ReactNode;
 }) {
   const [adding, setAdding] = useState(false);
+  // 現有圖層還有沒用過的算法時，才顯示「用現有資料新增指標」
+  const canAdd = layers.some((l) => freeMethods(l, indicators).length > 0);
   const isDefault = JSON.stringify(indicators) === JSON.stringify(DEFAULT_INDICATORS);
   const update = (k: number, patch: Partial<Indicator>) => onChange(indicators.map((x, i) => (i === k ? { ...x, ...patch } : x)));
 
@@ -400,26 +412,31 @@ function IndicatorEditor({ indicators, onChange, result, layers, sources }: {
             ind={ind}
             stat={result.stats[k]}
             layer={layers.find((l) => l.id === ind.layer)}
+            taken={usedMethods(indicators, ind.layer, ind.id)}
             sources={sources}
             onChange={(patch) => update(k, patch)}
             onRemove={() => onChange(indicators.filter((_, i) => i !== k))}
           />
         ))}
       </ul>
-      {adding ? (
+      {adding && canAdd ? (
         <AddIndicator
           layers={layers}
+          indicators={indicators}
           onAdd={(ind) => {
             onChange([...indicators, ind]);
             setAdding(false);
           }}
           onCancel={() => setAdding(false)}
         />
-      ) : (
-        <button className="button add-button" onClick={() => setAdding(true)}>
-          ＋ 新增指標
-        </button>
-      )}
+      ) : canAdd ? (
+        <div className="add-buttons">
+          <button className="button add-button" onClick={() => setAdding(true)}>
+            ＋ 用現有資料新增指標
+          </button>
+        </div>
+      ) : null}
+      {importTool}
       <p className="footnote">公車站權重較高，依據是環保局過去的設置作業程序：清潔箱優先設在公車站牌多的地點。</p>
     </Section>
   );
@@ -438,23 +455,29 @@ export function SignToggle({ sign, onChange }: { sign: 1 | -1; onChange: (s: 1 |
   );
 }
 
-function MethodSelect({ layer, value, onChange }: { layer: DataLayer; value: string; onChange: (v: string) => void }) {
+/** taken：已經被其他指標用掉的算法，選項會停用並標示 */
+function MethodSelect({ layer, value, onChange, taken }: { layer: DataLayer; value: string; onChange: (v: string) => void; taken: Set<string> }) {
+  const options = [
+    { value: "count", label: `格內有幾${layer.unit}` },
+    ...layer.fields.map((f) => ({ value: `sum:${f.key}`, label: `格內「${f.label}」加總` })),
+  ];
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)}>
-      <option value="count">格內有幾{layer.unit}</option>
-      {layer.fields.map((f) => (
-        <option key={f.key} value={`sum:${f.key}`}>
-          格內「{f.label}」加總
+      {options.map((o) => (
+        <option key={o.value} value={o.value} disabled={taken.has(o.value)}>
+          {o.label}
+          {taken.has(o.value) ? "（已有這個指標）" : ""}
         </option>
       ))}
     </select>
   );
 }
 
-function IndicatorCard({ ind, stat, layer, sources, onChange, onRemove }: {
+function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onRemove }: {
   ind: Indicator;
   stat: IndexResult["stats"][number];
   layer?: DataLayer;
+  taken: Set<string>;
   sources: AppData["sources"];
   onChange: (patch: Partial<Indicator>) => void;
   onRemove: () => void;
@@ -497,7 +520,8 @@ function IndicatorCard({ ind, stat, layer, sources, onChange, onRemove }: {
                 <span>怎麼算</span>
                 <MethodSelect
                   layer={layer}
-                  value={ind.method === "count" ? "count" : `sum:${ind.field}`}
+                  taken={taken}
+                  value={methodKey(ind)}
                   onChange={(v) =>
                     onChange(v === "count" ? { method: "count", field: undefined, cap: null } : { method: "sum", field: v.slice(4), cap: null })
                   }
@@ -531,11 +555,18 @@ function IndicatorCard({ ind, stat, layer, sources, onChange, onRemove }: {
   );
 }
 
-function AddIndicator({ layers, onAdd, onCancel }: { layers: DataLayer[]; onAdd: (ind: Indicator) => void; onCancel: () => void }) {
-  const [layerId, setLayerId] = useState(layers[0]?.id ?? "");
-  const [method, setMethod] = useState("count");
+function AddIndicator({ layers, indicators, onAdd, onCancel }: {
+  layers: DataLayer[];
+  indicators: Indicator[];
+  onAdd: (ind: Indicator) => void;
+  onCancel: () => void;
+}) {
+  // 只列出還有算法沒被用掉的圖層，避免同一個指標加兩次
+  const choices = layers.filter((l) => freeMethods(l, indicators).length > 0);
+  const [layerId, setLayerId] = useState(choices[0]?.id ?? "");
+  const layer = choices.find((l) => l.id === layerId);
+  const [method, setMethod] = useState(layer ? freeMethods(layer, indicators)[0] : "count");
   const [sign, setSign] = useState<1 | -1>(1);
-  const layer = layers.find((l) => l.id === layerId);
 
   const add = () => {
     if (!layer) return;
@@ -543,7 +574,7 @@ function AddIndicator({ layers, onAdd, onCancel }: { layers: DataLayer[]; onAdd:
     const fieldLabel = layer.fields.find((f) => f.key === field)?.label;
     onAdd({
       id: `c${Date.now().toString(36)}`,
-      label: fieldLabel ? `${layer.label}${fieldLabel}` : layer.label,
+      label: fieldLabel ? `${layer.label}${fieldLabel}` : `${layer.label}數量`,
       layer: layer.id,
       method: field ? "sum" : "count",
       field,
@@ -555,33 +586,43 @@ function AddIndicator({ layers, onAdd, onCancel }: { layers: DataLayer[]; onAdd:
 
   return (
     <div className="detail add-form">
-      <div className="form-title">新增指標</div>
-      <label className="field-inline">
-        <span>圖層</span>
-        <select
-          value={layerId}
-          onChange={(e) => {
-            setLayerId(e.target.value);
-            setMethod("count");
-          }}
-        >
-          {layers.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.label}
-            </option>
-          ))}
-        </select>
-      </label>
-      {layer ? (
-        <label className="field-inline">
-          <span>怎麼算</span>
-          <MethodSelect layer={layer} value={method} onChange={setMethod} />
-        </label>
-      ) : null}
-      <div className="field-inline">
-        <span>方向</span>
-        <SignToggle sign={sign} onChange={setSign} />
-      </div>
+      <div className="form-title">用現有資料新增指標</div>
+      <p className="footnote">
+        從已經載入的圖層，用另一種算法再做一個指標（例如捷運站：人流加總是加分、站數是扣分）。要加入新的資料，例如公共廁所，請用下面的「匯入新資料」。
+      </p>
+      {choices.length === 0 ? (
+        <p className="hint-box">現有圖層能算的指標都已經加了。要加入新的資料，請匯入 CSV。</p>
+      ) : (
+        <>
+          <label className="field-inline">
+            <span>圖層</span>
+            <select
+              value={layerId}
+              onChange={(e) => {
+                const next = choices.find((l) => l.id === e.target.value);
+                setLayerId(e.target.value);
+                if (next) setMethod(freeMethods(next, indicators)[0]);
+              }}
+            >
+              {choices.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          {layer ? (
+            <label className="field-inline">
+              <span>怎麼算</span>
+              <MethodSelect layer={layer} value={method} onChange={setMethod} taken={usedMethods(indicators, layer.id)} />
+            </label>
+          ) : null}
+          <div className="field-inline">
+            <span>方向</span>
+            <SignToggle sign={sign} onChange={setSign} />
+          </div>
+        </>
+      )}
       <div className="form-actions">
         <button className="button" onClick={onCancel}>
           取消

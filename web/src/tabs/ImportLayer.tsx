@@ -95,12 +95,12 @@ export function ImportLayer({ onImport, storageOk }: { onImport: (o: ImportOptio
 
       {!open ? (
         <button className="button add-button" onClick={() => setOpen(true)}>
-          ＋ 匯入資料（CSV）
+          ＋ 匯入新資料（CSV），例如公共廁所
         </button>
       ) : (
         <div className="detail add-form">
           <div className="detail-head">
-            <div className="form-title">匯入資料</div>
+            <div className="form-title">匯入新資料</div>
             <button className="icon-button" onClick={reset} aria-label="取消匯入">
               ×
             </button>

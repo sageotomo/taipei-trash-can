@@ -62,6 +62,35 @@ export const DEFAULT_INDICATORS: Indicator[] = [
 export const TOP_N = 30;
 export const AUTO_CAP_PERCENTILE = 0.9;
 
+// ---------------- 同一圖層、同一算法只能有一個指標 ----------------
+
+/** "count" 或 "sum:欄位"，同一圖層內不能重複 */
+export function methodKey(ind: Pick<Indicator, "method" | "field">): string {
+  return ind.method === "count" ? "count" : `sum:${ind.field}`;
+}
+
+/** 這個圖層已經被其他指標用掉的算法（exceptId：正在編輯的那一個不算） */
+export function usedMethods(indicators: Indicator[], layerId: string, exceptId?: string): Set<string> {
+  return new Set(indicators.filter((i) => i.layer === layerId && i.id !== exceptId).map(methodKey));
+}
+
+/** 這個圖層還可以新增的算法 */
+export function freeMethods(layer: DataLayer, indicators: Indicator[]): string[] {
+  const used = usedMethods(indicators, layer.id);
+  return ["count", ...layer.fields.map((f) => `sum:${f.key}`)].filter((m) => !used.has(m));
+}
+
+/** 移除重複的指標（保留第一個），用來修正舊版存下的設定 */
+export function dedupeIndicators(list: Indicator[]): Indicator[] {
+  const seen = new Set<string>();
+  return list.filter((i) => {
+    const key = `${i.layer}|${methodKey(i)}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 // ---------------- 把點分到格子 ----------------
 
 export interface CellAgg {

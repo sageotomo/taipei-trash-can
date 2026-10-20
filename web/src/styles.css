@@ -1078,6 +1078,7 @@ textarea {
 
 .ind-settings {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 8px;
   padding-top: 8px;
@@ -1132,6 +1133,7 @@ textarea {
 
 .add-form {
   display: grid;
+  grid-template-columns: minmax(0, 1fr); /* 長選項不撐寬面板 */
   gap: 10px;
 }
 
@@ -1156,6 +1158,7 @@ textarea {
 
 .import {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   margin-top: 10px;
 }
@@ -1227,5 +1230,10 @@ textarea {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.add-buttons {
+  display: grid;
   gap: 8px;
 }
