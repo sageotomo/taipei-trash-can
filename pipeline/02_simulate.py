@@ -290,26 +290,47 @@ def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame, stations:
     return pd.DataFrame({"lat": centers[keep, 0], "lng": centers[keep, 1], "homes": value[keep]})
 
 
+# 有真實資料時：說明 + 開放資料連結（網頁上滑鼠移到「真實資料」旁的 ! 會顯示）
+REAL_SOURCES = {
+    "bins": ("環保局「行人專用清潔箱總表」，681 處。檔案裡沒有北投區、南港區只有 4 處，總數也少於環保局 2026 年 8 月報告的 806 組，可能不是最新版。",
+        [{"label": "行人專用清潔箱總表（政府資料開放平臺）", "url": "https://data.gov.tw/dataset/121355"}]),
+    "mrt": ("捷運公司車站資料（74 站座標）＋各站分時進出量 2026 年 9 月，換算成每站每天的進出人次。",
+        [{"label": "臺北捷運車站資料服務", "url": "https://data.taipei/dataset/detail?id=1eefa68d-7c8d-491b-8e75-66a161947426"}, {"label": "臺北捷運各站分時進出量統計", "url": "https://data.taipei/dataset/detail?id=63f31c7e-7fc3-418b-bd82-b95158755b4d"}]),
+    "bus": ("交通局公運處臺北市公車站牌位置圖，3,407 個站位。",
+        [{"label": "臺北市公車站牌位置圖", "url": "https://data.taipei/dataset/detail?id=48aa5bca-2a4f-4fb7-a658-43cba51d5d56"}]),
+    "youbike": ("交通局 YouBike2.0 即時資訊，2026-10-19 的站點快照，只留營運中的 1,792 站。",
+        [{"label": "YouBike2.0臺北市公共自行車即時資訊", "url": "https://data.taipei/dataset/detail?id=c6bc8aed-557d-41d5-bfb1-8da24f78f2fb"}]),
+    "shops": ("飲料店：環保局飲料杯空杯回收點，1,392 家門市（沒參加空杯回收的飲料店不在內）。餐飲店：產業局含餐館業的商業登記清冊，20,285 家。",
+        [{"label": "臺北市飲料杯空杯回收點", "url": "https://data.taipei/dataset/detail?id=3ce36c6a-9c62-4082-8997-5df87fe37106"}, {"label": "設址臺北市所營事業含餐館業清冊", "url": "https://data.taipei/dataset/detail?id=178abc4e-fe32-4fc9-af3a-7baf1c15082c"}]),
+    "residential": ("民政局臺北市門牌位置數值資料（2026-10-02 版）。住宅值 ＝ 住家門牌（門牌扣掉店家）×（1 − 商圈程度），商圈程度看飲料店、餐飲店、捷運人流與夜市／攤販集中場。",
+        [{"label": "臺北市門牌位置數值資料", "url": "https://data.taipei/dataset/detail?id=b7c8e724-1e98-45ee-a0bd-f3840623ed97"}, {"label": "臺北市臨時攤販集中場", "url": "https://data.taipei/dataset/detail?id=c013d9ec-a550-46bd-ac60-45f085930706"}]),
+}
+# 沒有真實資料時的模擬方法
+SIMULATED_NOTES = {
+    "bins": "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口",
+    "mrt": "站點座標為近似值，每日人流為模擬",
+    "bus": "依捷運人流在站點周邊撒點",
+    "youbike": "捷運站與部分公車站旁撒點",
+    "shops": "依捷運人流與夜市位置撒點",
+    "residential": "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：民政局臺北市門牌位置數值資料",
+}
+# 一定是模擬的資料：模擬方法
+ALWAYS_SIMULATED = [
+    {"key": "reports", "label": "歷史通報", "real": False, "note": "模擬 260 件，三類：亂丟垃圾 50%、垃圾桶滿溢 25%、家戶垃圾棄置 25%。從店家位置抽樣，200 公尺內沒有垃圾桶的店家被抽中的機率是 4 倍，再隨機偏移約 60 公尺，日期分布在最近 60 天。使用者在網頁上新增的通報也會算進來。"},
+    {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明這份資料不存在。假設每個垃圾桶都有填滿感測器，模擬一週每小時的填滿度：每小時增加量 ＝ 這個桶的填滿速度 × 時段係數（用捷運真實的分時人流）× 週末係數 1.15 ＋ 隨機雜訊。附近捷運人流與店家越多，填滿速度越快。"},
+    {"key": "progress", "label": "增設進度", "real": False, "note": "假設市府採納了預設指標下的建議增設前 30 名，用固定亂數種子隨機指定狀態：已設置 30%、施工中 20%、規劃中 27%、未處理 23%。實際上應由環保局每週更新。"},
+]
+
+
 def build_sources(report: dict) -> list[dict]:
-    real = lambda key: bool(report.get(key))  # noqa: E731
-    return [
-        {"key": "bins", "label": "行人專用垃圾桶", "real": real("bins"),
-         "note": "環保局開放資料（正式名稱「行人專用清潔箱」）" if real("bins") else "以公車站、捷運站為候選點模擬 800 組，並刻意在部分地區留下缺口"},
-        {"key": "mrt", "label": "捷運站與人流", "real": real("mrt"),
-         "note": "捷運公司車站資料（座標）＋各站分時進出量 2026 年 9 月（人流）" if real("mrt") else "站點座標為近似值，每日人流為模擬"},
-        {"key": "bus", "label": "公車站牌", "real": real("bus"),
-         "note": "交通局公運處臺北市公車站牌位置圖" if real("bus") else "依捷運人流在站點周邊撒點"},
-        {"key": "youbike", "label": "YouBike 站點", "real": real("youbike"),
-         "note": "交通局 YouBike2.0 臺北市公共自行車即時資訊（站點快照）" if real("youbike") else "捷運站與部分公車站旁撒點"},
-        {"key": "shops", "label": "飲料店、餐飲店", "real": real("shops"),
-         "note": "環保局飲料杯空杯回收點（飲料店）＋產業局含餐館業商業登記清冊（餐飲店）" if real("shops") else "依捷運人流與夜市位置撒點"},
-        {"key": "residential", "label": "住宅區", "real": real("residential"),
-         "note": "民政局臺北市門牌位置數值資料：住家門牌（門牌扣掉店家）×（1 − 商圈程度），商圈程度看飲料店、餐飲店、捷運人流與夜市／攤販集中場" if real("residential")
-         else "以公車站為候選點（排除站名是學校、公家單位、公園、醫院等的站），店家不多、離捷運大站較遠的地方視為住宅區。真實資料：民政局臺北市門牌位置數值資料"},
-        {"key": "reports", "label": "歷史通報", "real": False, "note": "店家多、附近沒有桶的地方較常出現"},
-        {"key": "fill", "label": "智慧垃圾桶填滿紀錄", "real": False, "note": "主辦說明此資料不存在，依人流與時段模擬"},
-        {"key": "progress", "label": "增設進度", "real": False, "note": "從建議前 30 名隨機指定狀態"},
-    ]
+    out = []
+    for key, label in {"bins": "行人專用垃圾桶", "mrt": "捷運站與人流", "bus": "公車站牌", "youbike": "YouBike 站點", "shops": "飲料店、餐飲店", "residential": "住宅區"}.items():
+        if report.get(key):
+            note, links = REAL_SOURCES[key]
+            out.append({"key": key, "label": label, "real": True, "note": note, "links": links})
+        else:
+            out.append({"key": key, "label": label, "real": False, "note": SIMULATED_NOTES[key]})
+    return out + ALWAYS_SIMULATED
 
 
 def main() -> None:

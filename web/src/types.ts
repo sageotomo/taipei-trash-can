@@ -53,7 +53,8 @@ export interface Source {
   key: string;
   label: string;
   real: boolean;
-  note: string;
+  note: string;                              // 真實：資料來源說明；模擬：模擬方法
+  links?: { label: string; url: string }[];  // 真實資料的開放資料網址
 }
 
 export type Strategy = "A" | "B";

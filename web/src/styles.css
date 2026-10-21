@@ -291,14 +291,103 @@ textarea {
   vertical-align: 1px;
 }
 
+/* 真實／模擬：實心底色，放在淺綠、淺粉紅卡片上也看得出來 */
 .tag-real {
-  background: var(--action-soft);
-  color: var(--action);
+  background: #2e6b4f;
+  color: #fff;
 }
 
 .tag-sim {
-  background: #f1ece0;
-  color: #7a6a43;
+  background: #b86b16;
+  color: #fff;
+}
+
+.source-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.source-tag .tag {
+  margin-left: 0;
+}
+
+.section-head .source-tag,
+.ind-label .source-tag {
+  margin-left: 6px;
+}
+
+/* 「!」說明按鈕 */
+.source-info {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  background: var(--surface);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.source-info.real {
+  color: #2e6b4f;
+}
+
+.source-info.sim {
+  color: #b86b16;
+}
+
+.source-info:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 1px;
+}
+
+.source-tip {
+  position: fixed;
+  z-index: 2000;
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
+  color: var(--ink, #1f2a24);
+  font-size: 12.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  text-align: left;
+  white-space: normal;
+}
+
+.source-tip-head {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.source-tip-head.real {
+  color: #2e6b4f;
+}
+
+.source-tip-head.sim {
+  color: #b86b16;
+}
+
+.source-tip-links {
+  display: grid;
+  gap: 2px;
+}
+
+.source-tip-links a {
+  color: var(--action);
+  overflow-wrap: anywhere;
 }
 
 .swatch {
