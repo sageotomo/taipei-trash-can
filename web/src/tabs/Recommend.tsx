@@ -533,8 +533,21 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
           {/* 資料標示接在計算說明的最後面 */}
           {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === indicatorSource(ind, layer))} />}
         </span>
-        <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
-          {open ? "收起" : "設定"}
+      </div>
+      <div className="story-controls">
+        <label className="story-control">
+          <span>加入需求計算：</span>
+          <Switch on={on} onChange={onToggle} label={`把「${ind.label}」加入需求計算`} />
+        </label>
+        <button
+          className={`small-button settings-toggle${open ? " active" : ""}`}
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-label={open ? `收起「${ind.label}」的計算方式` : `調整「${ind.label}」的計算方式`}
+        >
+          <span aria-hidden="true">⚙</span>
+          {open ? "收起" : "調整計算方式"}
+          <span aria-hidden="true" className="chev">{open ? "▴" : "▾"}</span>
         </button>
       </div>
       {open ? (
@@ -585,12 +598,6 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
           </button>
         </div>
       ) : null}
-      <div className="story-controls">
-        <label className="story-control">
-          <span>加入需求計算：</span>
-          <Switch on={on} onChange={onToggle} label={`把「${ind.label}」加入需求計算`} />
-        </label>
-      </div>
     </li>
   );
 }
