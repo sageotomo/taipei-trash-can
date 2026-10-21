@@ -285,9 +285,17 @@ def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame, stations:
         near_market = d.min(axis=1) < MARKET_RADIUS_M
     commercial = np.maximum.reduce([ratio(drinks).values, ratio(food).values, ratio(flow).values, near_market.astype(float)])
 
+    # 點位用格內門牌的加權平均位置，不用 hex 中心：沿河、沿山的格子中心可能落在河裡或山上，
+    # 門牌其實都在格子的一邊。hex 是凸多邊形，平均位置一定還在同一格，所以住宅值不受影響。
+    cell_of = latlng_to_cells(addresses["lat"].values, addresses["lng"].values)
+    w = pd.Series(np.ones(len(addresses)) if n is None else n.values, index=cell_of)
+    pos_lat = (pd.Series(addresses["lat"].values, index=cell_of) * w).groupby(level=0).sum() / w.groupby(level=0).sum()
+    pos_lng = (pd.Series(addresses["lng"].values, index=cell_of) * w).groupby(level=0).sum() / w.groupby(level=0).sum()
+
     value = np.round(homes.values * (1 - commercial)).astype(int)
     keep = value >= MIN_RESIDENTIAL
-    return pd.DataFrame({"lat": centers[keep, 0], "lng": centers[keep, 1], "homes": value[keep]})
+    return pd.DataFrame({"lat": pos_lat.reindex(cells).values[keep], "lng": pos_lng.reindex(cells).values[keep],
+                         "homes": value[keep]})
 
 
 # 有真實資料時：說明 + 開放資料連結（網頁上滑鼠移到「真實資料」旁的 ! 會顯示）
