@@ -66,6 +66,8 @@ export default function App() {
   const [district, setDistrict] = useState("全部");
   const [progressSelected, setProgressSelected] = useState<number | null>(null);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
+  // 右側面板可收起，讓地圖佔滿整個畫面
+  const [panelOpen, setPanelOpen] = useState(true);
   const liveTime = useLiveTime();
 
   const [customLayers, setCustomLayers] = useState<DataLayer[]>(loadCustomLayers);
@@ -177,14 +179,25 @@ export default function App() {
   const wide = tab === "fill" && role === "gov";
 
   return (
-    <div className={wide ? "app wide" : "app"}>
+    <div className={["app", wide ? "wide" : "", panelOpen ? "" : "collapsed"].filter(Boolean).join(" ")}>
       <RoleToggle role={role} onChange={setRole} />
+      <button
+        type="button"
+        className="panel-toggle"
+        aria-controls="side-panel"
+        aria-expanded={panelOpen}
+        aria-label={panelOpen ? "收起側邊欄" : "打開側邊欄"}
+        title={panelOpen ? "收起側邊欄" : "打開側邊欄"}
+        onClick={() => setPanelOpen((v) => !v)}
+      >
+        <span aria-hidden="true">{panelOpen ? "›" : "‹"}</span>
+      </button>
       <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
         <BaseMap />
         <MapPanes />
         <FlyTo target={focus} />
         <CellScale />
-        <InvalidateSize dep={wide} />
+        <InvalidateSize dep={`${wide}-${panelOpen}`} />
         {ready && tab === "recommend" ? (
           <RecommendLayers
             data={data}
@@ -224,7 +237,7 @@ export default function App() {
         ) : null}
       </MapContainer>
 
-      <aside className="panel">
+      <aside id="side-panel" className="panel" aria-hidden={!panelOpen} inert={!panelOpen}>
         <header className="panel-header">
           <h1>找回消失的垃圾桶</h1>
           <p>台北行人垃圾桶從近 3,000 組剩下約 800 組。哪裡最缺？為什麼？</p>

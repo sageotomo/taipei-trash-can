@@ -143,8 +143,9 @@ export function MapClick({ onClick }: { onClick: (lat: number, lng: number) => v
 export function InvalidateSize({ dep }: { dep: unknown }) {
   const map = useMap();
   useEffect(() => {
-    const id = window.setTimeout(() => map.invalidateSize(), 50);
-    return () => window.clearTimeout(id);
+    // 面板寬度有 0.2 秒動畫，動畫中和結束後各重算一次地圖大小
+    const ids = [50, 260].map((ms) => window.setTimeout(() => map.invalidateSize(), ms));
+    return () => ids.forEach((id) => window.clearTimeout(id));
   }, [dep, map]);
   return null;
 }
