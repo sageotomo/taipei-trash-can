@@ -40,8 +40,8 @@ import { RoleToggle } from "./ui";
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "recommend", label: "缺垃圾桶指數" },
-  { id: "fill", label: "垃圾桶填滿度" },
+  { id: "recommend", label: "缺桶程度" },
+  { id: "fill", label: "滿桶狀況" },
   { id: "reports", label: "市民通報" },
   { id: "progress", label: "施政進度" },
 ];

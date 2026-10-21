@@ -1,5 +1,5 @@
 // 地圖左下角的「顯示 icon」小框：每個圖層一行（圖示、名稱、開關），控制地圖上要不要標出那類地點。
-// 只影響地圖顯示，不影響缺垃圾桶指數的計算。市民和政府單位視角共用。
+// 只影響地圖顯示，不影響缺桶程度的計算。市民和政府單位視角共用。
 
 import { useEffect, useId, useRef, useState } from "react";
 import L from "leaflet";
