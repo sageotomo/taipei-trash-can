@@ -528,8 +528,8 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
       </div>
       <div className="story-controls">
         <label className="story-control">
-          <span>加入需求計算：</span>
-          <Switch on={on} onChange={onToggle} label={`把「${ind.label}」加入需求計算`} />
+          <span>加入缺桶程度計算：</span>
+          <Switch on={on} onChange={onToggle} label={`把「${ind.label}」加入缺桶程度計算`} />
         </label>
         <button
           className={`small-button settings-toggle${open ? " active" : ""}`}
@@ -750,8 +750,8 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                 </div>
                 <div className="story-controls">
                   <label className="story-control">
-                    <span>加入需求計算：</span>
-                    <Switch on={on} onChange={(v) => toggle(k, v)} label={`把「${story?.title ?? ind.label}」加入需求計算`} />
+                    <span>加入缺桶程度計算：</span>
+                    <Switch on={on} onChange={(v) => toggle(k, v)} label={`把「${story?.title ?? ind.label}」加入缺桶程度計算`} />
                   </label>
                 </div>
               </li>

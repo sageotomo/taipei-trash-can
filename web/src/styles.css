@@ -2003,7 +2003,7 @@ textarea {
   transition: opacity 0.15s;
 }
 
-/* 卡片最下面一行：加入需求計算的開關 */
+/* 卡片最下面一行：加入缺桶程度計算的開關 */
 .story-controls {
   display: flex;
   flex-wrap: wrap;
