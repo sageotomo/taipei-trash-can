@@ -26,13 +26,13 @@ export const CUSTOM_COLORS = ["#3d7fc1", "#7b4fa0", "#2a9d8f", "#e76f51", "#6d59
 export type PoiType = "bins" | "mrt" | "bus" | "youbike" | "drink" | "food" | "report" | "residential";
 
 export const POI_TYPES: Record<PoiType, IconSpec & { label: string }> = {
-  bins: { glyph: "bins", label: "現有垃圾桶", color: "#2e6b4f" },
-  mrt: { glyph: "mrt", label: "捷運站", color: "#1d4e89" },
-  bus: { glyph: "bus", label: "公車站", color: "#5f6f74" },
+  bins: { glyph: "bins", label: "現有垃圾桶", color: "#3f9a6c" },
+  mrt: { glyph: "mrt", label: "捷運站", color: "#3d7fc1" },
+  bus: { glyph: "bus", label: "公車站", color: "#6f8a91" },
   youbike: { glyph: "youbike", label: "YouBike 站", color: "#d38b12" },
   drink: { glyph: "drink", label: "飲料店", color: "#c0577a" },
-  food: { glyph: "food", label: "餐飲店", color: "#8e5a2b" },
-  report: { glyph: "report", label: "市民通報", color: "#d1495b" },
-  residential: { glyph: "home", label: "住宅區", color: "#7b6d5a" },
+  food: { glyph: "food", label: "餐飲店", color: "#b07840" },
+  report: { glyph: "report", label: "市民通報", color: "#e0566a" },
+  residential: { glyph: "home", label: "住宅區", color: "#9a8a72" },
 };
 

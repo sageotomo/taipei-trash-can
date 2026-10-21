@@ -1,25 +1,31 @@
 @import url("https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap");
 
 :root {
-  /* 色票：冷調紙白底、藍灰墨色、清潔隊綠為操作色 */
-  --paper: #f3f5f2;
-  --surface: #ffffff;
-  --ink: #1b2a2f;
-  --muted: #5f6f74;
-  --rule: #d6dcd8;
-  --action: #2e6b4f;
-  --action-soft: #e3efe8;
+  /* 色票：深藍灰底、橘紅為主色、青綠為輔色（需要更多色階時調深淺） */
+  --paper: #131f24;
+  --surface: #19242e;
+  --surface-2: #1f2c37;
+  --ink: #e4ebe8;
+  --muted: #8a9ea3;
+  --rule: #2b3b45;
+  --action: #e16f4c;
+  --action-strong: #f08a64;
+  --action-soft: #3a2620;
+  --on-action: #14202a;
+  --teal: #3f7f8a;
+  --teal-soft: #1f404b;
+  --teal-ink: #7fb3bb;
 
   /* 填滿狀態 */
-  --ok: #3c9a5f;
+  --ok: #4caf7d;
   --warn: #e3b23c;
-  --full: #d1495b;
+  --full: #e0566a;
 
   --font-display: "Huninn", "Noto Sans TC", system-ui, sans-serif;
   --font-body: "Noto Sans TC", system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
 
   --panel-width: 400px;
-  color-scheme: light;
+  color-scheme: dark;
 }
 
 * {
@@ -91,7 +97,7 @@ textarea {
   border: 1px solid var(--rule);
   border-right: 0;
   border-radius: 8px 0 0 8px;
-  box-shadow: -2px 0 4px rgba(27, 42, 47, 0.08);
+  box-shadow: -2px 0 4px rgba(0, 0, 0, 0.19);
   font-size: 20px;
   line-height: 1;
   cursor: pointer;
@@ -110,7 +116,7 @@ textarea {
 .map {
   height: 100%;
   width: 100%;
-  background: #e8ece9;
+  background: var(--paper);
 }
 
 .panel {
@@ -144,7 +150,7 @@ textarea {
   background: var(--paper);
   border: 1px solid var(--rule);
   border-radius: 999px;
-  box-shadow: 0 1px 3px rgba(27, 42, 47, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
 }
 
 .role-toggle-label {
@@ -165,12 +171,13 @@ textarea {
 
 .role-toggle button.on {
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
   font-weight: 500;
 }
 
 .panel-header h1 {
   margin: 0;
+  color: var(--action);
   font-family: var(--font-display);
   font-size: 26px;
   font-weight: 400;
@@ -199,17 +206,21 @@ textarea {
   white-space: nowrap;
   border: 0;
   border-radius: 7px;
-  background: transparent;
-  color: var(--muted);
+  background: var(--teal-soft);
+  color: var(--teal-ink);
   font-family: var(--font-display);
   font-size: 15px;
   cursor: pointer;
 }
 
-.tab.active {
-  background: var(--surface);
+.tab:hover:not(.active) {
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(27, 42, 47, 0.12);
+}
+
+.tab.active {
+  background: var(--action);
+  color: var(--on-action);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.29);
 }
 
 .panel-body {
@@ -235,8 +246,8 @@ textarea {
 .error {
   padding: 12px;
   border-radius: 8px;
-  background: #fbe4e7;
-  color: #8a1f2d;
+  background: #4a2228;
+  color: #f5a3ae;
 }
 
 .hint-box {
@@ -320,7 +331,7 @@ textarea {
 .button.primary {
   border-color: var(--action);
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
 }
 
 .button:disabled {
@@ -342,13 +353,13 @@ textarea {
 
 /* 真實／模擬：實心底色，放在淺綠、淺粉紅卡片上也看得出來 */
 .tag-real {
-  background: #2e6b4f;
-  color: #fff;
+  background: var(--teal);
+  color: var(--on-action);
 }
 
 .tag-sim {
   background: #b86b16;
-  color: #fff;
+  color: var(--on-action);
 }
 
 .source-tag {
@@ -385,11 +396,11 @@ textarea {
 }
 
 .source-info.real {
-  color: #2e6b4f;
+  color: var(--teal-ink);
 }
 
 .source-info.sim {
-  color: #b86b16;
+  color: #e8a35a;
 }
 
 .source-info:focus-visible {
@@ -406,8 +417,8 @@ textarea {
   border: 1px solid var(--rule);
   border-radius: 8px;
   background: var(--surface);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16);
-  color: var(--ink, #1f2a24);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
   font-size: 12.5px;
   font-weight: 400;
   line-height: 1.55;
@@ -421,11 +432,11 @@ textarea {
 }
 
 .source-tip-head.real {
-  color: #2e6b4f;
+  color: var(--teal-ink);
 }
 
 .source-tip-head.sim {
-  color: #b86b16;
+  color: #e8a35a;
 }
 
 .source-tip-links {
@@ -656,6 +667,61 @@ textarea {
 
 .leaflet-tooltip {
   font-family: var(--font-body);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid var(--rule);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+
+.leaflet-tooltip-top::before { border-top-color: var(--surface-2); }
+.leaflet-tooltip-bottom::before { border-bottom-color: var(--surface-2); }
+.leaflet-tooltip-left::before { border-left-color: var(--surface-2); }
+.leaflet-tooltip-right::before { border-right-color: var(--surface-2); }
+
+.leaflet-popup-content-wrapper,
+.leaflet-popup-tip {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.leaflet-bar a,
+.leaflet-bar a:hover {
+  background: var(--surface);
+  color: var(--ink);
+  border-bottom-color: var(--rule);
+}
+
+.leaflet-bar a:hover {
+  background: var(--surface-2);
+  color: var(--action);
+}
+
+.leaflet-bar a.leaflet-disabled {
+  background: var(--surface);
+  color: var(--muted);
+}
+
+.leaflet-touch .leaflet-bar {
+  border-color: var(--rule);
+}
+
+.leaflet-container .leaflet-control-attribution {
+  background: rgba(19, 31, 36, 0.8);
+  color: var(--muted);
+}
+
+.leaflet-container .leaflet-control-attribution a {
+  color: var(--teal-ink);
+}
+
+/* 輸入框、下拉選單在深色底上 */
+:where(input:not([type="checkbox"], [type="radio"], [type="range"]), select, textarea) {
+  background-color: var(--surface-2);
+  border-color: var(--rule);
+}
+
+:where(a) {
+  color: var(--action-strong);
 }
 
 .app.wide {
@@ -729,13 +795,13 @@ textarea {
   height: 9px;
   border-radius: 50%;
   background: var(--full);
-  box-shadow: 0 0 0 0 rgba(209, 73, 91, 0.5);
+  box-shadow: 0 0 0 0 rgba(224, 86, 106, 0.5);
   animation: live-pulse 2s infinite;
 }
 
 @keyframes live-pulse {
-  70% { box-shadow: 0 0 0 8px rgba(209, 73, 91, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(209, 73, 91, 0); }
+  70% { box-shadow: 0 0 0 8px rgba(224, 86, 106, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(224, 86, 106, 0); }
 }
 
 .fill-summary {
@@ -764,7 +830,7 @@ textarea {
 .battery-icon {
   width: 11px;
   height: 7px;
-  border: 1.5px solid #8a6410;
+  border: 1.5px solid #f0c75e;
   border-radius: 2px;
 }
 
@@ -777,11 +843,11 @@ textarea {
   color: var(--ink);
 }
 
-.tone-ok { color: #2a6e43 !important; }
-.tone-warn { color: #8a6410 !important; }
-.tone-full { color: #a52a3c !important; }
+.tone-ok { color: #6fcf97 !important; }
+.tone-warn { color: #f0c75e !important; }
+.tone-full { color: #f08494 !important; }
 .strong { font-weight: 700; }
-.warn-text { color: #8a6410; }
+.warn-text { color: #f0c75e; }
 
 .button.locate {
   width: 100%;
@@ -881,7 +947,7 @@ textarea {
   padding: 0 8px;
   border-radius: 999px;
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
   font-size: 12px;
 }
 
@@ -1056,7 +1122,7 @@ textarea {
 .segment.active {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: 0 1px 2px rgba(27, 42, 47, 0.12);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.29);
 }
 
 .counters {
@@ -1115,7 +1181,7 @@ textarea {
   border: 0;
   border-radius: 50%;
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
   font-size: 13px;
   cursor: pointer;
 }
@@ -1135,15 +1201,15 @@ textarea {
 .pill {
   padding: 1px 8px;
   border-radius: 999px;
-  background: #fbf0d4;
-  color: #7a5a10;
+  background: #3d3218;
+  color: #f0c75e;
   font-size: 12px;
   white-space: nowrap;
 }
 
 .pill-full {
-  background: #fbe4e7;
-  color: #8a1f2d;
+  background: #4a2228;
+  color: #f5a3ae;
 }
 
 /* ---------- 市民通報 ---------- */
@@ -1249,7 +1315,7 @@ textarea {
 }
 
 .advice-add {
-  border-left-color: #9e3412;
+  border-left-color: var(--action);
 }
 
 .advice-collect {
@@ -1257,7 +1323,7 @@ textarea {
 }
 
 .advice-enforce {
-  border-left-color: #7b4fa0;
+  border-left-color: #a07bd0;
 }
 
 .advice-none {
@@ -1379,7 +1445,12 @@ textarea {
 
 /* 底圖淡化成灰階，讓網格和點位成為主角 */
 .basemap {
-  filter: grayscale(0.9) contrast(0.85) brightness(1.06);
+  filter: brightness(0.95) contrast(1.05);
+}
+
+/* 備用底圖是淺色的，反相後染成同色系 */
+.basemap-invert {
+  filter: invert(1) grayscale(1) brightness(0.62) contrast(1.15) sepia(0.4) hue-rotate(155deg) saturate(1.4);
 }
 
 /* ---------- 點位圖示 ---------- */
@@ -1396,8 +1467,8 @@ textarea {
 .poi-marker {
   width: 24px;
   height: 24px;
-  border: 1.5px solid #ffffff;
-  box-shadow: 0 1px 3px rgba(27, 42, 47, 0.35);
+  border: 1.5px solid var(--paper);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 
 .layer-icons {
@@ -1429,14 +1500,14 @@ textarea {
 /* ---------- 缺桶指數：公式、明細、指標設定 ---------- */
 
 :root {
-  --plus: #2e6b4f;
-  --minus: #b23a48;
-  --minus-soft: #f6e3e5;
+  --plus: #4caf7d;
+  --minus: #e0566a;
+  --minus-soft: #3a2228;
   /* 指標卡片底色：正相關（↑ 需要桶）淺綠、負相關（↓ 較不需要）淺粉紅 */
-  --plus-card: #eef7f1;
-  --plus-card-rule: #cde4d6;
-  --minus-card: #fcf0f2;
-  --minus-card-rule: #f0d3d8;
+  --plus-card: #1b2f28;
+  --plus-card-rule: #2b4a3b;
+  --minus-card: #2e1f26;
+  --minus-card-rule: #4e2c36;
 }
 
 .story-card.plus-card,
@@ -1732,8 +1803,8 @@ textarea {
 }
 
 .tag-import {
-  background: #e6eef8;
-  color: #2c5d94;
+  background: #1f3550;
+  color: #8fb8e8;
 }
 
 .layer-name {
@@ -1843,8 +1914,8 @@ textarea {
   padding: 6px 8px;
   border: 1px solid var(--rule);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  background: rgba(25, 36, 46, 0.94);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   font-size: 12px;
 }
 
@@ -1926,7 +1997,7 @@ textarea {
   align-items: center;
   gap: 6px;
   padding: 3px 9px 3px 7px;
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(25, 36, 46, 0.92);
   border: 1px solid var(--rule);
   border-radius: 6px;
   font-size: 12px;
@@ -1954,7 +2025,7 @@ textarea {
   padding: 0;
   border: 0;
   border-radius: 999px;
-  background: #c9d1cd;
+  background: #3a4b55;
   cursor: pointer;
   transition: background 0.15s;
 }
@@ -1966,8 +2037,8 @@ textarea {
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 1px 2px rgba(27, 42, 47, 0.25);
+  background: var(--ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   transition: transform 0.15s;
 }
 
@@ -2085,7 +2156,7 @@ textarea {
   flex: none;
   padding: 1px 8px;
   border-radius: 999px;
-  color: #fff;
+  color: var(--on-action);
   font-size: 12px;
   font-weight: 500;
   white-space: nowrap;
@@ -2141,7 +2212,7 @@ textarea {
   justify-items: center;
   gap: 2px;
   padding: 14px 10px;
-  border: 1px dashed #aab5b1;
+  border: 1px dashed #4a5d66;
   border-radius: 10px;
   background: var(--surface);
   color: var(--ink);
@@ -2311,7 +2382,7 @@ textarea {
   padding: 0 5px;
   border-radius: 4px;
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
   font-size: 11px;
 }
 
@@ -2461,10 +2532,10 @@ textarea {
   padding: 7px 14px;
   border-radius: 999px;
   background: var(--ink);
-  color: #fff;
+  color: var(--on-action);
   font-size: 13.5px;
   line-height: 1.4;
-  box-shadow: 0 2px 8px rgba(27, 42, 47, 0.25);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   pointer-events: none;
   animation: map-hint-in 0.3s ease;
 }
@@ -2478,8 +2549,8 @@ textarea {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #fff;
-  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7);
+  background: var(--action);
+  box-shadow: 0 0 0 0 rgba(225, 111, 76, 0.7);
   animation: map-hint-pulse 1.6s ease-out infinite;
 }
 
@@ -2496,7 +2567,7 @@ textarea {
 
 @keyframes map-hint-pulse {
   to {
-    box-shadow: 0 0 0 8px rgba(255, 255, 255, 0);
+    box-shadow: 0 0 0 8px rgba(225, 111, 76, 0);
   }
 }
 
@@ -2553,7 +2624,7 @@ textarea {
 .step-current .step-num {
   border-color: var(--action);
   background: var(--action);
-  color: #fff;
+  color: var(--on-action);
 }
 
 .step-current .step-body b {
@@ -2619,12 +2690,12 @@ textarea {
 }
 
 .key-mine {
-  background: #d1495b;
+  background: var(--full);
   border: 2px solid var(--ink);
 }
 
 .key-draft {
-  background: #fff;
+  background: var(--surface);
   border: 2px dashed var(--ink);
 }
 
@@ -2660,8 +2731,8 @@ textarea {
   margin-left: 4px;
   padding: 0 6px;
   border-radius: 4px;
-  background: #fbe4e7;
-  color: #8a1f2d;
+  background: #4a2228;
+  color: #f5a3ae;
   font-size: 11.5px;
 }
 
@@ -2735,7 +2806,7 @@ textarea {
 }
 
 .progress-table tr.outside td {
-  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(27, 42, 47, 0.03) 6px 12px);
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255, 255, 255, 0.04) 6px 12px);
 }
 
 .progress-table tr.outside .cell-button {

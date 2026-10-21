@@ -8,9 +8,9 @@ export const CASE_STATUSES = ["待處理", "已派工", "處理中", "已結案"
 export type CaseStatus = (typeof CASE_STATUSES)[number];
 
 export const CASE_COLORS: Record<CaseStatus, string> = {
-  待處理: "#d1495b",
+  待處理: "#e0566a",
   已派工: "#e3b23c",
-  處理中: "#3d7fc1",
+  處理中: "#4f93d6",
   已結案: "#8c9a9e",
 };
 

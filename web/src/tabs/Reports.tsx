@@ -9,14 +9,15 @@ import type { Role } from "../lib/role";
 import { Section, SourceTag, Swatch, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Report } from "../types";
+import { MAP } from "../lib/theme";
 
 export const CATEGORY_COLORS: Record<string, string> = {
-  亂丟垃圾: "#d1495b",
+  亂丟垃圾: "#e0566a",
   垃圾桶滿溢: "#e3b23c",
-  家戶垃圾棄置: "#7b4fa0",
+  家戶垃圾棄置: "#a07bd0",
 };
 
-const HOT_COLORS = ["#f6d5d0", "#eda59b", "#d9614f", "#9e2a1d"];
+const HOT_COLORS = ["#8a5a5e", "#b8565a", "#e0566a", "#ff8a8f"];
 function hotClass(count: number): number {
   if (count <= 0) return -1;
   if (count === 1) return 0;
@@ -77,7 +78,7 @@ function MapKey() {
   return (
     <ul className="map-key">
       <li>
-        <Swatch color="#2e6b4f" />
+        <Swatch color="#3f9a6c" />
         現有垃圾桶
       </li>
       <li>
@@ -138,7 +139,7 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
         const c = cases.get(r.id);
         if (c) return CASE_COLORS[c.status];
       }
-      return CATEGORY_COLORS[r.category] ?? "#d1495b";
+      return CATEGORY_COLORS[r.category] ?? "#e0566a";
     },
     [role, cases]
   );
@@ -154,9 +155,9 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
       const k = hotClass(reportCounts.get(cells[i]) ?? 0);
       const isSelected = cells[i] === selected;
       return {
-        fillColor: k < 0 ? "#ffffff" : HOT_COLORS[k],
+        fillColor: k < 0 ? MAP.empty : HOT_COLORS[k],
         fillOpacity: k < 0 ? 0.04 : 0.4,
-        color: isSelected ? "#1b2a2f" : "#ffffff",
+        color: isSelected ? MAP.selected : MAP.gridLine,
         weight: isSelected ? 3 : 0.5,
         opacity: isSelected ? 1 : 0.5,
       };
@@ -170,7 +171,7 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
     [data.bins]
   );
   const binStyle = useCallback(
-    (): L.CircleMarkerOptions => ({ radius: 3.5, fillColor: "#2e6b4f", color: "#ffffff", weight: 1, fillOpacity: 1 }),
+    (): L.CircleMarkerOptions => ({ radius: 3.5, fillColor: "#3f9a6c", color: MAP.outline, weight: 1, fillOpacity: 1 }),
     []
   );
 
@@ -178,16 +179,16 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
     (i: number): L.CircleMarkerOptions => {
       const r = reports[i];
       const fillColor = colorOf(r);
-      if (r.id === selectedId) return { radius: 9, fillColor, color: "#1b2a2f", weight: 3, fillOpacity: 1 };
+      if (r.id === selectedId) return { radius: 9, fillColor, color: MAP.selected, weight: 3, fillOpacity: 1 };
       if (role === "gov") {
         // 已結案的淡掉，讓還沒處理的案件跳出來
         return cases.get(r.id)?.status === "已結案"
-          ? { radius: 3, fillColor, color: "#ffffff", weight: 0.5, fillOpacity: 0.5, opacity: 0.5 }
-          : { radius: 5, fillColor, color: "#ffffff", weight: 1.2, fillOpacity: 1 };
+          ? { radius: 3, fillColor, color: MAP.outline, weight: 0.5, fillOpacity: 0.5, opacity: 0.5 }
+          : { radius: 5, fillColor, color: MAP.outline, weight: 1.2, fillOpacity: 1 };
       }
       return r.local
-        ? { radius: 7, fillColor, color: "#1b2a2f", weight: 2, fillOpacity: 1 }
-        : { radius: 3.5, fillColor, color: "#ffffff", weight: 0.8, fillOpacity: 0.9 };
+        ? { radius: 7, fillColor, color: MAP.selected, weight: 2, fillOpacity: 1 }
+        : { radius: 3.5, fillColor, color: MAP.outline, weight: 0.8, fillOpacity: 0.9 };
     },
     [reports, colorOf, role, selectedId, cases]
   );
@@ -210,7 +211,7 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
 
   const draftPoints = useMemo(() => (draft ? [draft] : []), [draft]);
   const draftStyle = useCallback(
-    (): L.CircleMarkerOptions => ({ radius: 10, fillColor: "#ffffff", color: "#1b2a2f", weight: 3, fillOpacity: 0.9, dashArray: "3 3" }),
+    (): L.CircleMarkerOptions => ({ radius: 10, fillColor: MAP.ink, color: MAP.action, weight: 3, fillOpacity: 0.9, dashArray: "3 3" }),
     []
   );
 

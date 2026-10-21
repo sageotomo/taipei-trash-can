@@ -15,6 +15,7 @@ import type { Role } from "../lib/role";
 import { Section, SourceTag, Swatch, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
+import { MAP } from "../lib/theme";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 const LIVE: Strategy = "B";
@@ -22,7 +23,7 @@ const NEARBY = 5;
 const NEARBY_MAX_M = 1500;
 const LOW_BATTERY = 20;
 
-export const FILL_COLORS = { ok: "#3c9a5f", warn: "#e3b23c", full: "#d1495b" };
+export const FILL_COLORS = { ok: "#4caf7d", warn: "#e3b23c", full: "#e0566a" };
 
 export function levelColor(level: number): string {
   if (level >= 80) return FILL_COLORS.full;
@@ -85,7 +86,7 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
         radius: picked ? 8 : full ? 7 : 5,
         fillColor: levelColor(level),
         fillOpacity: 0.95,
-        color: picked ? "#1b2a2f" : full ? "#5b1a08" : "#ffffff",
+        color: picked ? MAP.selected : full ? MAP.emphasis : MAP.outline,
         weight: picked ? 3 : full ? 2 : 1,
       };
     },
@@ -114,13 +115,13 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
           <Circle
             center={[state.location.lat, state.location.lng]}
             radius={500}
-            pathOptions={{ color: "#2b6cb0", weight: 1, fillOpacity: 0.06, dashArray: "4 4" }}
+            pathOptions={{ color: MAP.ring, weight: 1, fillOpacity: 0.06, dashArray: "4 4" }}
             interactive={false}
           />
           <CircleMarker
             center={[state.location.lat, state.location.lng]}
             radius={8}
-            pathOptions={{ color: "#ffffff", weight: 3, fillColor: "#2b6cb0", fillOpacity: 1 }}
+            pathOptions={{ color: MAP.outline, weight: 3, fillColor: MAP.ring, fillOpacity: 1 }}
             interactive={false}
           />
         </>

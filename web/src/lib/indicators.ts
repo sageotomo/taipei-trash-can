@@ -273,10 +273,10 @@ export function mainReason(r: CellResult): number {
 // ---------------- 分級 ----------------
 
 export const LEVELS = [
-  { label: "還夠用", color: "#f6cf86" },
-  { label: "有點缺", color: "#ee9f47" },
-  { label: "缺", color: "#d4662a" },
-  { label: "很缺", color: "#9e3412" },
+  { label: "還夠用", color: "#a0775c" },
+  { label: "有點缺", color: "#c9673f" },
+  { label: "缺", color: "#e16f4c" },
+  { label: "很缺", color: "#ff9a73" },
 ] as const;
 
 /** 分級門檻：佔理論最大值（正向權重合計）的比例 */

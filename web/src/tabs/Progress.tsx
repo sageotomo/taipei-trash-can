@@ -6,13 +6,14 @@ import { Section, SourceTag, Swatch } from "../ui";
 import type { AppData } from "../data";
 import type { ProgressItem, ProgressStatus } from "../types";
 import { WEEKS, shortDate, type ProgressSnapshot } from "../lib/progress";
+import { MAP } from "../lib/theme";
 
 export const STATUS_ORDER: ProgressStatus[] = ["已設置", "施工中", "規劃中", "未處理"];
 export const STATUS_COLORS: Record<ProgressStatus, string> = {
-  已設置: "#2e6b4f",
-  施工中: "#3d7fc1",
+  已設置: "#4caf7d",
+  施工中: "#4f93d6",
   規劃中: "#e3b23c",
-  未處理: "#9aa5a8",
+  未處理: "#7d9095",
 };
 
 // ---------------- 地圖 ----------------
@@ -33,7 +34,7 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
       return {
         fillColor: STATUS_COLORS[items[i].status],
         fillOpacity: visible ? (outside ? 0.1 : 0.25) : 0.04,
-        color: i === selected ? "#1b2a2f" : STATUS_COLORS[items[i].status],
+        color: i === selected ? MAP.selected : STATUS_COLORS[items[i].status],
         weight: i === selected ? 3 : 1.5,
         opacity: visible ? 1 : 0.2,
         dashArray: outside && i !== selected ? "4 4" : undefined,
@@ -49,7 +50,7 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
         radius: 8,
         fillColor: STATUS_COLORS[items[i].status],
         fillOpacity: visible ? 1 : 0.15,
-        color: "#ffffff",
+        color: MAP.outline,
         weight: 2,
         opacity: visible ? 1 : 0.15,
       };
@@ -70,7 +71,7 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
     [data.bins]
   );
   const binStyle = useCallback(
-    (): L.CircleMarkerOptions => ({ radius: 2.5, fillColor: "#5f6f74", color: "#5f6f74", weight: 0, fillOpacity: 0.45 }),
+    (): L.CircleMarkerOptions => ({ radius: 2.5, fillColor: MAP.dim, color: MAP.dim, weight: 0, fillOpacity: 0.45 }),
     []
   );
 
