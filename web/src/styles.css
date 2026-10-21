@@ -313,8 +313,7 @@ textarea {
   margin-left: 0;
 }
 
-.section-head .source-tag,
-.ind-label .source-tag {
+.section-head .source-tag {
   margin-left: 6px;
 }
 
@@ -600,7 +599,6 @@ textarea {
   align-items: center;
   gap: 6px;
   padding: 3px 0;
-  cursor: pointer;
 }
 
 .layer-list input {
@@ -1488,6 +1486,10 @@ textarea {
   background: var(--surface);
 }
 
+.ind-card .story-controls {
+  margin-top: 8px;
+}
+
 .ind-card.off:not(.plus-card):not(.minus-card) {
   background: var(--paper);
 }
@@ -1738,6 +1740,89 @@ textarea {
 
 /* ---------- 地圖左下角：格子實際尺寸 ---------- */
 
+/* ---------- 地圖左下角的「顯示 icon」小框（在每格寬度說明上方） ---------- */
+.icon-toggles {
+  position: absolute;
+  left: 10px;
+  bottom: 42px;
+  z-index: 1000; /* 和 Leaflet 控制項同層 */
+  padding: 6px 8px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+}
+
+.icon-toggles-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-bottom: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.icon-toggles-arrow {
+  margin-left: auto;
+  transition: transform 0.15s;
+}
+
+.icon-toggles.collapsed .icon-toggles-title {
+  margin-bottom: 0;
+}
+
+.icon-toggles.collapsed .icon-toggles-arrow {
+  transform: rotate(-90deg);
+}
+
+.icon-toggles-list[hidden] {
+  display: none;
+}
+
+.icon-toggles-list {
+  display: grid;
+  grid-template-columns: repeat(2, auto);
+  gap: 3px 12px;
+}
+
+.icon-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-toggle-row.on {
+  color: var(--ink);
+}
+
+.icon-toggle-row .poi-icon {
+  flex: none;
+}
+
+.icon-toggle-row:not(.on) .poi-icon {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+.icon-toggle-name {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.icon-toggle-row .switch {
+  transform: scale(0.8);
+  transform-origin: right center;
+}
+
 .cell-scale {
   position: absolute;
   left: 10px;
@@ -1800,11 +1885,10 @@ textarea {
   transform: translateX(14px);
 }
 
-.ind-story {
-  margin: 4px 0 0;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
+.ind-meta .source-tag,
+.ind-meta .tag-import {
+  margin-left: 6px;
+  vertical-align: 1px;
 }
 
 /* ---------- 市民版：生活情境清單 ---------- */
@@ -1819,8 +1903,8 @@ textarea {
 
 .story-card {
   display: flex;
-  align-items: flex-start;
-  gap: 10px;
+  flex-direction: column;
+  gap: 6px;
   padding: 10px 12px;
   border: 1px solid var(--rule);
   border-radius: 10px;
@@ -1828,8 +1912,22 @@ textarea {
   transition: opacity 0.15s;
 }
 
-.story-card .switch {
-  margin-top: 2px;
+/* 卡片最下面一行：加入需求計算的開關 */
+.story-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--rule);
+}
+
+.story-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  font-size: 12.5px;
+  cursor: pointer;
 }
 
 .story-card.off .story-body {

@@ -176,11 +176,10 @@ export function RecommendPanel(props: PanelProps) {
   const selectedResult = selected ? result.byCell.get(selected) : undefined;
   const detailRef = useRef<HTMLDivElement>(null);
 
-  // 開關一個參數時，地圖上同步標出（或收起）它的資料點
+  // 開關一個參數只決定算不算進指數；地圖上要顯示哪些點，由地圖左上角的圖層按鈕決定
   const toggle = useCallback(
     (k: number, on: boolean) => {
       props.onIndicators(indicators.map((x, i) => (i === k ? { ...x, enabled: on } : x)));
-      props.onVisible({ ...props.visible, [indicators[k].layer]: on });
     },
     [indicators, props]
   );
@@ -252,16 +251,11 @@ export function RecommendPanel(props: PanelProps) {
         </ol>
       </Section>
 
-      <Section title="地圖圖層">
+      <Section title="圖層資料">
         <ul className="layer-list">
           {layers.map((l) => (
             <li key={l.id}>
               <label>
-                <input
-                  type="checkbox"
-                  checked={!!props.visible[l.id]}
-                  onChange={(e) => props.onVisible({ ...props.visible, [l.id]: e.target.checked })}
-                />
                 <span className="layer-icons">
                   <PoiIcon icon={l.icon} />
                 </span>
@@ -279,7 +273,7 @@ export function RecommendPanel(props: PanelProps) {
             </li>
           ))}
         </ul>
-        <p className="footnote">放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
+        <p className="footnote">地圖上要顯示哪些圖層，用地圖左下角的「顯示 icon」。放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span className="legend-item">
             <Swatch color="#e4e8e5" shape="hex" />
@@ -516,20 +510,14 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
   const [open, setOpen] = useState(false);
   const unit = indicatorUnit(ind, layer);
   const on = isOn(ind);
-  const story = storyOf(ind.id);
 
   return (
     <li className={`ind-card ${ind.sign > 0 ? "plus-card" : "minus-card"}${on && ind.weight > 0 ? "" : " off"}`}>
       <div className="ind-head">
-        <Switch on={on} onChange={onToggle} label={`使用「${ind.label}」`} />
         {layer ? <PoiIcon icon={layer.icon} size={18} /> : null}
-        <span className="ind-label">
-          {ind.label}
-          {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === indicatorSource(ind, layer))} />}
-        </span>
+        <span className="ind-label">{ind.label}</span>
         <SignToggle sign={ind.sign} onChange={(sign) => onChange({ sign })} />
       </div>
-      {story ? <p className="ind-story">{story.title}</p> : null}
       <label className="ind-weight">
         <span className="sr-only">{ind.label}的權重</span>
         <input type="range" min={0} max={0.5} step={0.05} value={ind.weight} onChange={(e) => onChange({ weight: Number(e.target.value) })} />
@@ -542,6 +530,8 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
         <span>
           {methodText(ind, layer)}・{curveOf(ind) === "sqrt" ? "開根號・" : ""}上限 {fmtValue(stat.cap, unit)} {unit}
           {stat.auto ? (curveOf(ind) === "sqrt" ? "（自動：最大值）" : "（自動）") : ""}・{fmt(stat.fullShare * 100)}% 有資料的格子拿滿分
+          {/* 資料標示接在計算說明的最後面 */}
+          {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === indicatorSource(ind, layer))} />}
         </span>
         <button className="link-button" onClick={() => setOpen(!open)} aria-expanded={open}>
           {open ? "收起" : "設定"}
@@ -595,6 +585,12 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
           </button>
         </div>
       ) : null}
+      <div className="story-controls">
+        <label className="story-control">
+          <span>加入需求計算：</span>
+          <Switch on={on} onChange={onToggle} label={`把「${ind.label}」加入需求計算`} />
+        </label>
+      </div>
     </li>
   );
 }
@@ -739,7 +735,6 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             const on = isOn(ind);
             return (
               <li key={ind.id} className={`story-card ${ind.sign > 0 ? "plus-card" : "minus-card"}${on ? "" : " off"}`}>
-                <Switch on={on} onChange={(v) => toggle(k, v)} label={`使用「${story?.title ?? ind.label}」`} />
                 <div className="story-body">
                   <div className="story-title">
                     {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
@@ -753,6 +748,12 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                     <span className="muted">{layer ? `${layer.label} ${fmt(layer.points.length)} ${layer.unit}` : ""}</span>
                     {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === indicatorSource(ind, layer))} />}
                   </div>
+                </div>
+                <div className="story-controls">
+                  <label className="story-control">
+                    <span>加入需求計算：</span>
+                    <Switch on={on} onChange={(v) => toggle(k, v)} label={`把「${story?.title ?? ind.label}」加入需求計算`} />
+                  </label>
                 </div>
               </li>
             );

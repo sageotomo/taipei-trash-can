@@ -32,6 +32,7 @@ import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Vi
 import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tabs/FillLevel";
 import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
+import { IconToggles } from "./map/IconToggles";
 import type { Report } from "./types";
 import { loadRole, saveRole, type Role } from "./lib/role";
 import { RoleToggle } from "./ui";
@@ -198,6 +199,7 @@ export default function App() {
             role={role}
           />
         ) : null}
+        {ready && tab === "recommend" ? <IconToggles layers={layers} visible={visible} onVisible={setVisible} /> : null}
         {ready && tab === "fill" ? (
           <>
             <PoiLayers data={data} layers={fixedLayers} visible={{ mrt: true }} />
