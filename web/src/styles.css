@@ -140,7 +140,7 @@ textarea {
 
 .tabs {
   display: grid;
-  grid-template-columns: 1fr 1.5fr 1fr 1fr; /* 「垃圾桶填滿度」字比較多 */
+  grid-template-columns: repeat(4, 1fr); /* 四個分頁名稱都是四個字，平均分配 */
   gap: 4px;
   margin: 0 20px;
   padding: 4px;
@@ -646,7 +646,7 @@ textarea {
   }
 }
 
-/* ---------- 垃圾桶填滿度 ---------- */
+/* ---------- 滿桶狀況 ---------- */
 
 .live-head {
   display: flex;
