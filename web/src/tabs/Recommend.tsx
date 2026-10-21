@@ -474,7 +474,7 @@ export function SignToggle({ sign, onChange }: { sign: 1 | -1; onChange: (s: 1 |
         ＋ 需要桶
       </button>
       <button className={sign < 0 ? "on minus" : ""} aria-pressed={sign < 0} onClick={() => onChange(-1)}>
-        − 不缺桶
+        − 較不需要
       </button>
     </div>
   );
@@ -743,7 +743,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                   {story ? <p className="story-detail">{story.detail}</p> : null}
                   <div className="story-meta">
                     <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>
-                      {ind.sign > 0 ? "↑ 越多越缺桶" : "↓ 越多越不缺"}
+                      {ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}
                     </span>
                     <span className="muted">{layer ? `${layer.label} ${fmt(layer.points.length)} ${layer.unit}` : ""}</span>
                     {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === layer?.source)} />}
@@ -766,7 +766,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
 
       <Section title={`最需要垃圾桶的 ${recommendations.length} 個地方`}>
         {recommendations.length === 0 ? (
-          <p className="hint-box">目前的情境組合下，每個地方都不缺垃圾桶。試著打開更多「↑ 越多越缺桶」的情境。</p>
+          <p className="hint-box">目前的情境組合下，每個地方都不缺垃圾桶。試著打開更多「↑ 需要桶」的情境。</p>
         ) : null}
         <ol className="rank-list">
           {recommendations.map((r, i) => {
@@ -840,7 +840,7 @@ function CitizenCellDetail({ result, r, indicators, layerOf, place, isRecommende
                 <span className="why-value">
                   {fmtValue(r.raw[j], unit)} {unit}
                 </span>
-                <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>{ind.sign > 0 ? "↑ 更缺" : "↓ 比較不缺"}</span>
+                <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>{ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}</span>
               </li>
             );
           })}

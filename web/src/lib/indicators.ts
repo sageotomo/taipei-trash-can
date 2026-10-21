@@ -63,7 +63,7 @@ export interface Indicator {
   layer: string;
   method: Method;
   field?: string;          // method = "sum" 時加總的欄位
-  sign: 1 | -1;            // 1 = 需要桶（加分），-1 = 不缺桶（扣分）
+  sign: 1 | -1;            // 1 = 需要桶（加分），-1 = 較不需要（扣分）
   weight: number;
   cap: number | null;      // 上限；null = 自動（直接相除：第 90 百分位；開根號：最大值）
   curve?: Curve;           // 分數換算；沒寫視為 "linear"
