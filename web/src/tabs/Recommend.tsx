@@ -102,6 +102,9 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
   );
 }
 
+/** 住宅值是自訂的指數，畫面上不顯示數字，只顯示它換算後的分數或方向 */
+const hidesValue = (ind: Indicator) => ind.layer === "residential" && ind.method !== "count" && ind.field === "homes";
+
 const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16, food: 17 };
 
 
@@ -364,7 +367,7 @@ function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onCl
                   ) : (
                     <>
                       {curveOf(ind) === "sqrt" ? "√(" : ""}
-                      {fmtValue(raw, unit)} {unit} ÷ {fmtValue(cap, unit)}
+                      {hidesValue(ind) ? "住宅值 ÷ 上限" : <>{fmtValue(raw, unit)} {unit} ÷ {fmtValue(cap, unit)}</>}
                       {curveOf(ind) === "sqrt" ? ")" : ""}
                       {raw >= cap ? " → 滿分 1" : ` = ${r.score[j].toFixed(2)}`}
                       <span className="muted"> × {ind.weight.toFixed(2)}</span>
@@ -831,7 +834,7 @@ function CitizenCellDetail({ result, r, indicators, layerOf, place, isRecommende
                 {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
                 <span className="why-label">{ind.label}</span>
                 <span className="why-value">
-                  {fmtValue(r.raw[j], unit)} {unit}
+                  {hidesValue(ind) ? "" : `${fmtValue(r.raw[j], unit)} ${unit}`}
                 </span>
                 <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>{ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}</span>
               </li>
