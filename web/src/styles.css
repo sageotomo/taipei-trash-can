@@ -1281,6 +1281,29 @@ textarea {
   --plus: #2e6b4f;
   --minus: #b23a48;
   --minus-soft: #f6e3e5;
+  /* 指標卡片底色：正相關（越多越缺桶）淺綠、負相關（越多越不缺）淺粉紅 */
+  --plus-card: #eef7f1;
+  --plus-card-rule: #cde4d6;
+  --minus-card: #fcf0f2;
+  --minus-card-rule: #f0d3d8;
+}
+
+.story-card.plus-card,
+.ind-card.plus-card {
+  border-color: var(--plus-card-rule);
+  background: var(--plus-card);
+}
+
+.story-card.minus-card,
+.ind-card.minus-card {
+  border-color: var(--minus-card-rule);
+  background: var(--minus-card);
+}
+
+/* 卡片已經有底色，裡面的方向標籤改白底才看得清楚 */
+.story-card.plus-card .effect,
+.story-card.minus-card .effect {
+  background: var(--surface);
 }
 
 .plus {
@@ -1376,7 +1399,7 @@ textarea {
   background: var(--surface);
 }
 
-.ind-card.off {
+.ind-card.off:not(.plus-card):not(.minus-card) {
   background: var(--paper);
 }
 

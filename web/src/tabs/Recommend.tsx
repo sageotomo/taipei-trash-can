@@ -514,7 +514,7 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
   const story = storyOf(ind.id);
 
   return (
-    <li className={on && ind.weight > 0 ? "ind-card" : "ind-card off"}>
+    <li className={`ind-card ${ind.sign > 0 ? "plus-card" : "minus-card"}${on && ind.weight > 0 ? "" : " off"}`}>
       <div className="ind-head">
         <Switch on={on} onChange={onToggle} label={`使用「${ind.label}」`} />
         {layer ? <PoiIcon icon={layer.icon} size={18} /> : null}
@@ -733,7 +733,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             const layer = layers.find((l) => l.id === ind.layer);
             const on = isOn(ind);
             return (
-              <li key={ind.id} className={on ? "story-card" : "story-card off"}>
+              <li key={ind.id} className={`story-card ${ind.sign > 0 ? "plus-card" : "minus-card"}${on ? "" : " off"}`}>
                 <Switch on={on} onChange={(v) => toggle(k, v)} label={`使用「${story?.title ?? ind.label}」`} />
                 <div className="story-body">
                   <div className="story-title">
