@@ -28,7 +28,7 @@ import {
   type ReportInput,
 } from "./lib/reports";
 import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, type StatusOverrides } from "./lib/cases";
-import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
+import { ReportLayers, ReportMapHint, ReportPanel, type Draft } from "./tabs/Reports";
 import { ReportGovPanel } from "./tabs/ReportsGov";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
@@ -271,7 +271,12 @@ export default function App() {
         ) : null}
         {ready && tab === "reports" ? (
           <>
-            {role === "citizen" ? <MapClick onClick={pickReportLocation} /> : null}
+            {role === "citizen" ? (
+              <>
+                <MapClick onClick={pickReportLocation} />
+                <ReportMapHint draft={draft} />
+              </>
+            ) : null}
             <ReportLayers
               data={data}
               reports={allReports}

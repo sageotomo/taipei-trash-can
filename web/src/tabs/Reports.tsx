@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type L from "leaflet";
 import { HexLayer, PointLayer, PANES } from "../map/layers";
 import type { Placer } from "../lib/place";
@@ -28,6 +28,78 @@ function hotClass(count: number): number {
 export interface Draft {
   lat: number;
   lng: number;
+}
+
+/**
+ * 地圖上方的操作提示（市民）。第一次來的人常常不知道要點地圖，所以直接寫在地圖上。
+ * pointer-events: none，點到提示也等於點地圖。
+ */
+export function ReportMapHint({ draft }: { draft: Draft | null }) {
+  return (
+    <div className={draft ? "map-hint picked" : "map-hint"} role="status">
+      <span className="map-hint-icon" aria-hidden="true" />
+      {draft ? "已標好位置，接著填通報表單。點錯了？再點一次就能換" : "點一下地圖，標出你看到垃圾問題的位置"}
+    </div>
+  );
+}
+
+const STEPS = [
+  { title: "在地圖上點位置", text: "放大到你看到問題的路口或街道，點一下。" },
+  { title: "選類別、拍張照", text: "照片和說明都是選填，有照片比較好判斷。" },
+  { title: "送出、追蹤進度", text: "留 email 或手機，處理完會通知你。" },
+];
+
+/** 三步驟進度：還沒點地圖在第 1 步、填表中在第 2 步、送出後在第 3 步 */
+function ReportSteps({ current }: { current: 1 | 2 | 3 }) {
+  return (
+    <ol className="steps" aria-label="怎麼通報">
+      {STEPS.map((step, i) => {
+        const n = i + 1;
+        const state = n < current ? "done" : n === current ? "current" : "todo";
+        return (
+          <li key={step.title} className={`step step-${state}`} aria-current={state === "current" ? "step" : undefined}>
+            <span className="step-num" aria-hidden="true">
+              {state === "done" ? "✓" : n}
+            </span>
+            <span className="step-body">
+              <b>{step.title}</b>
+              <small>{step.text}</small>
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/** 地圖上的記號說明 */
+function MapKey() {
+  return (
+    <ul className="map-key">
+      <li>
+        <Swatch color="#2e6b4f" />
+        現有垃圾桶
+      </li>
+      <li>
+        <span className="key-dot key-draft" aria-hidden="true" />
+        你正在標的位置
+      </li>
+      <li>
+        <span className="key-dot key-mine" aria-hidden="true" />
+        你送出的通報
+      </li>
+      {CATEGORIES.map((c) => (
+        <li key={c}>
+          <Swatch color={CATEGORY_COLORS[c]} />
+          其他人通報的{c}
+        </li>
+      ))}
+      <li>
+        <Swatch color={HOT_COLORS[2]} shape="hex" />
+        六角格越紅，這一帶通報越多
+      </li>
+    </ul>
+  );
 }
 
 /** 每格的垃圾桶數與「現行固定排程下一週平均滿溢小時數」 */
@@ -190,6 +262,13 @@ export function ReportPanel(props: PanelProps) {
   const [sent, setSent] = useState<{ contact: boolean; saved: boolean } | null>(null);
   const contactOk = validContact(contact);
   const binStats = useBinStats(data);
+  // 點地圖後把表單捲進畫面：手機版的表單在地圖下方，不捲過去常常沒發現
+  const formRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (draft && window.matchMedia("(max-width: 800px)").matches) {
+      formRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  }, [draft]);
 
   const byCategory = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -239,12 +318,12 @@ export function ReportPanel(props: PanelProps) {
 
   return (
     <>
-      <p className="lead">
-        點地圖上你看到垃圾問題的位置，選類別、拍張照片後送出。不用登入；想知道處理結果，可以留 email 或手機，承辦單位處理完會通知你。
-      </p>
+      <p className="lead">看到亂丟垃圾、垃圾桶滿出來？三個步驟告訴承辦單位，不用登入。</p>
+
+      <ReportSteps current={draft ? 2 : sent ? 3 : 1} />
 
       {draft ? (
-        <div className="detail">
+        <div className="detail" ref={formRef}>
           <div className="detail-head">
             <div>
               <div className="form-title">新增通報</div>
@@ -342,12 +421,18 @@ export function ReportPanel(props: PanelProps) {
             地圖上有黑框的點就是你的通報。處理進度會顯示在下方「你送出的通報」
             {sent.contact ? "，進度更新時也會通知你（示意）" : ""}。
           </span>
+          <span className="muted">還有別的地方要通報？直接再點地圖就可以。</span>
           {!sent.saved ? (
             <span className="warn-text">這台瀏覽器的儲存空間滿了，這筆通報重新整理後會消失。可以刪掉幾筆有照片的舊通報。</span>
           ) : null}
         </div>
       ) : (
-        <p className="hint-box">點地圖選一個位置開始通報。</p>
+        <div className="hint-box start-box">
+          <strong>從地圖開始</strong>
+          <span>
+            點一下地圖上有垃圾問題的位置，這裡就會出現通報表單。找不到地方？先用滑鼠滾輪或兩指放大地圖。
+          </span>
+        </div>
       )}
 
       {advice ? (
@@ -371,6 +456,27 @@ export function ReportPanel(props: PanelProps) {
           </dl>
         </div>
       ) : null}
+
+      <details className="guide" open={!draft && localReports.length === 0}>
+        <summary>地圖上的記號</summary>
+        <MapKey />
+      </details>
+
+      <details className="guide">
+        <summary>常見問題</summary>
+        <dl className="faq">
+          <dt>要登入或下載 App 嗎？</dt>
+          <dd>不用。打開網頁就能通報，email 和手機也都是選填。</dd>
+          <dt>該選哪個類別？</dt>
+          <dd>
+            路邊、公車站有人亂丟選「亂丟垃圾」；垃圾桶塞滿、垃圾掉到地上選「垃圾桶滿溢」；整袋家裡的垃圾被丟在路邊或垃圾桶旁選「家戶垃圾棄置」。
+          </dd>
+          <dt>我的照片和聯絡方式誰看得到？</dt>
+          <dd>只有承辦單位。其他市民在地圖上只看得到類別和說明。</dd>
+          <dt>通報存在哪裡？</dt>
+          <dd>這個示範版存在你這台裝置的瀏覽器，換手機或清除瀏覽資料就會不見。</dd>
+        </dl>
+      </details>
 
       <Section title="通報統計" aside={<SourceTag source={data.sources.find((s) => s.key === "reports")} />}>
         <ul className="layer-list">
