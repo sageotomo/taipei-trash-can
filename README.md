@@ -120,6 +120,8 @@ make test
 網站部署在 **Cloudflare Workers**（純靜態網站，沒有後端），並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
 
 - Cloudflare 連接這個 GitHub repo，push 到 `main` 後自動 build 與部署；其他分支會產生預覽網址。
+- **分支預覽**：Settings → Builds → Previews Base 的 Preview command 是 `npx wrangler preview`，`web/wrangler.jsonc` 必須有 `"previews": {}` 區塊（可以是空的）。每個分支的預覽網址是 `https://<分支名稱，斜線換成 ->-taipei-trash-can.sage-otomo.workers.dev`，例如 `feat/rename-terms` → `feat-rename-terms-taipei-trash-can.sage-otomo.workers.dev`。
+- Cloudflare 會在分支第一次 build 時，從 Previews Base 複製一份設定給這個分支，之後改 Previews Base 不會同步到已經存在的分支。舊分支的指令不對時，最簡單的做法是開一個新分支名稱重新 push。
 - Build 設定：Root directory `web`、Build command `npm run build`、Deploy command `npx wrangler deploy`。
 - 要上傳哪些檔案寫在 `web/wrangler.jsonc`（`dist/`），裡面的 `name` 必須和 Cloudflare 後台的 Worker 名稱相同。
 - GitHub Actions（`.github/workflows/ci.yml`）只負責跑測試與確認可以 build。
