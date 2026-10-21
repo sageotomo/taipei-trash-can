@@ -1445,12 +1445,7 @@ textarea {
 
 /* 底圖淡化成灰階，讓網格和點位成為主角 */
 .basemap {
-  filter: brightness(0.95) contrast(1.05);
-}
-
-/* 底圖是淺色的，反相後染成網站的深藍灰（陸地約 #152429，文字變淺青色） */
-.basemap-invert {
-  filter: invert(1) grayscale(1) contrast(0.8) brightness(0.75) sepia(0.8) hue-rotate(150deg) saturate(2);
+  filter: grayscale(0.9) contrast(0.85) brightness(1.06);
 }
 
 /* ---------- 點位圖示 ---------- */
@@ -1467,7 +1462,7 @@ textarea {
 .poi-marker {
   width: 24px;
   height: 24px;
-  border: 1.5px solid var(--paper);
+  border: 1.5px solid #ffffff;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
 }
 

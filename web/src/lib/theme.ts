@@ -1,19 +1,20 @@
 // 地圖上用的顏色（Leaflet 的樣式要直接給色碼，不能用 CSS 變數）。
-// 和 styles.css 的 :root 色票對應：深藍灰底、橘紅為主色、青綠為輔色。
+// 和 styles.css 的 :root 色票對應：深藍灰、橘紅為主色、青綠為輔色。
+// 底圖維持淺色，所以選取框、強調框用深色。
 
 export const MAP = {
-  /** 點位外框：和底圖同色，讓點在深色地圖上有清楚的邊 */
-  outline: "#131f24",
+  /** 點位外框 */
+  outline: "#ffffff",
   /** 選取中的點或格子 */
-  selected: "#f2f5f3",
+  selected: "#131f24",
   /** 強調（建議增設的格子、已滿的桶） */
-  emphasis: "#ffb08f",
+  emphasis: "#5b1a08",
   /** 網格細框線 */
-  gridLine: "#6f8a91",
+  gridLine: "#ffffff",
   /** 不缺／沒資料的格子 */
   empty: "#ffffff",
   /** 不缺的格子在圖例上的樣子 */
-  emptySwatch: "#2b3b45",
+  emptySwatch: "#3a4b55",
   /** 背景點（非重點） */
   dim: "#7d9095",
   /** 範圍圈 */
