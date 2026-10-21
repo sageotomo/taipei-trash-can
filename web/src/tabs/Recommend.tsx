@@ -747,15 +747,6 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                     </span>
                     <span className="muted">{layer ? `${layer.label} ${fmt(layer.points.length)} ${layer.unit}` : ""}</span>
                     {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === layer?.source)} />}
-                    {layer ? (
-                      <button
-                        className="link-button"
-                        aria-pressed={!!props.visible[layer.id]}
-                        onClick={() => props.onVisible({ ...props.visible, [layer.id]: !props.visible[layer.id] })}
-                      >
-                        {props.visible[layer.id] ? "收起地圖上的點" : "在地圖上標出"}
-                      </button>
-                    ) : null}
                   </div>
                 </div>
               </li>
