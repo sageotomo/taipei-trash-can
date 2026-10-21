@@ -59,6 +59,52 @@ textarea {
   display: grid;
   grid-template-columns: 1fr var(--panel-width);
   height: 100%;
+  transition: grid-template-columns 0.2s ease;
+}
+
+/* ---------- 側邊欄收合 ---------- */
+
+.app.collapsed {
+  grid-template-columns: 1fr 0px;
+}
+
+.app.collapsed .panel {
+  visibility: hidden;
+  overflow: hidden;
+  border-left: 0;
+}
+
+/* 掛在面板左緣的小把手，收起時貼在畫面右緣 */
+.panel-toggle {
+  position: fixed;
+  top: 50%;
+  right: var(--panel-width);
+  z-index: 1100; /* 高於 Leaflet 控制項 */
+  transform: translateY(-50%);
+  width: 22px;
+  height: 56px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  background: var(--surface);
+  color: var(--muted);
+  border: 1px solid var(--rule);
+  border-right: 0;
+  border-radius: 8px 0 0 8px;
+  box-shadow: -2px 0 4px rgba(27, 42, 47, 0.08);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition: right 0.2s ease;
+}
+
+.panel-toggle:hover {
+  color: var(--action);
+  background: var(--action-soft);
+}
+
+.app.collapsed .panel-toggle {
+  right: 0;
 }
 
 .map {
@@ -631,6 +677,21 @@ textarea {
 
   .panel-body {
     overflow: visible;
+  }
+
+  /* 手機版面板在地圖下方，不需要收合 */
+  .panel-toggle {
+    display: none;
+  }
+
+  .app.collapsed {
+    grid-template-columns: 1fr;
+  }
+
+  .app.collapsed .panel {
+    visibility: visible;
+    overflow: visible;
+    border-top: 1px solid var(--rule);
   }
 
   /* 手機版地圖在上方，使用者身分切換浮在地圖右上角，面板不用留位置 */
