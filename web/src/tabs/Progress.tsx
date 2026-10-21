@@ -5,6 +5,7 @@ import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch } from "../ui";
 import type { AppData } from "../data";
 import type { ProgressItem, ProgressStatus } from "../types";
+import { WEEKS, shortDate, type ProgressSnapshot } from "../lib/progress";
 
 export const STATUS_ORDER: ProgressStatus[] = ["已設置", "施工中", "規劃中", "未處理"];
 export const STATUS_COLORS: Record<ProgressStatus, string> = {
@@ -28,12 +29,14 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
       const visible = district === "全部" || items[i].district === district;
+      const outside = items[i].rank === null;
       return {
         fillColor: STATUS_COLORS[items[i].status],
-        fillOpacity: visible ? 0.25 : 0.04,
+        fillOpacity: visible ? (outside ? 0.1 : 0.25) : 0.04,
         color: i === selected ? "#1b2a2f" : STATUS_COLORS[items[i].status],
         weight: i === selected ? 3 : 1.5,
         opacity: visible ? 1 : 0.2,
+        dashArray: outside && i !== selected ? "4 4" : undefined,
       };
     },
     [items, district, selected]
@@ -54,7 +57,13 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
     [items, district]
   );
 
-  const tooltip = useCallback((i: number) => `#${items[i].rank}・${items[i].status}・${items[i].updated_at}`, [items]);
+  const tooltip = useCallback(
+    (i: number) => {
+      const p = items[i];
+      return `${p.rank === null ? "已不在前 30 名" : `第 ${p.rank} 名`}・${p.status}・${shortDate(p.updated_at)} 更新`;
+    },
+    [items]
+  );
 
   const bins = useMemo(
     () => data.bins.features.map((f) => ({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] })),
@@ -76,27 +85,69 @@ export function ProgressLayers({ data, items, district, selected, onSelect }: {
 
 // ---------------- 面板 ----------------
 
-export function ProgressPanel({ data, items, place, district, onDistrict, selected, onSelect }: {
+function weekLabel(w: number): string {
+  const week = WEEKS[w];
+  const latest = w === WEEKS.length - 1 ? "（最新）" : "";
+  return `${shortDate(week.start)}–${shortDate(week.end)} 這週${latest}`;
+}
+
+export function ProgressPanel({ data, history, week, onWeek, place, district, onDistrict, selected, onSelect }: {
   data: AppData;
-  items: ProgressItem[];
+  history: ProgressSnapshot[];
+  week: number;
+  onWeek: (w: number) => void;
   place: Placer;
   district: string;
   onDistrict: (d: string) => void;
   selected: number | null;
   onSelect: (i: number) => void;
 }) {
-  const districts = useMemo(() => ["全部", ...Array.from(new Set(items.map((p) => p.district))).sort()], [items]);
+  const snap = history[week];
+  const items = snap?.items ?? [];
+  const districts = useMemo(
+    () => ["全部", ...Array.from(new Set(history.flatMap((s) => s.items.map((p) => p.district)))).sort()],
+    [history]
+  );
+  const inDistrict = (p: ProgressItem) => district === "全部" || p.district === district;
 
-  const scope = district === "全部" ? items : items.filter((p) => p.district === district);
+  const scope = items.filter(inDistrict);
   const counts = STATUS_ORDER.map((s) => ({ status: s, n: scope.filter((p) => p.status === s).length }));
   const done = counts[0].n;
+  const added = (snap?.added ?? []).filter(inDistrict);
+  const removed = (snap?.removed ?? []).filter(inDistrict);
+  const outside = scope.filter((p) => p.rank === null).length;
+  const advancedSet = new Set(snap?.advanced ?? []);
+  const advanced = scope.filter((p) => advancedSet.has(p.cell)).length;
+
+  if (!snap) return null;
 
   return (
     <>
       <p className="lead">
-        市府採納的 {items.length} 個建議增設點，目前做到哪裡？每個點都標出負責的清潔隊和最後更新日期
+        市府每週一用最新的通報重新算一次建議增設的前 30 名，並追蹤每個點做到哪裡。選一週看當時的狀況
         <SourceTag source={data.sources.find((s) => s.key === "progress")} />。
       </p>
+
+      <div className="week-picker">
+        <label className="select">
+          <span className="week-picker-label">週次</span>
+          <select value={week} onChange={(e) => onWeek(Number(e.target.value))}>
+            {[...WEEKS.keys()].reverse().map((w) => (
+              <option key={w} value={w}>
+                {weekLabel(w)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="week-steps" role="group" aria-label="上一週或下一週">
+          <button className="button" disabled={week === 0} onClick={() => onWeek(week - 1)} aria-label="上一週">
+            ‹ 上一週
+          </button>
+          <button className="button" disabled={week === WEEKS.length - 1} onClick={() => onWeek(week + 1)} aria-label="下一週">
+            下一週 ›
+          </button>
+        </div>
+      </div>
 
       <div className="progress-head">
         <div className="progress-number">
@@ -129,6 +180,37 @@ export function ProgressPanel({ data, items, place, district, onDistrict, select
         ))}
       </div>
 
+      <Section title="這週的變化">
+        {week === 0 ? (
+          <p className="muted">這是第一週的紀錄，開始追蹤前 30 名。</p>
+        ) : (
+          <>
+            <dl className="supply week-changes">
+              <div>
+                <dt>新進前 30 名</dt>
+                <dd>{added.length} 點</dd>
+              </div>
+              <div>
+                <dt>移出清單</dt>
+                <dd>{removed.length} 點</dd>
+              </div>
+              <div>
+                <dt>狀態往前推</dt>
+                <dd>{advanced} 點</dd>
+              </div>
+            </dl>
+            {removed.length > 0 ? (
+              <p className="footnote">
+                移出：{removed.map((p) => place([p.lat, p.lng], p.district)).join("、")}。這些點掉出前 30 名，當時還沒動工，所以不再追蹤。
+              </p>
+            ) : null}
+          </>
+        )}
+        {outside > 0 ? (
+          <p className="footnote">清單最後 {outside} 點已經不在前 30 名，但已經動工，會繼續做完（地圖上用虛線框標示）。</p>
+        ) : null}
+      </Section>
+
       <Section title="建議點">
         <table className="progress-table">
           <thead>
@@ -140,13 +222,16 @@ export function ProgressPanel({ data, items, place, district, onDistrict, select
           </thead>
           <tbody>
             {items.map((p, i) =>
-              district === "全部" || p.district === district ? (
-                <tr key={p.cell} className={i === selected ? "active" : undefined}>
+              inDistrict(p) ? (
+                <tr key={p.cell} className={[i === selected ? "active" : "", p.rank === null ? "outside" : ""].filter(Boolean).join(" ") || undefined}>
                   <td>
                     <button className="cell-button" onClick={() => onSelect(i)}>
                       {place([p.lat, p.lng], p.district)}
                     </button>
-                    <small>{p.owner}</small>
+                    <small>
+                      {p.rank === null ? "已不在前 30 名" : `第 ${p.rank} 名`}・{p.owner}
+                      {week > 0 && p.since === snap.week.start ? <span className="new-tag">本週新進</span> : null}
+                    </small>
                   </td>
                   <td>
                     <span className="status">
@@ -154,7 +239,7 @@ export function ProgressPanel({ data, items, place, district, onDistrict, select
                       {p.status}
                     </span>
                   </td>
-                  <td className="muted nowrap">{p.updated_at.slice(5).replace("-", "/")}</td>
+                  <td className="muted nowrap">{shortDate(p.updated_at)}</td>
                 </tr>
               ) : null
             )}

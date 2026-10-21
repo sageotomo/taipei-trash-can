@@ -2689,3 +2689,55 @@ textarea {
   flex: none;
   white-space: nowrap;
 }
+
+/* ---------- 增桶進度：週次 ---------- */
+
+.week-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--paper);
+}
+
+.week-picker .select {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.week-picker-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.week-picker select {
+  font-weight: 500;
+}
+
+.week-steps {
+  display: flex;
+  gap: 6px;
+}
+
+.week-steps .button {
+  padding: 4px 10px;
+  font-size: 13px;
+}
+
+.week-steps .button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.progress-table tr.outside td {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(27, 42, 47, 0.03) 6px 12px);
+}
+
+.progress-table tr.outside .cell-button {
+  color: var(--muted);
+}

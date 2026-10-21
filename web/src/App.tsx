@@ -13,7 +13,7 @@ import {
 } from "./lib/indicators";
 import { reportsLayer, staticLayers } from "./lib/datalayers";
 import { makePlacer } from "./lib/place";
-import { makeProgress } from "./lib/progress";
+import { WEEKS, makeProgressHistory } from "./lib/progress";
 import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
 import { cellCenter, latLngToCell } from "./lib/hexgrid";
 import { FlyTo, InvalidateSize, MapClick, MapPanes } from "./map/layers";
@@ -71,6 +71,8 @@ export default function App() {
   useEffect(() => saveStatusOverrides(statusOverrides), [statusOverrides]);
   const [district, setDistrict] = useState("全部");
   const [progressSelected, setProgressSelected] = useState<number | null>(null);
+  // 增桶進度看哪一週，預設最新一週
+  const [progressWeek, setProgressWeek] = useState(WEEKS.length - 1);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
   // 右側面板可收起，讓地圖佔滿整個畫面
   const [panelOpen, setPanelOpen] = useState(true);
@@ -120,13 +122,17 @@ export default function App() {
   );
   const caseById = useMemo(() => new Map(cases.map((c) => [c.report.id, c])), [cases]);
 
-  // 增桶進度：市府「採納」的是預設指標、只含歷史通報算出的前 30 名，不隨使用者調整而改變
-  const progress = useMemo(() => {
+  // 增桶進度：每週一用「截至上週日的歷史通報」、預設指標重算前 30 名，不隨使用者調整而改變
+  const progressHistory = useMemo(() => {
     if (!data || !place) return [];
-    const base = [...fixedLayers, reportsLayer(data.reportsSeed)];
-    const a = aggregate(base);
-    return makeProgress(pickRecommendations(computeIndex(a, cellUniverse(a), DEFAULT_INDICATORS)), place.district);
+    const rankings = WEEKS.map((w) => {
+      const base = [...fixedLayers, reportsLayer(data.reportsSeed.filter((r) => r.created_at < w.cutoff))];
+      const a = aggregate(base);
+      return pickRecommendations(computeIndex(a, cellUniverse(a), DEFAULT_INDICATORS));
+    });
+    return makeProgressHistory(rankings, place.district);
   }, [data, fixedLayers, place]);
+  const progress = useMemo(() => progressHistory[progressWeek]?.items ?? [], [progressHistory, progressWeek]);
 
   const importLayer = useCallback(({ layer, addIndicator, sign }: ImportOptions) => {
     setCustomLayers((prev) => [...prev, layer]);
@@ -381,7 +387,12 @@ export default function App() {
           {ready && tab === "progress" ? (
             <ProgressPanel
               data={data}
-              items={progress}
+              history={progressHistory}
+              week={progressWeek}
+              onWeek={(w) => {
+                setProgressWeek(w);
+                setProgressSelected(null);
+              }}
               place={place}
               district={district}
               onDistrict={setDistrict}
