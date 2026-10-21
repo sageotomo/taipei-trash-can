@@ -29,15 +29,15 @@ export const STORIES: Record<string, Story> = {
     title: "等公車時，手上的垃圾沒地方丟",
     detail: "公車站是行人停留、聚集的地方。",
   },
-  reports: {
-    no: 5,
-    title: "市民已經通報過這裡很髒",
-    detail: "通報越多，代表這裡真的需要處理。",
-  },
   bins: {
-    no: 6,
+    no: 5,
     title: "這裡已經有垃圾桶了",
     detail: "格子裡的垃圾桶越多，就越不缺。",
+  },
+  reports: {
+    no: 6,
+    title: "市民已經通報過這裡很髒",
+    detail: "通報越多，代表這裡真的需要處理。",
   },
 };
 

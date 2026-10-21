@@ -29,10 +29,17 @@ export function loadIndicators(): Indicator[] {
     const raw = localStorage.getItem(INDICATORS_KEY);
     if (!raw) return DEFAULT_INDICATORS;
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.every(isIndicator) ? dedupeIndicators(parsed) : DEFAULT_INDICATORS;
+    return Array.isArray(parsed) && parsed.every(isIndicator) ? inDefaultOrder(dedupeIndicators(parsed)) : DEFAULT_INDICATORS;
   } catch {
     return DEFAULT_INDICATORS;
   }
+}
+
+/** 存過的設定也照預設的故事順序排（調整故事順序後不用清掉使用者的權重）；自訂指標維持原本順序，排在後面 */
+export function inDefaultOrder(list: Indicator[]): Indicator[] {
+  const rank = new Map(DEFAULT_INDICATORS.map((d, i) => [d.id, i]));
+  const builtIn = list.filter((i) => rank.has(i.id)).sort((a, b) => rank.get(a.id)! - rank.get(b.id)!);
+  return [...builtIn, ...list.filter((i) => !rank.has(i.id))];
 }
 
 export function saveIndicators(list: Indicator[]): void {
