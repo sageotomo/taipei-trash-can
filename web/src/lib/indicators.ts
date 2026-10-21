@@ -79,7 +79,7 @@ export function effectiveWeight(ind: Indicator): number {
   return isOn(ind) ? ind.weight : 0;
 }
 
-// 預設指標就是展示用的七個故事（說明文字在 lib/stories.ts），順序就是故事順序
+// 預設指標就是展示用的六個故事（捷運人流不放：搭捷運的人和逛商圈的人大多重疊，會和飲料店重複計算）（說明文字在 lib/stories.ts），順序就是故事順序
 export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "drinks", label: "飲料店（商圈）", layer: "drinks", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "youbike", label: "YouBike 站", layer: "youbike", method: "count", sign: 1, weight: 0.1, cap: null },
@@ -87,7 +87,6 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
   { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
-  { id: "mrt_flow", label: "捷運人流", layer: "mrt", method: "sum", field: "flow", sign: 1, weight: 0.3, cap: null, curve: "sqrt" },
 ];
 
 export const TOP_N = 30;

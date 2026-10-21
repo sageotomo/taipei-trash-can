@@ -71,7 +71,7 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
       const r = result.cells[i];
       const k = levelOf(r.value, result.maxPossible);
       const d = place.district(cellCenter(r.cell));
-      // 民眾版不顯示指數數字，只顯示分級
+      // 市民版不顯示指數數字，只顯示分級
       if (role === "citizen") return k < 0 ? `${d}・不缺` : `${d}・${LEVELS[k].label}`;
       return k < 0 ? `${d}・不缺（缺桶指數 0）` : `${d}・缺桶指數 ${r.value.toFixed(2)}（${LEVELS[k].label}）`;
     },
@@ -185,7 +185,7 @@ export function RecommendPanel(props: PanelProps) {
     if (selected) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selected]);
 
-  // 所有 hook 都在上面；民眾版用同一份資料與開關，只是畫面不同
+  // 所有 hook 都在上面；市民版用同一份資料與開關，只是畫面不同
   if (props.role === "citizen") {
     return <CitizenPanel {...props} toggle={toggle} detailRef={detailRef} />;
   }
@@ -674,8 +674,8 @@ function AddIndicator({ layers, indicators, onAdd, onCancel }: {
   );
 }
 
-// ---------------- 民眾版 ----------------
-// 民眾看不到公式與權重，只看到七個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
+// ---------------- 市民版 ----------------
+// 市民看不到公式與權重，只看到六個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
 
 function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => void; detailRef: RefObject<HTMLDivElement | null> }) {
   const { data, layers, indicators, result, recommendations, selected, onSelect, place, toggle, detailRef } = props;
@@ -796,7 +796,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
   );
 }
 
-/** 民眾版的格子明細：只列出格內有什麼、往哪個方向影響，不顯示權重與計算 */
+/** 市民版的格子明細：只列出格內有什麼、往哪個方向影響，不顯示權重與計算 */
 function CitizenCellDetail({ result, r, indicators, layerOf, place, isRecommended, onClose }: {
   result: IndexResult;
   r: CellResult;

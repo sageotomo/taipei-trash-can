@@ -2,11 +2,11 @@ import type { ReactNode } from "react";
 import type { Source } from "./types";
 import { ROLES, type Role } from "./lib/role";
 
-/** 畫面右上角的身分切換（沒有登入，只是切換視角） */
+/** 畫面右上角的使用者身分切換（沒有登入，只是切換視角） */
 export function RoleToggle({ role, onChange }: { role: Role; onChange: (r: Role) => void }) {
   return (
-    <div className="role-toggle" role="group" aria-label="切換身分">
-      <span className="role-toggle-label">身分</span>
+    <div className="role-toggle" role="group" aria-label="切換使用者身分">
+      <span className="role-toggle-label">使用者身分</span>
       {ROLES.map((r) => (
         <button key={r.id} className={role === r.id ? "on" : ""} aria-pressed={role === r.id} onClick={() => onChange(r.id)}>
           {r.label}

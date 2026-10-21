@@ -53,7 +53,7 @@ export function nearest(points: { lat: number; lng: number }[], lat: number, lng
     .slice(0, k);
 }
 
-/** 填滿度分級：給民眾看的字 */
+/** 填滿度分級：給市民看的字 */
 export function fillStatus(level: number): { label: string; tone: "ok" | "warn" | "full" } {
   if (level >= 100) return { label: "已滿", tone: "full" };
   if (level >= 80) return { label: "快滿了", tone: "full" };

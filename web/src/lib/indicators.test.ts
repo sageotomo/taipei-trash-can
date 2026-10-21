@@ -108,8 +108,8 @@ describe("computeIndex", () => {
     expect(result.byCell.get(c)!.score[0]).toBeCloseTo(0.1); // √(1/100)
   });
 
-  it("預設的捷運人流用開根號", () => {
-    expect(DEFAULT_INDICATORS.find((i) => i.id === "mrt_flow")!.curve).toBe("sqrt");
+  it("預設指標不含捷運人流（和飲料店重複計算）", () => {
+    expect(DEFAULT_INDICATORS.find((i) => i.id === "mrt_flow")).toBeUndefined();
   });
 
   it("上限留白時自動取第 90 百分位", () => {

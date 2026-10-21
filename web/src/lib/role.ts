@@ -1,10 +1,10 @@
-// 使用者身分：民眾或政府單位。目前沒有登入，只是畫面右上角的切換，用來展示兩種視角。
+// 使用者身分：市民或政府單位。目前沒有登入，只是畫面右上角的切換，用來展示兩種視角。
 // 存在這台瀏覽器（localStorage），重新整理後維持；讀寫失敗就用預設值。
 
 export type Role = "citizen" | "gov";
 
 export const ROLES: { id: Role; label: string }[] = [
-  { id: "citizen", label: "民眾" },
+  { id: "citizen", label: "市民" },
   { id: "gov", label: "政府單位" },
 ];
 
