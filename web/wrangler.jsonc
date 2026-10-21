@@ -1,8 +1,9 @@
-// Cloudflare Workers（靜態網站）設定：只上傳 npm run build 產生的 dist/，沒有後端程式。
+// Cloudflare Workers 設定：靜態網站（npm run build 產生的 dist/）＋ /api/* 的小後端（worker/index.ts）。
 // name 必須和 Cloudflare 後台的 Worker 名稱相同。
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "taipei-trash-can",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   // 明確開啟 workers.dev 網址與分支預覽網址（兩者都受 Cloudflare Access 保護）
   "workers_dev": true,
@@ -10,6 +11,23 @@
   // 非 main 分支的 build 用 `npx wrangler preview` 產生預覽，這個指令需要 previews 區塊（可以是空的）
   "previews": {},
   "assets": {
-    "directory": "./dist"
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // 只有 /api/* 先進 Worker，其他網址直接回靜態檔
+    "run_worker_first": ["/api/*"]
+  },
+  // 掃 QR code 的市民通報存在 D1：在 Cloudflare 後台建立 taipei-trash-can-reports 後，加上
+  //   "d1_databases": [{ "binding": "DB", "database_name": "taipei-trash-can-reports", "database_id": "<ID>" }],
+  // 還沒加之前，/api/reports 會回「通報功能尚未設定」。
+  // 頻率限制（period 只能是 10 或 60 秒；namespace_id 在帳號內不能重複）
+  "ratelimits": [
+    { "name": "POST_IP_LIMIT", "namespace_id": "2101", "simple": { "limit": 10, "period": 60 } },
+    { "name": "POST_ALL_LIMIT", "namespace_id": "2102", "simple": { "limit": 60, "period": 60 } },
+    { "name": "GET_IP_LIMIT", "namespace_id": "2103", "simple": { "limit": 60, "period": 60 } }
+  ],
+  // Turnstile site key 是公開的；secret 用 `wrangler secret put TURNSTILE_SECRET` 或後台設定，不放進 git。
+  // 沒填 site key 時用官方測試金鑰（一定通過），只適合排練。
+  "vars": {
+    "TURNSTILE_SITE_KEY": ""
   }
 }

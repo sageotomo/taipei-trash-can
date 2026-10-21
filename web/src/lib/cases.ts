@@ -54,7 +54,7 @@ export interface StatusRecord {
 
 /** 歷史通報的模擬處理進度（新通報一律從「待處理」開始） */
 export function simulatedStatus(r: Report): StatusRecord {
-  if (r.local) return { status: "待處理", updated_at: r.created_at };
+  if (r.local || r.qr) return { status: "待處理", updated_at: r.created_at };
   const age = Math.max(0, daysBetween(r.created_at, SIM_DAY));
   const odds = statusOdds(age);
   const u = hash01(r.id);
@@ -75,8 +75,12 @@ export function ownerOf(category: string, district: string): string {
   return district ? `${district}清潔隊` : "清潔隊";
 }
 
+/** 掃碼通報有留聯絡方式時的佔位文字（內容不會傳到瀏覽器） */
+export const QR_CONTACT = "（已留，內容只存在伺服器）";
+
 /** 遮蔽聯絡方式：0912-***-678、a***@gmail.com */
 export function maskContact(contact: string): string {
+  if (contact === QR_CONTACT) return contact;
   const c = contact.trim();
   if (c.includes("@")) {
     const [name, domain] = c.split("@");
@@ -164,7 +168,8 @@ export function buildCases(
       district,
       owner: ownerOf(r.category, district),
       bin: nearestBin(r.lat, r.lng, bins),
-      contact: r.local ? r.contact || undefined : simulatedContact(r),
+      // 掃碼通報的聯絡方式只存在伺服器，這裡只知道有沒有留
+      contact: r.local ? r.contact || undefined : r.qr ? (r.has_contact ? QR_CONTACT : undefined) : simulatedContact(r),
       age,
       overdue: rec.status !== "已結案" && age > SLA_DAYS,
     };

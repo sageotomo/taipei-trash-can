@@ -20,7 +20,8 @@
     ]
   },
   "include": [
-    "src"
+    "src",
+    "worker"
   ],
   "exclude": [
     "src/**/*.test.ts"

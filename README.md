@@ -13,6 +13,8 @@
 | 市民通報 | 市民：點地圖通報亂丟垃圾、垃圾桶滿溢、家戶垃圾棄置，可附現場照片、留 email 或手機追蹤處理進度；每格依通報量給出「增設／加強清運／加強取締」建議。政府單位：所有通報列成案件表（編號、類別、地點、最近垃圾桶編號、處理進度、承辦單位），可篩選、排序、改進度、匯出 CSV，超過 7 天未結案標為逾期 |
 | 增桶進度 | 可選週次（以週為單位）看當週的建議增設前 30 名、設置狀態、更新日期與負責清潔隊，以及當週新進／移出的點；可依行政區篩選 |
 
+**掃碼通報**：每個垃圾桶貼一張 QR code，指到 `/report?bin=<垃圾桶編號>`（`web/report.html`，不載入地圖）。市民選類別、發生時間、補充說明、選填聯絡方式後送出，存在 Cloudflare D1；儀表板每 15 秒讀一次 `/api/reports`，在「市民通報」分頁出現，政府端案件表標「掃碼」。掃碼頁不開放上傳照片（網站公開時避免不雅圖片直接出現在儀表板）。
+
 畫面右上角可以切換「市民／政府單位」兩種視角（沒有登入，只是展示用）。
 
 缺桶程度分頁的地圖左下角有「顯示 icon」小框，每個圖層（捷運站、公車站、YouBike、飲料店、現有垃圾桶、住宅區、市民通報）一個開關，只控制地圖上要不要標出那類地點。生活情境卡片（政府單位視角是指標卡片）最下面的「加入需求計算」才決定算不算進缺桶程度，兩者互不影響。
@@ -121,7 +123,7 @@ make test
 
 ## 部署
 
-網站部署在 **Cloudflare Workers**（純靜態網站，沒有後端），並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
+網站部署在 **Cloudflare Workers**（靜態網站＋ `web/worker/index.ts` 處理 `/api/*`，掃碼通報存在 D1），並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
 
 - Cloudflare 連接這個 GitHub repo，push 到 `main` 後自動 build 與部署；其他分支會產生預覽網址。
 - **分支預覽**：Settings → Builds → Previews Base 的 Preview command 是 `npx wrangler preview`，`web/wrangler.jsonc` 必須有 `"previews": {}` 區塊（可以是空的）。每個分支的預覽網址是 `https://<分支名稱，斜線換成 ->-taipei-trash-can.sage-otomo.workers.dev`，例如 `feat/rename-terms` → `feat-rename-terms-taipei-trash-can.sage-otomo.workers.dev`。
@@ -129,6 +131,15 @@ make test
 - Build 設定：Root directory `web`、Build command `npm run build`、Deploy command `npx wrangler deploy`。
 - 要上傳哪些檔案寫在 `web/wrangler.jsonc`（`dist/`），裡面的 `name` 必須和 Cloudflare 後台的 Worker 名稱相同。
 - GitHub Actions（`.github/workflows/ci.yml`）只負責跑測試與確認可以 build。
+
+**掃碼通報的後端（`web/worker/index.ts`）防灌爆設計**：
+
+- 資料庫總量上限 2,000 筆，在同一個 SQL 指令裡檢查，滿了就拒收
+- Cloudflare Rate Limiting：同一個 IP 每分鐘送出 10 次、整體每分鐘 60 次（每個機房分開算）、讀取每 IP 每分鐘 60 次；現場共用 Wi-Fi 會是同一個 IP，所以 IP 門檻放寬，擋機器人主要靠 Turnstile
+- Turnstile：site key 放 `wrangler.jsonc` 的 `vars.TURNSTILE_SITE_KEY`，secret 放 Worker 的 Secret `TURNSTILE_SECRET`（不進 git）。沒設 site key 時用官方測試金鑰（一定通過，只適合排練）；設了 site key 卻沒 secret 會拒收
+- 伺服器重新檢查所有欄位（`web/src/lib/qrReport.ts`），位置由垃圾桶編號決定，不收使用者送的座標；只收自己網站送出的 JSON，最大 4 KB
+- 聯絡方式只存不回傳；政府端改處理進度仍只存在瀏覽器，沒有公開的寫入 API
+- 資料表由 Worker 第一次使用時自動建立（`CREATE TABLE IF NOT EXISTS`），不用另外跑 migration
 
 **比賽當天提交前**：到 Worker 的 Settings → Domains & Routes，把 Cloudflare Access 關掉，網站才會公開，評審與投票者才看得到。
 

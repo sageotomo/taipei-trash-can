@@ -1,0 +1,220 @@
+/* 掃 QR code 的通報頁：手機優先，色票和儀表板相同 */
+@import url("https://fonts.googleapis.com/css2?family=Huninn&family=Noto+Sans+TC:wght@400;500;700&display=swap");
+
+:root {
+  --paper: #f3f5f2;
+  --surface: #ffffff;
+  --ink: #1b2a2f;
+  --muted: #5f6f74;
+  --rule: #d6dcd8;
+  --action: #2e6b4f;
+  --action-soft: #e3efe8;
+  --full: #d1495b;
+  --font-display: "Huninn", "Noto Sans TC", system-ui, sans-serif;
+  --font-body: "Noto Sans TC", system-ui, -apple-system, "PingFang TC", "Microsoft JhengHei", sans-serif;
+  color-scheme: light;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--paper);
+}
+
+button,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.rp {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px 32px;
+}
+
+.rp-head h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 4px 0 8px;
+}
+
+.kicker {
+  margin: 0;
+  font-size: 13px;
+  color: var(--action);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.bin {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.bin-id {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 0 8px;
+  border-radius: 4px;
+  background: var(--ink);
+  color: var(--surface);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+fieldset {
+  border: 0;
+  margin: 0 0 16px;
+  padding: 0;
+}
+
+legend,
+.field > span {
+  display: block;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.cats {
+  display: grid;
+  gap: 8px;
+}
+
+.cat {
+  display: grid;
+  gap: 0;
+  padding: 12px 14px;
+  border: 1.5px solid var(--rule);
+  border-radius: 10px;
+  cursor: pointer;
+  min-height: 56px;
+}
+
+.cat input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.cat small {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.cat.on {
+  border-color: var(--action);
+  background: var(--action-soft);
+}
+
+.cat:has(input:focus-visible) {
+  outline: 2px solid var(--action);
+  outline-offset: 2px;
+}
+
+.field {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.field input,
+.field textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1.5px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 16px; /* 小於 16px 時 iPhone 會自動放大畫面 */
+}
+
+.field textarea {
+  resize: vertical;
+}
+
+.field small {
+  font-size: 13px;
+}
+
+.count {
+  justify-self: end;
+}
+
+.ts {
+  min-height: 70px;
+  margin-bottom: 12px;
+}
+
+.primary,
+.secondary {
+  width: 100%;
+  min-height: 48px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary {
+  border: 0;
+  background: var(--action);
+  color: var(--surface);
+}
+
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondary {
+  border: 1.5px solid var(--action);
+  background: var(--surface);
+  color: var(--action);
+}
+
+.done h2 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  margin: 0 0 8px;
+}
+
+.case-id {
+  font-size: 20px;
+  letter-spacing: 0.04em;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.err {
+  color: var(--full);
+  font-weight: 500;
+}
+
+.rp-foot {
+  margin-top: 24px;
+  font-size: 12px;
+}

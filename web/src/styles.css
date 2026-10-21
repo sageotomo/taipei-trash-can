@@ -2315,6 +2315,11 @@ textarea {
   font-size: 11px;
 }
 
+.qr-tag {
+  background: var(--ink);
+  color: var(--surface);
+}
+
 .status-select {
   display: inline-block;
   position: relative;
