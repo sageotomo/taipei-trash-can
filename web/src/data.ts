@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, SmartBin, Source } from "./types";
 
 /** 住宅區：homes = 住家門牌數（真實資料時每格一點；模擬時每點 1） */
-export type ResidentialProps = { homes?: number; simulated: boolean };
+/** door = 住家門牌、biz = 商圈程度（0～1），homes = door ×（1 − biz） */
+export type ResidentialProps = { homes?: number; door?: number; biz?: number; simulated: boolean };
 
 export interface AppData {
   bins: FeatureCollection<BinProps>;

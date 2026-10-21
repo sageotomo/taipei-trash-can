@@ -292,10 +292,15 @@ def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame, stations:
     pos_lat = (pd.Series(addresses["lat"].values, index=cell_of) * w).groupby(level=0).sum() / w.groupby(level=0).sum()
     pos_lng = (pd.Series(addresses["lng"].values, index=cell_of) * w).groupby(level=0).sum() / w.groupby(level=0).sum()
 
-    value = np.round(homes.values * (1 - commercial)).astype(int)
+    # 用網頁上顯示的數字（整數門牌、兩位小數的商圈程度）來算，有人自己驗算時才對得上
+    door = np.round(homes.values).astype(int)
+    commercial = np.round(commercial, 2)
+    value = np.round(door * (1 - commercial)).astype(int)
     keep = value >= MIN_RESIDENTIAL
     return pd.DataFrame({"lat": pos_lat.reindex(cells).values[keep], "lng": pos_lng.reindex(cells).values[keep],
-                         "homes": value[keep]})
+                         "homes": value[keep],
+                         # 網頁上顯示算式用：住家門牌、商圈程度（兩位小數）
+                         "door": door[keep], "biz": commercial[keep]})
 
 
 # 有真實資料時：說明 + 開放資料連結（網頁上滑鼠移到「真實資料」旁的 ! 會顯示）

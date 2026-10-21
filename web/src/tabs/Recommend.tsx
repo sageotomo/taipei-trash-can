@@ -22,8 +22,9 @@ import { cellCenter, latLngToCell } from "../lib/hexgrid";
 import { HexLayer, MapClick, PANES } from "../map/layers";
 import { PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
-import { Section, SourceTag, Swatch, Switch, escapeHtml, fmt, fmtValue } from "../ui";
+import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
 import { storyOf } from "../lib/stories";
+import { pointLabel } from "../lib/pointLabel";
 import { CELL_WIDTH_M } from "../lib/hexgrid";
 import type { Role } from "../lib/role";
 import type { AppData } from "../data";
@@ -103,18 +104,6 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
 
 const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16, food: 17 };
 
-function pointLabel(
-  layer: DataLayer, p: DataLayer["points"][number], simulated: boolean, title = layer.label,
-  isSim: (source?: string) => boolean = () => false,
-): string {
-  const head = p.name ? `${escapeHtml(title)}：${escapeHtml(p.name)}` : escapeHtml(title);
-  const extra = layer.fields
-    .filter((f) => p.values?.[f.key] !== undefined)
-    // 欄位來源和圖層不同（例如真實垃圾桶上的模擬填滿速度）時，在欄位旁標「模擬」
-    .map((f) => escapeHtml(`${f.label} ${fmtValue(p.values![f.key], f.unit)} ${f.unit}${!simulated && f.source && isSim(f.source) ? "（模擬）" : ""}`))
-    .join("・");
-  return head + (extra ? `<br>${extra}` : "") + (simulated ? "（模擬）" : "");
-}
 
 /** 各圖層的點，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
 export function PoiLayers({ data, layers, visible }: { data: AppData; layers: DataLayer[]; visible: Visibility }) {

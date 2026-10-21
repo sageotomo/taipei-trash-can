@@ -29,7 +29,10 @@ export function staticLayers(data: AppData): DataLayer[] {
   );
 
   const residential = data.residential.features.map((f) =>
-    point(f.geometry.coordinates[1], f.geometry.coordinates[0], undefined, { homes: f.properties.homes ?? 1 })
+    point(f.geometry.coordinates[1], f.geometry.coordinates[0], undefined, {
+      homes: f.properties.homes ?? 1,
+      ...(f.properties.door !== undefined && f.properties.biz !== undefined ? { door: f.properties.door, biz: f.properties.biz } : {}),
+    })
   );
 
   return [
@@ -42,7 +45,7 @@ export function staticLayers(data: AppData): DataLayer[] {
     { id: "bins", label: "現有垃圾桶", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時", source: "fill" }] },
     { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential,
-      fields: [{ key: "homes", label: "住宅值（住家門牌，商圈打折）", unit: "戶" }] },
+      fields: [{ key: "homes", label: "住宅值", unit: "" }] },
   ];
 }
 

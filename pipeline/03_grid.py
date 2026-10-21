@@ -105,7 +105,7 @@ def main() -> None:
 
     write_json(OUT / "residential.geojson", {
         "type": "FeatureCollection",
-        "features": point_features(residential.assign(simulated=sim["residential"]), ["homes", "simulated"]),
+        "features": point_features(residential.assign(simulated=sim["residential"]), [c for c in ["homes", "door", "biz"] if c in residential.columns] + ["simulated"]),
     })
 
     reports_out = reports.assign(lat=reports["lat"].round(5), lng=reports["lng"].round(5), simulated=True)
