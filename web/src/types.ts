@@ -89,7 +89,7 @@ export interface FillData {
 
 export type ProgressStatus = "已設置" | "施工中" | "規劃中" | "未處理";
 
-/** 施政進度（模擬，lib/progress.ts 產生） */
+/** 增桶進度（模擬，lib/progress.ts 產生） */
 export interface ProgressItem {
   rank: number;
   cell: string;

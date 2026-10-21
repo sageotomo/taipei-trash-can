@@ -46,7 +46,7 @@ const TABS: { id: TabId; label: string }[] = [
   { id: "recommend", label: "缺桶程度" },
   { id: "fill", label: "滿桶狀況" },
   { id: "reports", label: "市民通報" },
-  { id: "progress", label: "施政進度" },
+  { id: "progress", label: "增桶進度" },
 ];
 
 // 台北市中心
@@ -120,7 +120,7 @@ export default function App() {
   );
   const caseById = useMemo(() => new Map(cases.map((c) => [c.report.id, c])), [cases]);
 
-  // 施政進度：市府「採納」的是預設指標、只含歷史通報算出的前 30 名，不隨使用者調整而改變
+  // 增桶進度：市府「採納」的是預設指標、只含歷史通報算出的前 30 名，不隨使用者調整而改變
   const progress = useMemo(() => {
     if (!data || !place) return [];
     const base = [...fixedLayers, reportsLayer(data.reportsSeed)];
