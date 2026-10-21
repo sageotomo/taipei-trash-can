@@ -8,7 +8,7 @@ import { latLngToCell } from "./hexgrid";
 // v3：住宅區改成「住家門牌數」加總；舊版的設定不再讀取
 // v4：捷運人流改成開根號（√(這格 ÷ 最大的那格)）
 // v5：預設指標拿掉捷運人流（和飲料店的族群重疊）
-const INDICATORS_KEY = "trash-bins:indicators:v5";
+const INDICATORS_KEY = "trash-bins:indicators:v7";
 
 function isIndicator(x: unknown): x is Indicator {
   const i = x as Indicator;

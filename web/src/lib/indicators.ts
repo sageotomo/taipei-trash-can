@@ -23,6 +23,7 @@ export interface LayerField {
   key: string;
   label: string;
   unit: string;
+  source?: string;         // 這個欄位的資料來源和圖層不同時才寫，例如垃圾桶位置是真實、填滿速度是模擬
 }
 
 export interface DataLayer {
@@ -79,7 +80,7 @@ export function effectiveWeight(ind: Indicator): number {
   return isOn(ind) ? ind.weight : 0;
 }
 
-// 預設指標就是展示用的六個故事（捷運人流不放：搭捷運的人和逛商圈的人大多重疊，會和飲料店重複計算）（說明文字在 lib/stories.ts），順序就是故事順序
+// 預設指標就是展示用的七個故事（捷運人流不放：搭捷運的人和逛商圈的人大多重疊，會和飲料店重複計算）（說明文字在 lib/stories.ts），順序就是故事順序
 export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "drinks", label: "飲料店（商圈）", layer: "drinks", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "youbike", label: "YouBike 站", layer: "youbike", method: "count", sign: 1, weight: 0.1, cap: null },
@@ -87,6 +88,8 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
   { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
+  // 格內所有垃圾桶的填滿速度加總 ≈ 這格丟進桶子的垃圾量；和上面「現有垃圾桶」的扣分一起看，就是「垃圾量 − 桶子數」
+  { id: "fill", label: "滿溢速度", layer: "bins", method: "sum", field: "fill", sign: 1, weight: 0.15, cap: null },
 ];
 
 export const TOP_N = 30;
@@ -294,6 +297,13 @@ export function indicatorUnit(ind: Indicator, layer?: DataLayer): string {
   if (!layer) return "";
   if (ind.method === "count") return layer.unit;
   return layer.fields.find((f) => f.key === ind.field)?.unit ?? "";
+}
+
+/** 指標用到的資料來源（sources.json 的 key）：加總某欄位時，以欄位自己的來源為準 */
+export function indicatorSource(ind: Indicator, layer?: DataLayer): string | undefined {
+  if (!layer) return undefined;
+  if (ind.method === "sum") return layer.fields.find((f) => f.key === ind.field)?.source ?? layer.source;
+  return layer.source;
 }
 
 export function methodText(ind: Indicator, layer?: DataLayer): string {

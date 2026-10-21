@@ -12,6 +12,7 @@ import {
   curveOf,
   mainReason,
   methodText,
+  indicatorSource,
   type CellResult,
   type DataLayer,
   type Indicator,
@@ -102,11 +103,15 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
 
 const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16, food: 17 };
 
-function pointLabel(layer: DataLayer, p: DataLayer["points"][number], simulated: boolean, title = layer.label): string {
+function pointLabel(
+  layer: DataLayer, p: DataLayer["points"][number], simulated: boolean, title = layer.label,
+  isSim: (source?: string) => boolean = () => false,
+): string {
   const head = p.name ? `${escapeHtml(title)}：${escapeHtml(p.name)}` : escapeHtml(title);
   const extra = layer.fields
     .filter((f) => p.values?.[f.key] !== undefined)
-    .map((f) => escapeHtml(`${f.label} ${fmtValue(p.values![f.key], f.unit)} ${f.unit}`))
+    // 欄位來源和圖層不同（例如真實垃圾桶上的模擬填滿速度）時，在欄位旁標「模擬」
+    .map((f) => escapeHtml(`${f.label} ${fmtValue(p.values![f.key], f.unit)} ${f.unit}${!simulated && f.source && isSim(f.source) ? "（模擬）" : ""}`))
     .join("・");
   return head + (extra ? `<br>${extra}` : "") + (simulated ? "（模擬）" : "");
 }
@@ -114,10 +119,10 @@ function pointLabel(layer: DataLayer, p: DataLayer["points"][number], simulated:
 /** 各圖層的點，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
 export function PoiLayers({ data, layers, visible }: { data: AppData; layers: DataLayer[]; visible: Visibility }) {
   const groups = useMemo(() => {
-    const sim = (layer: DataLayer) => data.sources.find((s) => s.key === layer.source)?.real === false;
+    const isSim = (key?: string) => data.sources.find((s) => s.key === key)?.real === false;
     return layers.map((layer) => ({
       key: layer.id, layer, icon: layer.icon, label: layer.label,
-      points: layer.points.map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, sim(layer)) })),
+      points: layer.points.map((p): LabeledPoint => ({ lat: p.lat, lng: p.lng, label: pointLabel(layer, p, isSim(layer.source), layer.label, isSim) })),
     }));
   }, [data.sources, layers]);
 
@@ -520,7 +525,7 @@ function IndicatorCard({ ind, stat, layer, taken, sources, onChange, onToggle, o
         {layer ? <PoiIcon icon={layer.icon} size={18} /> : null}
         <span className="ind-label">
           {ind.label}
-          {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === layer?.source)} />}
+          {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={sources.find((s) => s.key === indicatorSource(ind, layer))} />}
         </span>
         <SignToggle sign={ind.sign} onChange={(sign) => onChange({ sign })} />
       </div>
@@ -675,7 +680,7 @@ function AddIndicator({ layers, indicators, onAdd, onCancel }: {
 }
 
 // ---------------- 市民版 ----------------
-// 市民看不到公式與權重，只看到六個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
+// 市民看不到公式與權重，只看到七個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
 
 function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => void; detailRef: RefObject<HTMLDivElement | null> }) {
   const { data, layers, indicators, result, recommendations, selected, onSelect, place, toggle, detailRef } = props;
@@ -746,7 +751,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                       {ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}
                     </span>
                     <span className="muted">{layer ? `${layer.label} ${fmt(layer.points.length)} ${layer.unit}` : ""}</span>
-                    {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === layer?.source)} />}
+                    {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === indicatorSource(ind, layer))} />}
                   </div>
                 </div>
               </li>

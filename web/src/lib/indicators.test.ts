@@ -174,3 +174,16 @@ describe("同一圖層、同一算法不重複", () => {
     expect(freeMethods(layer("bus", []), [base])).toEqual([]);
   });
 });
+
+describe("indicatorSource", () => {
+  it("加總欄位時用欄位自己的來源（真實垃圾桶上的模擬填滿速度）", async () => {
+    const { indicatorSource } = await import("./indicators");
+    const bins: DataLayer = {
+      id: "bins", label: "垃圾桶", unit: "個", icon, source: "bins", points: [],
+      fields: [{ key: "fill", label: "填滿速度", unit: "%/小時", source: "fill" }],
+    };
+    const base = { id: "x", label: "x", layer: "bins", sign: 1 as const, weight: 0.1, cap: null };
+    expect(indicatorSource({ ...base, method: "count" }, bins)).toBe("bins");
+    expect(indicatorSource({ ...base, method: "sum", field: "fill" }, bins)).toBe("fill");
+  });
+});
