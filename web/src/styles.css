@@ -213,6 +213,9 @@ textarea {
 }
 
 .panel-body {
+  /* 讓裡面絕對定位的元素（例如 .sr-only 的隱藏文字）以捲動區為基準，
+     不然它們會跑到捲動區外，把整頁撐高、多出一條外側捲軸 */
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
