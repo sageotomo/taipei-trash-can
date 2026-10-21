@@ -47,6 +47,8 @@ export interface Report {
   cell: string;
   simulated?: boolean;
   local?: boolean; // 這台瀏覽器新增的
+  photo?: string;   // 檢舉照片（壓縮後的 JPEG data URL），只有網頁上新增的通報有
+  contact?: string; // 市民留的 email 或電話（選填），追蹤處理進度用
 }
 
 export interface Source {

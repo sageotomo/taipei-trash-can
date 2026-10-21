@@ -23,10 +23,13 @@ import {
   clearLocalReports,
   createReport,
   loadLocalReports,
+  localDate,
   removeLocalReport,
-  type Category,
+  type ReportInput,
 } from "./lib/reports";
+import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, type StatusOverrides } from "./lib/cases";
 import { ReportLayers, ReportPanel, type Draft } from "./tabs/Reports";
+import { ReportGovPanel } from "./tabs/ReportsGov";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
 import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tabs/FillLevel";
@@ -63,6 +66,9 @@ export default function App() {
   const [localReports, setLocalReports] = useState<Report[]>(loadLocalReports);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [reportCell, setReportCell] = useState<string | null>(null);
+  const [selectedReport, setSelectedReport] = useState<string | null>(null);
+  const [statusOverrides, setStatusOverrides] = useState<StatusOverrides>(loadStatusOverrides);
+  useEffect(() => saveStatusOverrides(statusOverrides), [statusOverrides]);
   const [district, setDistrict] = useState("全部");
   const [progressSelected, setProgressSelected] = useState<number | null>(null);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
@@ -99,6 +105,20 @@ export default function App() {
     for (const r of allReports) counts.set(r.cell, (counts.get(r.cell) ?? 0) + 1);
     return counts;
   }, [allReports]);
+
+  // 通報案件（處理進度、承辦、最近的垃圾桶），市民看自己通報的進度、政府單位看全部
+  const binPoints = useMemo(
+    () =>
+      data
+        ? data.bins.features.map((f) => ({ id: f.properties.id, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] }))
+        : [],
+    [data]
+  );
+  const cases = useMemo(
+    () => (place ? buildCases(allReports, statusOverrides, binPoints, place.district, localDate()) : []),
+    [allReports, statusOverrides, binPoints, place]
+  );
+  const caseById = useMemo(() => new Map(cases.map((c) => [c.report.id, c])), [cases]);
 
   // 施政進度：市府「採納」的是預設指標、只含歷史通報算出的前 30 名，不隨使用者調整而改變
   const progress = useMemo(() => {
@@ -141,13 +161,36 @@ export default function App() {
   }, []);
 
   const submitReport = useCallback(
-    (category: Category, note: string) => {
-      if (!draft) return;
-      setLocalReports((prev) => addLocalReport(prev, createReport({ category, note, ...draft })));
+    (input: ReportInput) => {
+      if (!draft) return false;
+      const { reports, saved } = addLocalReport(localReports, createReport({ ...input, ...draft }));
+      setLocalReports(reports);
       setDraft(null);
+      return saved;
     },
-    [draft]
+    [draft, localReports]
   );
+
+  const pickCase = useCallback(
+    (id: string, fly = true) => {
+      const c = caseById.get(id);
+      if (!c) return;
+      setSelectedReport(id);
+      setReportCell(c.report.cell);
+      if (fly) flyTo(c.report.lat, c.report.lng, 17);
+    },
+    [caseById, flyTo]
+  );
+
+  const setCaseStatus = useCallback((id: string, status: CaseStatus) => {
+    setStatusOverrides((prev) => ({ ...prev, [id]: { status, updated_at: localDate() } }));
+  }, []);
+
+  // 切換身分時清掉進行中的通報草稿與選取
+  useEffect(() => {
+    setDraft(null);
+    setSelectedReport(null);
+  }, [role]);
 
   const selectProgress = useCallback(
     (i: number) => {
@@ -175,8 +218,8 @@ export default function App() {
   );
 
   const ready = data && place;
-  // 政府單位看填滿度時，右側要放整張表格，面板加寬
-  const wide = tab === "fill" && role === "gov";
+  // 政府單位看填滿度與通報案件時，右側要放整張表格，面板加寬
+  const wide = (tab === "fill" || tab === "reports") && role === "gov";
 
   return (
     <div className={["app", wide ? "wide" : "", panelOpen ? "" : "collapsed"].filter(Boolean).join(" ")}>
@@ -228,8 +271,18 @@ export default function App() {
         ) : null}
         {ready && tab === "reports" ? (
           <>
-            <MapClick onClick={pickReportLocation} />
-            <ReportLayers data={data} reports={allReports} reportCounts={reportCounts} selected={reportCell} draft={draft} />
+            {role === "citizen" ? <MapClick onClick={pickReportLocation} /> : null}
+            <ReportLayers
+              data={data}
+              reports={allReports}
+              reportCounts={reportCounts}
+              selected={reportCell}
+              draft={draft}
+              role={role}
+              cases={caseById}
+              selectedId={role === "gov" ? selectedReport : null}
+              onPickReport={role === "gov" ? (id) => pickCase(id, false) : undefined}
+            />
           </>
         ) : null}
         {ready && tab === "progress" ? (
@@ -289,7 +342,18 @@ export default function App() {
               onFocus={flyTo}
             />
           ) : null}
-          {ready && tab === "reports" ? (
+          {ready && tab === "reports" && role === "gov" ? (
+            <ReportGovPanel
+              data={data}
+              place={place}
+              cases={cases}
+              reportCounts={reportCounts}
+              selectedId={selectedReport}
+              onSelect={pickCase}
+              onStatus={setCaseStatus}
+            />
+          ) : null}
+          {ready && tab === "reports" && role === "citizen" ? (
             <ReportPanel
               data={data}
               place={place}
@@ -298,6 +362,7 @@ export default function App() {
               reportCounts={reportCounts}
               selected={reportCell}
               draft={draft}
+              cases={caseById}
               onSubmit={submitReport}
               onCancel={() => setDraft(null)}
               onDelete={(id) => setLocalReports((prev) => removeLocalReport(prev, id))}

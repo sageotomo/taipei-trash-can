@@ -2112,3 +2112,332 @@ textarea {
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* ---------------- 市民通報：照片、聯絡方式 ---------------- */
+
+.field input[type="text"] {
+  padding: 8px 10px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.field input[aria-invalid="true"] {
+  border-color: var(--full);
+}
+
+.field-help {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.photo-drop {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 14px 10px;
+  border: 1px dashed #aab5b1;
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  text-align: center;
+  cursor: pointer;
+}
+
+.photo-drop:hover,
+#report-photo:focus-visible + .photo-drop {
+  border-color: var(--action);
+  background: var(--action-soft);
+}
+
+.photo-drop.busy {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.photo-drop small {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* 相機圖示：機身＋鏡頭，純 CSS */
+.photo-icon {
+  position: relative;
+  width: 26px;
+  height: 18px;
+  margin-bottom: 4px;
+  border: 2px solid var(--action);
+  border-radius: 4px;
+}
+
+.photo-icon::before {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 6px;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--action);
+  border-radius: 50%;
+}
+
+.photo-icon::after {
+  content: "";
+  position: absolute;
+  top: -6px;
+  left: 6px;
+  width: 8px;
+  height: 4px;
+  border-radius: 2px 2px 0 0;
+  background: var(--action);
+}
+
+.photo-preview {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.photo-preview img {
+  width: 96px;
+  height: 72px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--rule);
+}
+
+.photo-actions {
+  display: flex;
+  gap: 14px;
+}
+
+.photo-actions label.link-button {
+  cursor: pointer;
+}
+
+.sent-box {
+  display: grid;
+  gap: 4px;
+  border-style: solid;
+  border-color: var(--action);
+  background: var(--action-soft);
+  color: var(--ink);
+}
+
+.report-thumb {
+  width: 22px;
+  height: 22px;
+  object-fit: cover;
+  border-radius: 4px;
+}
+
+.case-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.case-status.big {
+  gap: 4px;
+  font-size: 14px;
+}
+
+/* ---------------- 市民通報：政府單位案件表 ---------------- */
+
+.table-filters.three {
+  grid-template-columns: auto auto 1fr;
+}
+
+.table-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.table-meta .footnote {
+  margin-bottom: 8px;
+}
+
+.button.small {
+  padding: 4px 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.case-table td:first-child {
+  min-width: 0;
+}
+
+.case-table td:nth-child(2) {
+  min-width: 180px;
+}
+
+.case-table .clip {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.case-table td {
+  vertical-align: middle;
+}
+
+.th-plain {
+  display: block;
+  padding: 7px 8px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.new-tag {
+  margin-left: 4px;
+  padding: 0 5px;
+  border-radius: 4px;
+  background: var(--action);
+  color: #fff;
+  font-size: 11px;
+}
+
+.status-select {
+  display: inline-block;
+  position: relative;
+}
+
+.status-select select {
+  appearance: none;
+  padding: 3px 22px 3px 10px;
+  border: 1px solid var(--status);
+  border-radius: 999px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 11px center / 4px 4px no-repeat,
+    linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 7px center / 4px 4px no-repeat,
+    color-mix(in srgb, var(--status) 14%, var(--surface));
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.overdue-pill {
+  margin-left: 4px;
+}
+
+.overdue-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--full);
+  border-radius: 50%;
+}
+
+
+/* 附件小圖示：照片（相框）、聯絡方式（信封） */
+.attach-photo,
+.attach-contact {
+  display: inline-block;
+  margin-left: 5px;
+  vertical-align: -1px;
+  width: 14px;
+  height: 11px;
+  border: 1.5px solid var(--muted);
+  border-radius: 2px;
+}
+
+.attach-photo {
+  background: radial-gradient(circle at 50% 55%, var(--muted) 2px, transparent 2.5px);
+}
+
+.attach-contact {
+  background:
+    linear-gradient(33deg, transparent 46%, var(--muted) 47%, var(--muted) 55%, transparent 56%) left / 50% 100% no-repeat,
+    linear-gradient(-33deg, transparent 46%, var(--muted) 47%, var(--muted) 55%, transparent 56%) right / 50% 100% no-repeat;
+}
+
+.case-detail {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 14px;
+  margin-top: 14px;
+  border: 1px solid var(--rule);
+}
+
+.case-photo {
+  width: 180px;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.case-facts {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  font-size: 13.5px;
+}
+
+.case-facts > div {
+  display: grid;
+  grid-template-columns: 3.5em 1fr;
+}
+
+.case-facts .wide {
+  grid-column: 1 / -1;
+}
+
+.case-facts dt {
+  color: var(--muted);
+}
+
+.case-facts dd {
+  margin: 0;
+}
+
+.case-facts strong {
+  margin-left: 2px;
+}
+
+.form-actions.start {
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.form-actions.start .footnote {
+  margin: 0;
+}
+
+@media (max-width: 800px) {
+  .case-detail {
+    grid-template-columns: 1fr;
+  }
+
+  .case-photo {
+    width: 100%;
+  }
+
+  .case-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .table-filters.three {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .table-filters.three input {
+    grid-column: 1 / -1;
+  }
+}

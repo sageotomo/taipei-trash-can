@@ -1,4 +1,5 @@
-// 市民通報只存在這台裝置的瀏覽器（localStorage），不需要後端，也不收個資。
+// 市民通報只存在這台裝置的瀏覽器（localStorage），不需要後端。
+// 照片與聯絡方式都是選填；照片先在瀏覽器壓縮（lib/photo.ts）再存，避免塞爆 localStorage。
 // localStorage 在無痕模式或封鎖網站資料時可能讀寫失敗，所以都包在 try/catch 裡。
 
 import { latLngToCell } from "./hexgrid";
@@ -22,31 +23,56 @@ export function loadLocalReports(): Report[] {
   }
 }
 
-function save(reports: Report[]) {
+/** 回傳是否存成功（照片太多時可能超過瀏覽器容量） */
+function save(reports: Report[]): boolean {
   try {
     localStorage.setItem(KEY, JSON.stringify(reports));
+    return true;
   } catch {
     // 存不了就只留在這次的畫面上
+    return false;
   }
 }
 
-export function createReport(input: { category: Category; note: string; lat: number; lng: number }): Report {
+/** 這台裝置當地的日期 YYYY-MM-DD（toISOString 是 UTC，台灣早上 8 點前會變成前一天） */
+export function localDate(d = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** 網頁上新增的通報編號：W＋月日＋三碼，例如 W1021-7K3（歷史通報是 R 開頭） */
+export function newReportId(d = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const tail = Math.floor(Math.random() * 36 ** 3).toString(36).toUpperCase().padStart(3, "0");
+  return `W${pad(d.getMonth() + 1)}${pad(d.getDate())}-${tail}`;
+}
+
+export interface ReportInput {
+  category: Category;
+  note: string;
+  photo?: string;
+  contact?: string;
+}
+
+export function createReport(input: ReportInput & { lat: number; lng: number }): Report {
+  const contact = input.contact?.trim().slice(0, 100);
   return {
-    id: `L${Date.now().toString(36)}`,
+    id: newReportId(),
     category: input.category,
     note: input.note.trim().slice(0, 200),
     lat: input.lat,
     lng: input.lng,
     cell: latLngToCell(input.lat, input.lng),
-    created_at: new Date().toISOString().slice(0, 10),
+    created_at: localDate(),
     local: true,
+    ...(input.photo ? { photo: input.photo } : {}),
+    ...(contact ? { contact } : {}),
   };
 }
 
-export function addLocalReport(existing: Report[], report: Report): Report[] {
+export function addLocalReport(existing: Report[], report: Report): { reports: Report[]; saved: boolean } {
   const next = [...existing, report];
-  save(next);
-  return next;
+  return { reports: next, saved: save(next) };
 }
 
 export function removeLocalReport(existing: Report[], id: string): Report[] {
