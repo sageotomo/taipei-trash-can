@@ -56,6 +56,8 @@ export interface Source {
   key: string;
   label: string;
   real: boolean;
+  /** 推估：輸入是真實資料，但它和指標之間的關係是假設，沒有實際觀測（real 為 false） */
+  assumption?: boolean;
   note: string;                              // 真實：資料來源說明；模擬：模擬方法
   links?: { label: string; url: string }[];  // 真實資料的開放資料網址
 }

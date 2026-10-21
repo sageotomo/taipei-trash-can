@@ -17,7 +17,8 @@ export function RoleToggle({ role, onChange }: { role: Role; onChange: (r: Role)
 }
 
 /**
- * 每個資料都標示真實或模擬，這是黑客松規則要求的。
+ * 每個資料都標示真實或模擬，這是黑客松規則要求的。推估（assumption）是模擬的一種：
+ * 輸入是真實資料，但它和指標的關係沒有實際觀測，所以不能標成真實資料。
  * 旁邊的「!」：滑鼠移上去（手機點一下）顯示說明。真實資料寫來源與網址，模擬資料寫模擬方法。
  * 說明框用 position: fixed 定位，才不會被可捲動的側邊欄裁掉。
  */
@@ -58,7 +59,7 @@ export function SourceTag({ source }: { source?: Source }) {
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
 
   if (!source) return null;
-  const kind = source.real ? "真實資料" : "模擬資料";
+  const kind = source.real ? "真實資料" : source.assumption ? "推估資料" : "模擬資料";
   return (
     <span className="source-tag" onMouseEnter={show} onMouseLeave={hide}>
       <span className={source.real ? "tag tag-real" : "tag tag-sim"}>{kind}</span>
@@ -91,7 +92,7 @@ export function SourceTag({ source }: { source?: Source }) {
           onMouseLeave={hide}
         >
           <strong className={source.real ? "source-tip-head real" : "source-tip-head sim"}>
-            {source.label}・{source.real ? "資料來源" : "模擬方法"}
+            {source.label}・{source.real ? "資料來源" : source.assumption ? "推估方式" : "模擬方法"}
           </strong>
           <span className="source-tip-note">{source.note}</span>
           {source.links?.length ? (

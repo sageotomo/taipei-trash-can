@@ -45,7 +45,8 @@ export function staticLayers(data: AppData): DataLayer[] {
     { id: "bins", label: "現有垃圾桶", unit: "個", icon: POI_TYPES.bins, source: "bins", points: bins,
       fields: [{ key: "fill", label: "填滿速度", unit: "%/小時", source: "fill" }] },
     { id: "residential", label: "住宅區", unit: "處", icon: POI_TYPES.residential, source: "residential", points: residential,
-      fields: [{ key: "homes", label: "住宅值", unit: "" }] },
+      // 門牌位置是真實資料，但「住宅區有人把家裡垃圾丟進路邊桶」是推估，所以住宅值另外標示
+      fields: [{ key: "homes", label: "住宅值", unit: "", source: "residential_dumping" }] },
   ];
 }
 
