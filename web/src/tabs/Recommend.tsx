@@ -682,13 +682,11 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
   const selectedResult = selected ? result.byCell.get(selected) : undefined;
   const allOn = indicators.every(isOn);
   const blockM = Math.round(CELL_WIDTH_M / 10) * 10;
+  // 一般步行速度約 80 公尺／分鐘
+  const walkMin = Math.max(1, Math.round(blockM / 80));
 
   return (
     <>
-      <p className="lead">
-        地圖上每一格是約 {fmt(blockM)} 公尺寬的街區，顏色越深越缺垃圾桶。打開或關掉下面的生活情境，看看哪裡最需要垃圾桶。
-      </p>
-
       <div ref={detailRef} className="detail-anchor">
         {selected && selectedResult ? (
           <CitizenCellDetail
@@ -702,7 +700,9 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
           />
         ) : (
           <div className="hint-box">
-            <p className="hint-text">點地圖上任一格，看看那裡為什麼缺（或不缺）垃圾桶。</p>
+            <p className="hint-text">
+              地圖上每一格約 {fmt(blockM)} 公尺寬，大概是走路 {walkMin} 分鐘的距離。顏色越深，代表那一帶越缺垃圾桶。以下情境會增加或減少對垃圾桶的需求，你可以打開或關掉這些情境參數，看看哪裡最需要垃圾桶，也可以點任一格，看那裡為什麼缺（或不缺）垃圾桶。
+            </p>
             <div className="legend">
               <span className="legend-item">
                 <Swatch color="#e4e8e5" shape="hex" />
