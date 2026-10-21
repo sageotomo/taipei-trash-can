@@ -1448,9 +1448,9 @@ textarea {
   filter: brightness(0.95) contrast(1.05);
 }
 
-/* 備用底圖是淺色的，反相後染成同色系 */
+/* 底圖是淺色的，反相後染成網站的深藍灰（陸地約 #152429，文字變淺青色） */
 .basemap-invert {
-  filter: invert(1) grayscale(1) brightness(0.62) contrast(1.15) sepia(0.4) hue-rotate(155deg) saturate(1.4);
+  filter: invert(1) grayscale(1) contrast(0.8) brightness(0.75) sepia(0.8) hue-rotate(150deg) saturate(2);
 }
 
 /* ---------- 點位圖示 ---------- */

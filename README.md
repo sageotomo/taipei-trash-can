@@ -134,7 +134,7 @@ make test
 
 ## 使用的開源套件與 AI 工具
 
-- 地圖：[Leaflet](https://leafletjs.com/)、[react-leaflet](https://react-leaflet.js.org/)，底圖 © CARTO、© OpenStreetMap contributors（備援：© 內政部國土測繪中心）
+- 地圖：[Leaflet](https://leafletjs.com/)、[react-leaflet](https://react-leaflet.js.org/)，底圖 © 內政部國土測繪中心（備援：© OpenStreetMap）
 - 網格：自訂正六角形網格，演算法參考 [Red Blob Games: Hexagonal Grids](https://www.redblobgames.com/grids/hexagons/)
 - 前端：React、Vite、TypeScript、Vitest
 - 資料處理：pandas、NumPy、pytest
