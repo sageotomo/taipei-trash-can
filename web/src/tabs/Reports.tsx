@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type L from "leaflet";
 import { HexLayer, PointLayer, PANES } from "../map/layers";
 import type { Placer } from "../lib/place";
-import { ACTIONS, CATEGORIES, HIGH_REPORTS, suggestAction, type Category, type ReportInput } from "../lib/reports";
+import { ACTIONS, CATEGORIES, HIGH_REPORTS, OCCURRED_MAX_DAYS, localDateTime, occurredError, shortDateTime, suggestAction, type Category, type ReportInput } from "../lib/reports";
 import { CASE_COLORS, validContact, type ReportCase } from "../lib/cases";
 import { compressPhoto } from "../lib/photo";
 import type { Role } from "../lib/role";
@@ -45,7 +45,7 @@ export function ReportMapHint({ draft }: { draft: Draft | null }) {
 
 const STEPS = [
   { title: "在地圖上點位置", text: "放大到你看到問題的路口或街道，點一下。" },
-  { title: "選類別、拍張照", text: "照片和說明都是選填，有照片比較好判斷。" },
+  { title: "選類別、填發生時間", text: "發生時間必填；照片和說明選填，有照片比較好判斷。" },
   { title: "送出、追蹤進度", text: "留 email 或手機，處理完會通知你。" },
 ];
 
@@ -195,7 +195,8 @@ export function ReportLayers({ data, reports, reportCounts, selected, draft, rol
     (i: number) => {
       const r = reports[i];
       const c = role === "gov" ? cases.get(r.id) : undefined;
-      const head = c ? `${escapeHtml(r.id)}・${r.category}・${c.status}${c.overdue ? "（逾期）" : ""}` : `${r.category}・${r.created_at}`;
+      const when = r.occurred_at ? `發生 ${shortDateTime(r.occurred_at)}` : r.created_at;
+      const head = c ? `${escapeHtml(r.id)}・${r.category}・${c.status}${c.overdue ? "（逾期）" : ""}` : `${r.category}・${when}`;
       return `${head}${r.note ? `<br>${escapeHtml(r.note)}` : ""}`;
     },
     [reports, role, cases]
@@ -253,6 +254,10 @@ export function ReportPanel(props: PanelProps) {
   const { data, place, reports, localReports, reportCounts, selected, draft } = props;
   const [category, setCategory] = useState<Category>("亂丟垃圾");
   const [note, setNote] = useState("");
+  const [occurredAt, setOccurredAt] = useState("");
+  const [occurredTouched, setOccurredTouched] = useState(false);
+  const occurredMsg = occurredError(occurredAt);
+  const occurredInput = useRef<HTMLInputElement>(null);
   const [contact, setContact] = useState("");
   const [contactTouched, setContactTouched] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -300,13 +305,18 @@ export function ReportPanel(props: PanelProps) {
   };
 
   const submit = () => {
-    if (!contactOk) {
+    if (occurredMsg || !contactOk) {
+      setOccurredTouched(true);
       setContactTouched(true);
+      // 跳到第一個有問題的欄位，錯誤說明才不會在畫面外
+      if (occurredMsg) occurredInput.current?.focus();
       return;
     }
-    const saved = props.onSubmit({ category, note, photo: photo ?? undefined, contact });
+    const saved = props.onSubmit({ category, occurredAt, note, photo: photo ?? undefined, contact });
     setSent({ contact: contact.trim() !== "", saved });
     setNote("");
+    setOccurredAt("");
+    setOccurredTouched(false);
     setPhoto(null);
     setPhotoMsg(null);
     setContactTouched(false);
@@ -343,6 +353,41 @@ export function ReportPanel(props: PanelProps) {
               </label>
             ))}
           </fieldset>
+          <div className="field">
+            <label htmlFor="report-occurred">
+              發生時間 <span className="required">必填</span>
+            </label>
+            <div className="occurred-row">
+              <input
+                ref={occurredInput}
+                id="report-occurred"
+                type="datetime-local"
+                value={occurredAt}
+                max={localDateTime()}
+                min={localDateTime(new Date(Date.now() - OCCURRED_MAX_DAYS * 86_400_000))}
+                required
+                onChange={(e) => setOccurredAt(e.target.value)}
+                onBlur={() => setOccurredTouched(true)}
+                aria-invalid={occurredTouched && occurredMsg !== null}
+                aria-describedby="occurred-help"
+              />
+              <button
+                type="button"
+                className="button"
+                onClick={() => {
+                  setOccurredAt(localDateTime());
+                  setOccurredTouched(true);
+                }}
+              >
+                就是現在
+              </button>
+            </div>
+            <small id="occurred-help" className={occurredTouched && occurredMsg ? "field-help warn-text" : "field-help"}>
+              {occurredTouched && occurredMsg
+                ? occurredMsg
+                : "你看到問題的日期和大約時間。承辦單位會用來判斷是不是固定時段發生，例如晚上收攤後。"}
+            </small>
+          </div>
           <div className="field">
             <span>現場照片（選填）</span>
             <input
@@ -471,6 +516,8 @@ export function ReportPanel(props: PanelProps) {
           <dd>
             路邊、公車站有人亂丟選「亂丟垃圾」；垃圾桶塞滿、垃圾掉到地上選「垃圾桶滿溢」；整袋家裡的垃圾被丟在路邊或垃圾桶旁選「家戶垃圾棄置」。
           </dd>
+          <dt>為什麼要填發生時間？</dt>
+          <dd>垃圾問題常集中在固定時段，例如夜市收攤後或清運前。知道時間，承辦單位才知道該什麼時候去巡、要不要加開清運。</dd>
           <dt>我的照片和聯絡方式誰看得到？</dt>
           <dd>只有承辦單位。其他市民在地圖上只看得到類別和說明。</dd>
           <dt>通報存在哪裡？</dt>
@@ -522,7 +569,7 @@ export function ReportPanel(props: PanelProps) {
                   <span className="rank-main">
                     {r.category}
                     <small>
-                      {r.id}・{r.created_at.slice(5).replace("-", "/")}
+                      {r.id}・{r.occurred_at ? `發生 ${shortDateTime(r.occurred_at)}` : r.created_at.slice(5).replace("-", "/")}
                       {r.note ? `・${r.note}` : ""}
                     </small>
                   </span>

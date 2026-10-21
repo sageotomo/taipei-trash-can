@@ -207,10 +207,11 @@ function csvCell(v: string | number): string {
 
 /** 聯絡方式不匯出：匯出檔可能被轉寄，個資只留在系統裡 */
 export function casesToCsv(cases: ReportCase[], placeOf: (c: ReportCase) => string): string {
-  const head = ["通報編號", "通報日期", "類別", "行政區", "地點", "最近垃圾桶", "距離（公尺）", "處理進度", "最後更新", "承辦單位", "逾期", "有照片", "說明"];
+  const head = ["通報編號", "通報日期", "發生時間", "類別", "行政區", "地點", "最近垃圾桶", "距離（公尺）", "處理進度", "最後更新", "承辦單位", "逾期", "有照片", "說明"];
   const rows = cases.map((c) => [
     c.report.id,
     c.report.created_at,
+    c.report.occurred_at?.replace("T", " ") ?? "",
     c.report.category,
     c.district,
     placeOf(c),

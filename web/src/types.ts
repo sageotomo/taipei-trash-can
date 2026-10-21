@@ -43,6 +43,7 @@ export interface Report {
   lat: number;
   lng: number;
   created_at: string;
+  occurred_at?: string; // 問題發生的時間 YYYY-MM-DDTHH:mm（市民填的；歷史通報沒有）
   district?: string;
   cell: string;
   simulated?: boolean;

@@ -40,6 +40,35 @@ export function localDate(d = new Date()): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** 這台裝置當地的日期時間 YYYY-MM-DDTHH:mm，給 <input type="datetime-local"> 用 */
+export function localDateTime(d = new Date()): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${localDate(d)}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** 發生時間最早可以填到幾天前 */
+export const OCCURRED_MAX_DAYS = 30;
+
+/**
+ * 檢查市民填的發生時間（YYYY-MM-DDTHH:mm，當地時間）。沒問題回傳 null，有問題回傳要顯示的說明。
+ * 承辦單位要靠時間判斷是不是固定時段的問題（例如晚上收攤後），所以必填。
+ */
+export function occurredError(value: string, now = new Date()): string | null {
+  if (!value) return "請填問題發生的日期和時間。";
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value);
+  if (!m) return "日期時間格式不對，請重新選一次。";
+  const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5]).getTime();
+  if (Number.isNaN(t)) return "日期時間格式不對，請重新選一次。";
+  if (t > now.getTime() + 60_000) return "發生時間不能晚於現在。";
+  if (t < now.getTime() - OCCURRED_MAX_DAYS * 86_400_000) return `只能通報 ${OCCURRED_MAX_DAYS} 天內發生的問題。`;
+  return null;
+}
+
+/** 2026-10-21T13:40 → 10/21 13:40 */
+export function shortDateTime(v: string): string {
+  return v.slice(5).replace("-", "/").replace("T", " ");
+}
+
 /** 網頁上新增的通報編號：W＋月日＋三碼，例如 W1021-7K3（歷史通報是 R 開頭） */
 export function newReportId(d = new Date()): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -49,6 +78,8 @@ export function newReportId(d = new Date()): string {
 
 export interface ReportInput {
   category: Category;
+  /** 問題發生的時間 YYYY-MM-DDTHH:mm */
+  occurredAt: string;
   note: string;
   photo?: string;
   contact?: string;
@@ -64,6 +95,7 @@ export function createReport(input: ReportInput & { lat: number; lng: number }):
     lng: input.lng,
     cell: latLngToCell(input.lat, input.lng),
     created_at: localDate(),
+    occurred_at: input.occurredAt,
     local: true,
     ...(input.photo ? { photo: input.photo } : {}),
     ...(contact ? { contact } : {}),

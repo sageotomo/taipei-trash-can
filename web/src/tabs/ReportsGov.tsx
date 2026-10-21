@@ -1,7 +1,7 @@
 // 市民通報：政府單位視角。所有通報當成「案件」列成表格，承辦單位可以篩選、排序、改處理進度、匯出。
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { Placer } from "../lib/place";
-import { ACTIONS, CATEGORIES, suggestAction } from "../lib/reports";
+import { ACTIONS, CATEGORIES, shortDateTime, suggestAction } from "../lib/reports";
 import { CASE_COLORS, CASE_STATUSES, SLA_DAYS, casesToCsv, maskContact, type CaseStatus, type ReportCase } from "../lib/cases";
 import { Section, SourceTag, Swatch, fmt } from "../ui";
 import type { AppData } from "../data";
@@ -239,6 +239,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
                       {r.photo ? <span title="有照片" className="attach-photo" aria-label="有照片" /> : null}
                       {c.contact ? <span title="可回覆通報人" className="attach-contact" aria-label="有聯絡方式" /> : null}
                       <small>{short(r.created_at)}・{c.age === 0 ? "今天" : `${c.age} 天前`}</small>
+                      {r.occurred_at ? <small>發生 {shortDateTime(r.occurred_at)}</small> : null}
                     </td>
                     <td>
                       <span className="nowrap">
@@ -331,6 +332,10 @@ function CaseDetail({ c, placeLabel, count, stats, onStatus }: {
           <div>
             <dt>通報</dt>
             <dd>{r.created_at}</dd>
+          </div>
+          <div>
+            <dt>發生</dt>
+            <dd>{r.occurred_at ? r.occurred_at.replace("T", " ") : "未填（歷史通報）"}</dd>
           </div>
           <div>
             <dt>承辦</dt>
