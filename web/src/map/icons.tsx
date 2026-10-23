@@ -8,6 +8,7 @@ import { PointLayer, PANES, type LatLngPoint } from "./layers";
 import type { IconSpec } from "../types";
 
 import { GLYPHS } from "../lib/glyphs";
+import { MAP } from "../lib/theme";
 export { CUSTOM_COLORS, CUSTOM_GLYPHS, GLYPHS, POI_TYPES, type PoiType } from "../lib/glyphs";
 
 function svg(glyph: string, size: number): string {
@@ -72,7 +73,7 @@ export function PoiPointLayer({ icon, label, points, iconZoom, pane = PANES.poin
   }, [map]);
 
   const dotStyle = useMemo(
-    () => () => ({ radius, fillColor: icon.color, color: "#ffffff", weight: 1.2, fillOpacity: 1 }),
+    () => () => ({ radius, fillColor: icon.color, color: MAP.outline, weight: 1.2, fillOpacity: 1 }),
     [radius, icon.color]
   );
   const tooltip = useMemo(() => (i: number) => points[i].label ?? label, [points, label]);
@@ -97,7 +98,7 @@ function IconMarkers({ icon, label, points, zIndexOffset }: { icon: IconSpec; la
       const asDots = visible.length > MAX_MARKERS;
       for (const p of visible) {
         const m = asDots
-          ? L.circleMarker([p.lat, p.lng], { renderer, radius: 4, fillColor: icon.color, color: "#ffffff", weight: 1, fillOpacity: 1 })
+          ? L.circleMarker([p.lat, p.lng], { renderer, radius: 4, fillColor: icon.color, color: MAP.outline, weight: 1, fillOpacity: 1 })
           : L.marker([p.lat, p.lng], { icon: marker, keyboard: false, zIndexOffset });
         m.bindTooltip(p.label ?? label, { direction: "top" }).addTo(group);
       }

@@ -28,12 +28,13 @@ import { pointLabel } from "../lib/pointLabel";
 import { CELL_WIDTH_M } from "../lib/hexgrid";
 import type { Role } from "../lib/role";
 import type { AppData } from "../data";
+import { MAP } from "../lib/theme";
 
 export type Visibility = Record<string, boolean>;
 export const DEFAULT_VISIBILITY: Visibility = { bins: true, mrt: true };
 
-const PLUS = "#2e6b4f";
-const MINUS = "#b23a48";
+const PLUS = "#4caf7d";
+const MINUS = "#e0566a";
 
 // ---------------- 地圖圖層 ----------------
 
@@ -58,9 +59,9 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
       const isSelected = r.cell === selected;
       const isRec = recommended.has(r.cell);
       return {
-        fillColor: k < 0 ? "#ffffff" : LEVELS[k].color,
+        fillColor: k < 0 ? MAP.empty : LEVELS[k].color,
         fillOpacity: k < 0 ? 0.04 : 0.42,
-        color: isSelected ? "#1b2a2f" : isRec ? "#5b1a08" : "#ffffff",
+        color: isSelected ? MAP.selected : isRec ? MAP.emphasis : MAP.gridLine,
         weight: isSelected ? 3 : isRec ? 2 : 0.5,
         opacity: isSelected || isRec ? 1 : 0.5,
       };
@@ -268,7 +269,7 @@ export function RecommendPanel(props: PanelProps) {
         <p className="footnote">地圖上要顯示哪些圖層，用地圖左下角的「顯示 icon」。放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span className="legend-item">
-            <Swatch color="#e4e8e5" shape="hex" />
+            <Swatch color={MAP.emptySwatch} shape="hex" />
             不缺
           </span>
           {LEVELS.map((l) => (
@@ -705,7 +706,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             </p>
             <div className="legend">
               <span className="legend-item">
-                <Swatch color="#e4e8e5" shape="hex" />
+                <Swatch color={MAP.emptySwatch} shape="hex" />
                 不缺
               </span>
               {LEVELS.map((l) => (
