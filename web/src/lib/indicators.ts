@@ -92,9 +92,6 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "fill", label: "滿溢速度", layer: "bins", method: "sum", field: "fill", sign: 1, weight: 0.15, cap: null },
 ];
 
-/** 佈建分析頁一打開時的狀態：權重照預設，但每個指標都先關著，讓使用者自己一個一個打開 */
-export const STARTING_INDICATORS: Indicator[] = DEFAULT_INDICATORS.map((i) => ({ ...i, enabled: false }));
-
 export const TOP_N = 30;
 export const AUTO_CAP_PERCENTILE = 0.9;
 

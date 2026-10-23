@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type L from "leaflet";
 import {
-  STARTING_INDICATORS,
+  DEFAULT_INDICATORS,
   LEVELS,
   freeMethods,
   methodKey,
@@ -31,7 +31,8 @@ import type { AppData } from "../data";
 import { MAP } from "../lib/theme";
 
 export type Visibility = Record<string, boolean>;
-export const DEFAULT_VISIBILITY: Visibility = { bins: true, mrt: true };
+// 地圖 icon 預設全部不顯示，需要時再從「顯示 icon」打開
+export const DEFAULT_VISIBILITY: Visibility = {};
 
 const PLUS = "#4caf7d";
 const MINUS = "#e0566a";
@@ -219,7 +220,7 @@ export function RecommendPanel(props: PanelProps) {
 
       <Section title={`建議增設前 ${recommendations.length} 名`}>
         {recommendations.length === 0 ? (
-          <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。打開「需要桶」的指標或調高權重，就會出現建議點。</p>
+          <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。調高「需要桶」指標的權重，就會出現建議點。</p>
         ) : null}
         <ol className="rank-list">
           {recommendations.map((r, i) => {
@@ -381,14 +382,14 @@ function IndicatorEditor({ indicators, onChange, onToggle, result, layers, sourc
   const [adding, setAdding] = useState(false);
   // 現有圖層還有沒用過的算法時，才顯示「用現有資料新增指標」
   const canAdd = layers.some((l) => freeMethods(l, indicators).length > 0);
-  const isDefault = JSON.stringify(indicators) === JSON.stringify(STARTING_INDICATORS);
+  const isDefault = JSON.stringify(indicators) === JSON.stringify(DEFAULT_INDICATORS);
   const update = (k: number, patch: Partial<Indicator>) => onChange(indicators.map((x, i) => (i === k ? { ...x, ...patch } : x)));
 
   return (
     <Section
       title="指標與權重"
       aside={
-        <button className="link-button" onClick={() => onChange(STARTING_INDICATORS)} disabled={isDefault}>
+        <button className="link-button" onClick={() => onChange(DEFAULT_INDICATORS)} disabled={isDefault}>
           恢復預設
         </button>
       }
