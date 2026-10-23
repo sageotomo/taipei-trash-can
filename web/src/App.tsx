@@ -31,7 +31,7 @@ import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, 
 import { ReportLayers, ReportMapHint, ReportPanel, type Draft } from "./tabs/Reports";
 import { ReportGovPanel } from "./tabs/ReportsGov";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
-import { DEFAULT_VISIBILITY, PoiLayers, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
+import { DEFAULT_VISIBILITY, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
 import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tabs/FillLevel";
 import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
@@ -255,17 +255,14 @@ export default function App() {
           ) : null}
           {ready && tab === "recommend" ? <IconToggles layers={layers} visible={visible} onVisible={setVisible} /> : null}
           {ready && tab === "fill" ? (
-            <>
-              <PoiLayers data={data} layers={fixedLayers} visible={{ mrt: true }} />
-              <FillLayers
-                data={data}
-                time={liveTime}
-                role={role}
-                state={fillState}
-                onPickBin={pickFillBin}
-                onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
-              />
-            </>
+            <FillLayers
+              data={data}
+              time={liveTime}
+              role={role}
+              state={fillState}
+              onPickBin={pickFillBin}
+              onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
+            />
           ) : null}
           {ready && tab === "reports" ? (
             <>
