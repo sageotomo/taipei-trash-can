@@ -1,4 +1,4 @@
-// 點位圖示：每種點位用不同的圖示標記，一眼就看得出是什麼。
+// 點位圖示：每種點位用不同的可愛貼紙圖示，一眼就看得出是什麼。
 // 所有圖層用同一個尺寸，畫在 canvas 上，點再多也不會退回成圓點。
 
 import { useEffect, useMemo } from "react";
@@ -10,9 +10,18 @@ import type { IconSpec } from "../types";
 import { GLYPHS } from "../lib/glyphs";
 export { CUSTOM_COLORS, CUSTOM_GLYPHS, GLYPHS, POI_TYPES, type PoiType } from "../lib/glyphs";
 
-function svg(glyph: string, size: number): string {
-  const path = (GLYPHS[glyph] ?? GLYPHS.pin).path;
-  return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${path}</svg>`;
+/** 貼紙風格的完整圖示 SVG：白色粗邊、柔和陰影、左上一點反光，中間是可愛的白色圖案 */
+export function stickerSvg(icon: IconSpec, px: number, withNs = false): string {
+  const glyph = (GLYPHS[icon.glyph] ?? GLYPHS.pin).path.replaceAll("{accent}", icon.color);
+  return (
+    `<svg ${withNs ? 'xmlns="http://www.w3.org/2000/svg" ' : ""}viewBox="0 0 24 24" width="${px}" height="${px}" aria-hidden="true">` +
+    `<circle cx="12" cy="12.8" r="11" fill="rgba(70,45,35,0.3)"/>` +
+    `<circle cx="12" cy="12" r="11" fill="#fff"/>` +
+    `<circle cx="12" cy="12" r="9.3" fill="${icon.color}"/>` +
+    `<ellipse cx="7.6" cy="6.4" rx="2.6" ry="1.3" transform="rotate(-35 7.6 6.4)" fill="rgba(255,255,255,0.35)"/>` +
+    `<g transform="translate(12 12) scale(0.74) translate(-12 -12)">${glyph}</g>` +
+    `</svg>`
+  );
 }
 
 /** 圖例或面板裡用的小圖示 */
@@ -20,19 +29,19 @@ export function PoiIcon({ icon, size = 20 }: { icon: IconSpec; size?: number }) 
   return (
     <span
       className="poi-icon"
-      style={{ background: icon.color, width: size, height: size }}
-      dangerouslySetInnerHTML={{ __html: svg(icon.glyph, Math.round(size * 0.68)) }}
+      style={{ width: size, height: size }}
+      dangerouslySetInnerHTML={{ __html: stickerSvg(icon, size) }}
     />
   );
 }
 
 /** 所有點位共用同一個圖示尺寸（px），只隨縮放等級一起變大變小 */
 export function iconSizeAt(zoom: number): number {
-  if (zoom <= 12) return 12;
-  if (zoom <= 13) return 14;
-  if (zoom <= 14) return 16;
-  if (zoom <= 15) return 19;
-  return 22;
+  if (zoom <= 12) return 13;
+  if (zoom <= 13) return 15;
+  if (zoom <= 14) return 18;
+  if (zoom <= 15) return 21;
+  return 25;
 }
 
 // 圖示先畫成高解析度的點陣圖，canvas 再依目前尺寸縮放貼上
@@ -42,15 +51,8 @@ function bitmap(icon: IconSpec, onReady: () => void): HTMLImageElement {
   const key = `${icon.glyph}|${icon.color}`;
   let img = bitmapCache.get(key);
   if (!img) {
-    const path = (GLYPHS[icon.glyph] ?? GLYPHS.pin).path;
-    const svgText =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${BITMAP_PX}" height="${BITMAP_PX}">` +
-      `<circle cx="12" cy="12" r="11.4" fill="rgba(0,0,0,0.45)"/>` +
-      `<circle cx="12" cy="12" r="10.6" fill="${icon.color}" stroke="#fff" stroke-width="1.4"/>` +
-      `<g transform="translate(12 12) scale(0.62) translate(-12 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</g>` +
-      `</svg>`;
     img = new Image();
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(stickerSvg(icon, BITMAP_PX, true));
     bitmapCache.set(key, img);
   }
   if (!img.complete) img.addEventListener("load", onReady, { once: true });
