@@ -80,7 +80,7 @@ export function effectiveWeight(ind: Indicator): number {
   return isOn(ind) ? ind.weight : 0;
 }
 
-// 預設指標就是展示用的七個故事（捷運人流不放：搭捷運的人和逛商圈的人大多重疊，會和飲料店重複計算）（說明文字在 lib/stories.ts），順序就是故事順序
+// 預設指標就是展示用的七個故事（捷運人流不放：搭捷運的人和逛商圈的人大多重疊，會和飲料店重複計算），順序就是故事順序
 export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "drinks", label: "飲料店（商圈）", layer: "drinks", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "youbike", label: "YouBike 站", layer: "youbike", method: "count", sign: 1, weight: 0.1, cap: null },

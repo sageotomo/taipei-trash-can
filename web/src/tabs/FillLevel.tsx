@@ -1,17 +1,14 @@
 // 滿桶狀況：每個智慧垃圾桶此刻填了幾 %。
-// 市民：看填滿度、用自己的位置找附近還有空位的垃圾桶。
-// 政府單位：看填滿度，右側用表格列出所有垃圾桶的即時狀況（地點、填滿度）。
+// 看填滿度，右側用表格列出所有垃圾桶的即時狀況（地點、填滿度）。
 //
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Circle, CircleMarker } from "react-leaflet";
-import { MapClick, PANES } from "../map/layers";
+import { PANES } from "../map/layers";
 import { ImagePointLayer, type ImagePointStyle } from "../map/icons";
 import { binPlaceNames } from "../lib/place";
-import { fillStatus, nearest, walkMinutes, type LiveTime } from "../lib/live";
-import type { Role } from "../lib/role";
+import { fillStatus, type LiveTime } from "../lib/live";
 import { Section, SourceTag, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
@@ -19,8 +16,6 @@ import { MAP } from "../lib/theme";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 const LIVE: Strategy = "B";
-const NEARBY = 5;
-const NEARBY_MAX_M = 1500;
 
 // 顏色和垃圾桶圖示同色
 export const FILL_COLORS = { ok: "#75c2b4", warn: "#e4c659", full: "#f06241" };
@@ -52,18 +47,11 @@ export function nowLabel(t: LiveTime): string {
   return `${DAYS[Math.floor(t.hour / 24) % 7]} ${t.clock}`;
 }
 
-export interface UserLocation {
-  lat: number;
-  lng: number;
-  label: string;
-}
-
 export interface FillState {
-  location: UserLocation | null;
   selected: number | null;
 }
 
-export const DEFAULT_FILL_STATE: FillState = { location: null, selected: null };
+export const DEFAULT_FILL_STATE: FillState = { selected: null };
 
 function useBinPoints(data: AppData) {
   return useMemo(
@@ -77,27 +65,19 @@ function useBinPoints(data: AppData) {
 interface LayerProps {
   data: AppData;
   time: LiveTime;
-  role: Role;
   state: FillState;
   onPickBin: (i: number) => void;
-  onPickLocation: (loc: UserLocation) => void;
 }
 
-export function FillLayers({ data, time, role, state, onPickBin, onPickLocation }: LayerProps) {
+export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
   const points = useBinPoints(data);
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
 
-  const nearbySet = useMemo(() => {
-    if (role !== "citizen" || !state.location) return new Set<number>();
-    const { lat, lng } = state.location;
-    return new Set(nearest(points, lat, lng, NEARBY).filter((r) => r.d <= NEARBY_MAX_M).map((r) => r.i));
-  }, [role, state.location, points]);
-
   const style = useCallback(
     (i: number): ImagePointStyle => {
       const level = levels[i][time.hour];
-      const picked = i === state.selected || nearbySet.has(i);
+      const picked = i === state.selected;
       return {
         src: levelIcon(level),
         scale: picked ? 1.35 : level >= 80 ? 1.1 : 0.9,
@@ -105,7 +85,7 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
         front: picked || level >= 80,
       };
     },
-    [levels, time.hour, state.selected, nearbySet]
+    [levels, time.hour, state.selected]
   );
 
   // 提示文字含此刻的填滿度，所以每個整點重建一次
@@ -116,32 +96,9 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
     },
     [levels, time.hour, places]
   );
-  const hourPoints = useMemo(() => points.slice(), [points, time.hour, role]);
+  const hourPoints = useMemo(() => points.slice(), [points, time.hour]);
 
-  return (
-    <>
-      {role === "citizen" ? (
-        <MapClick onClick={(lat, lng) => onPickLocation({ lat, lng, label: "地圖上選的位置" })} />
-      ) : null}
-      <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />
-      {role === "citizen" && state.location ? (
-        <>
-          <Circle
-            center={[state.location.lat, state.location.lng]}
-            radius={500}
-            pathOptions={{ color: MAP.ring, weight: 1, fillOpacity: 0.06, dashArray: "4 4" }}
-            interactive={false}
-          />
-          <CircleMarker
-            center={[state.location.lat, state.location.lng]}
-            radius={8}
-            pathOptions={{ color: MAP.outline, weight: 3, fillColor: MAP.ring, fillOpacity: 1 }}
-            interactive={false}
-          />
-        </>
-      ) : null}
-    </>
-  );
+  return <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />;
 }
 
 // ---------------- 面板 ----------------
@@ -149,11 +106,9 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
 interface PanelProps {
   data: AppData;
   time: LiveTime;
-  role: Role;
   state: FillState;
   onChange: (s: FillState) => void;
   onFocusBin: (i: number) => void;
-  onFocus: (lat: number, lng: number, zoom?: number) => void;
 }
 
 export function FillPanel(props: PanelProps) {
@@ -165,7 +120,6 @@ export function FillPanel(props: PanelProps) {
     return c;
   }, [levels, time.hour]);
   const fillSource = data.sources.find((s) => s.key === "fill");
-  const gov = props.role === "gov";
 
   return (
     <>
@@ -190,176 +144,15 @@ export function FillPanel(props: PanelProps) {
         </div>
         <div>
           <FillIcon src={FILL_ICONS.full} />
-          <span>{gov ? "需清運" : "快滿／已滿"}</span>
-          <strong className={gov ? "tone-full" : undefined}>{fmt(counts.full)}</strong>
+          <span>需清運</span>
+          <strong className="tone-full">{fmt(counts.full)}</strong>
         </div>
       </div>
       <p className="footnote">
-        有空位：50% 以下　半滿：50–80%　{gov ? "需清運" : "快滿"}：80% 以上
+        有空位：50% 以下　半滿：50–80%　需清運：80% 以上
       </p>
 
-      {props.role === "citizen" ? <CitizenView {...props} /> : <GovView {...props} />}
-    </>
-  );
-}
-
-// ---------------- 市民：找附近的垃圾桶 ----------------
-
-interface Candidate {
-  label: string;
-  sub: string;
-  lat: number;
-  lng: number;
-}
-
-function CitizenView({ data, time, state, onChange, onFocusBin, onFocus }: PanelProps) {
-  const points = useBinPoints(data);
-  const places = useMemo(() => binPlaceNames(data), [data]);
-  const levels = data.fill.levels[LIVE];
-  const [query, setQuery] = useState("");
-  const [geoMsg, setGeoMsg] = useState<string | null>(null);
-  const [locating, setLocating] = useState(false);
-
-  // 可搜尋的地點：捷運站＋垃圾桶所在路名（都在本機資料裡，不需要連外查地址）
-  const candidates = useMemo<Candidate[]>(() => {
-    const out: Candidate[] = [];
-    for (const f of data.pois.features) {
-      if (f.properties.kind !== "mrt" || !f.properties.name) continue;
-      const name = f.properties.name.endsWith("站") ? f.properties.name : `${f.properties.name}站`;
-      out.push({ label: `捷運${name}`, sub: f.properties.district ?? "", lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] });
-    }
-    const seen = new Set<string>();
-    for (const f of data.bins.features) {
-      const road = f.properties.road;
-      if (!road || seen.has(road)) continue;
-      seen.add(road);
-      out.push({ label: road, sub: f.properties.district, lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] });
-    }
-    return out;
-  }, [data]);
-
-  const matches = useMemo(() => {
-    const q = query.trim().replace(/臺/g, "台");
-    if (!q) return [];
-    return candidates.filter((c) => c.label.replace(/臺/g, "台").includes(q) || c.sub.includes(q)).slice(0, 6);
-  }, [query, candidates]);
-
-  const setLocation = (loc: UserLocation) => {
-    onChange({ ...state, location: loc });
-    onFocus(loc.lat, loc.lng, 16);
-  };
-
-  const geolocate = () => {
-    if (!("geolocation" in navigator)) {
-      setGeoMsg("這個瀏覽器不支援定位，請改用搜尋或點地圖。");
-      return;
-    }
-    setLocating(true);
-    setGeoMsg(null);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setLocating(false);
-        setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: "你目前的位置" });
-      },
-      (err) => {
-        setLocating(false);
-        setGeoMsg(
-          err.code === err.PERMISSION_DENIED
-            ? "沒有定位權限。可以在瀏覽器允許定位，或改用搜尋、點地圖。"
-            : "暫時抓不到位置，請改用搜尋或點地圖。"
-        );
-      },
-      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 }
-    );
-  };
-
-  const near = useMemo(() => {
-    if (!state.location) return [];
-    return nearest(points, state.location.lat, state.location.lng, NEARBY).filter((r) => r.d <= NEARBY_MAX_M);
-  }, [points, state.location]);
-  // 建議去：最近一個還沒快滿的
-  const suggested = near.find((r) => levels[r.i][time.hour] < 80)?.i;
-
-  return (
-    <>
-      <Section title="找附近的垃圾桶">
-        <button className="button primary locate" onClick={geolocate} disabled={locating}>
-          {locating ? "定位中…" : "使用我目前的位置"}
-        </button>
-        {geoMsg ? <p className="footnote warn-text">{geoMsg}</p> : null}
-
-        <div className="place-search">
-          <input
-            type="search"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="或輸入捷運站、路名，例如：西門、忠孝東路"
-            aria-label="搜尋地點"
-          />
-          {matches.length > 0 ? (
-            <ul className="place-results">
-              {matches.map((c) => (
-                <li key={c.label + c.lat}>
-                  <button
-                    onClick={() => {
-                      setQuery("");
-                      setLocation({ lat: c.lat, lng: c.lng, label: c.label });
-                    }}
-                  >
-                    {c.label}
-                    <small>{c.sub}</small>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          ) : query.trim() ? (
-            <p className="footnote">找不到「{query.trim()}」，換個關鍵字，或直接點地圖。</p>
-          ) : null}
-        </div>
-        <p className="footnote">也可以直接點地圖選位置。</p>
-      </Section>
-
-      {state.location ? (
-        <Section
-          title="離你最近的垃圾桶"
-          aside={
-            <button className="link-button" onClick={() => onChange({ ...state, location: null })}>
-              清除
-            </button>
-          }
-        >
-          <p className="muted near-from">從「{state.location.label}」出發</p>
-          {near.length === 0 ? (
-            <p className="muted">1.5 公里內沒有垃圾桶。這一帶可能不在研究範圍內，或真的很缺垃圾桶。</p>
-          ) : (
-            <ol className="near-list">
-              {near.map(({ i, d }) => {
-                const level = levels[i][time.hour];
-                const st = fillStatus(level);
-                return (
-                  <li key={i}>
-                    <button className={i === suggested ? "near-item suggested" : "near-item"} onClick={() => onFocusBin(i)}>
-                      <span className="near-main">
-                        {i === suggested ? <span className="badge">建議去這個</span> : null}
-                        {places[i]}
-                        <small>
-                          步行約 {walkMinutes(d)} 分鐘・{fmt(Math.round(d / 10) * 10)} m
-                        </small>
-                      </span>
-                      <span className="near-level">
-                        <FillBar level={level} />
-                        <span className={`fill-label tone-${st.tone}`}>
-                          {st.label} {level}%
-                        </span>
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ol>
-          )}
-        </Section>
-      ) : null}
+      <GovView {...props} />
     </>
   );
 }
@@ -372,7 +165,7 @@ function FillBar({ level }: { level: number }) {
   );
 }
 
-// ---------------- 政府單位：所有垃圾桶即時狀況表 ----------------
+// ---------------- 所有垃圾桶即時狀況表 ----------------
 
 type SortKey = "place" | "level";
 type Filter = "all" | "dispatch";

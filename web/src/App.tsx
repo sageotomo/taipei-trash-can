@@ -15,20 +15,12 @@ import { reportsLayer, staticLayers } from "./lib/datalayers";
 import { makePlacer } from "./lib/place";
 import { WEEKS, makeProgressHistory } from "./lib/progress";
 import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
-import { cellCenter, latLngToCell } from "./lib/hexgrid";
-import { FlyTo, InvalidateSize, MapClick, MapPanes } from "./map/layers";
+import { cellCenter } from "./lib/hexgrid";
+import { FlyTo, InvalidateSize, MapPanes } from "./map/layers";
 import { CellScale } from "./map/CellScale";
-import {
-  addLocalReport,
-  clearLocalReports,
-  createReport,
-  loadLocalReports,
-  localDate,
-  removeLocalReport,
-  type ReportInput,
-} from "./lib/reports";
+import { localDate } from "./lib/reports";
 import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, type StatusOverrides } from "./lib/cases";
-import { ReportLayers, ReportMapHint, ReportPanel, type Draft } from "./tabs/Reports";
+import { ReportLayers } from "./tabs/Reports";
 import { ReportGovPanel } from "./tabs/ReportsGov";
 import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
@@ -36,10 +28,7 @@ import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tab
 import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import { IconToggles } from "./map/IconToggles";
-import type { Report } from "./types";
 import { useQrReports } from "./lib/qrFeed";
-import { loadRole, saveRole, type Role } from "./lib/role";
-import { RoleToggle } from "./ui";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
@@ -58,14 +47,10 @@ export type Focus = { lat: number; lng: number; zoom?: number; key: number } | n
 export default function App() {
   const { data, error } = useAppData();
   const [tab, setTab] = useState<TabId>("fill");
-  const [role, setRole] = useState<Role>(loadRole);
-  useEffect(() => saveRole(role), [role]);
   const [indicators, setIndicators] = useState<Indicator[]>(loadIndicators);
   const [selected, setSelected] = useState<string | null>(null);
   const [visible, setVisible] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [focus, setFocus] = useState<Focus>(null);
-  const [localReports, setLocalReports] = useState<Report[]>(loadLocalReports);
-  const [draft, setDraft] = useState<Draft | null>(null);
   const [reportCell, setReportCell] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [statusOverrides, setStatusOverrides] = useState<StatusOverrides>(loadStatusOverrides);
@@ -89,7 +74,7 @@ export default function App() {
   }, []);
 
   const qrReports = useQrReports(data?.bins);
-  const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...qrReports, ...localReports], [data, qrReports, localReports]);
+  const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...qrReports], [data, qrReports]);
   const place = useMemo(() => (data ? makePlacer(data) : null), [data]);
 
   // ---- 圖層與缺桶指數 ----
@@ -102,14 +87,14 @@ export default function App() {
   const recommendations = useMemo(() => pickRecommendations(result), [result]);
   const recommendedSet = useMemo(() => new Set(recommendations.map((r) => r.cell)), [recommendations]);
 
-  // 每格通報數（歷史＋本機新增），市民通報分頁用
+  // 每格通報數（歷史＋QR code 新進），通報案件分頁用
   const reportCounts = useMemo(() => {
     const counts = new Map<string, number>();
     for (const r of allReports) counts.set(r.cell, (counts.get(r.cell) ?? 0) + 1);
     return counts;
   }, [allReports]);
 
-  // 通報案件（處理進度、承辦、最近的垃圾桶），市民看自己通報的進度、政府單位看全部
+  // 通報案件（處理進度、承辦、最近的垃圾桶）
   const binPoints = useMemo(
     () =>
       data
@@ -162,22 +147,6 @@ export default function App() {
     [flyTo]
   );
 
-  const pickReportLocation = useCallback((lat: number, lng: number) => {
-    setDraft({ lat, lng });
-    setReportCell(latLngToCell(lat, lng));
-  }, []);
-
-  const submitReport = useCallback(
-    (input: ReportInput) => {
-      if (!draft) return false;
-      const { reports, saved } = addLocalReport(localReports, createReport({ ...input, ...draft }));
-      setLocalReports(reports);
-      setDraft(null);
-      return saved;
-    },
-    [draft, localReports]
-  );
-
   const pickCase = useCallback(
     (id: string, fly = true) => {
       const c = caseById.get(id);
@@ -192,12 +161,6 @@ export default function App() {
   const setCaseStatus = useCallback((id: string, status: CaseStatus) => {
     setStatusOverrides((prev) => ({ ...prev, [id]: { status, updated_at: localDate() } }));
   }, []);
-
-  // 切換身分時清掉進行中的通報草稿與選取
-  useEffect(() => {
-    setDraft(null);
-    setSelectedReport(null);
-  }, [role]);
 
   const selectProgress = useCallback(
     (i: number) => {
@@ -225,12 +188,11 @@ export default function App() {
   );
 
   const ready = data && place;
-  // 政府單位看填滿度與通報案件時，右側要放整張表格，面板加寬
-  const wide = (tab === "fill" || tab === "reports") && role === "gov";
+  // 動態調度與通報案件右側要放整張表格，面板加寬
+  const wide = tab === "fill" || tab === "reports";
 
   return (
     <div className={wide ? "app wide" : "app"}>
-      <RoleToggle role={role} onChange={setRole} />
       {/* 地圖放在內縮的框裡，外圍用側邊欄的底色 */}
       <div className="map-frame">
         <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
@@ -250,7 +212,6 @@ export default function App() {
               onSelect={selectCell}
               visible={visible}
               place={place}
-              role={role}
             />
           ) : null}
           {ready && tab === "recommend" ? <IconToggles layers={layers} visible={visible} onVisible={setVisible} /> : null}
@@ -258,32 +219,20 @@ export default function App() {
             <FillLayers
               data={data}
               time={liveTime}
-              role={role}
               state={fillState}
               onPickBin={pickFillBin}
-              onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
             />
           ) : null}
           {ready && tab === "reports" ? (
-            <>
-              {role === "citizen" ? (
-                <>
-                  <MapClick onClick={pickReportLocation} />
-                  <ReportMapHint draft={draft} />
-                </>
-              ) : null}
-              <ReportLayers
-                data={data}
-                reports={allReports}
-                reportCounts={reportCounts}
-                selected={reportCell}
-                draft={draft}
-                role={role}
-                cases={caseById}
-                selectedId={role === "gov" ? selectedReport : null}
-                onPickReport={role === "gov" ? (id) => pickCase(id, false) : undefined}
-              />
-            </>
+            <ReportLayers
+              data={data}
+              reports={allReports}
+              reportCounts={reportCounts}
+              selected={reportCell}
+              cases={caseById}
+              selectedId={selectedReport}
+              onPickReport={(id) => pickCase(id, false)}
+            />
           ) : null}
           {ready && tab === "progress" ? (
             <ProgressLayers data={data} items={progress} district={district} selected={progressSelected} onSelect={selectProgress} />
@@ -331,7 +280,6 @@ export default function App() {
               onVisible={setVisible}
               place={place}
               onRemoveLayer={removeLayer}
-              role={role}
               importTool={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
             />
           ) : null}
@@ -339,14 +287,12 @@ export default function App() {
             <FillPanel
               data={data}
               time={liveTime}
-              role={role}
               state={fillState}
               onChange={setFillState}
               onFocusBin={focusBin}
-              onFocus={flyTo}
             />
           ) : null}
-          {ready && tab === "reports" && role === "gov" ? (
+          {ready && tab === "reports" ? (
             <ReportGovPanel
               data={data}
               place={place}
@@ -355,26 +301,6 @@ export default function App() {
               selectedId={selectedReport}
               onSelect={pickCase}
               onStatus={setCaseStatus}
-            />
-          ) : null}
-          {ready && tab === "reports" && role === "citizen" ? (
-            <ReportPanel
-              data={data}
-              place={place}
-              reports={allReports}
-              localReports={localReports}
-              reportCounts={reportCounts}
-              selected={reportCell}
-              draft={draft}
-              cases={caseById}
-              onSubmit={submitReport}
-              onCancel={() => setDraft(null)}
-              onDelete={(id) => setLocalReports((prev) => removeLocalReport(prev, id))}
-              onClear={() => setLocalReports(clearLocalReports())}
-              onFocus={(lat, lng) => {
-                flyTo(lat, lng, 17);
-                setReportCell(latLngToCell(lat, lng));
-              }}
             />
           ) : null}
           {ready && tab === "progress" ? (

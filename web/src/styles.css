@@ -96,50 +96,6 @@ textarea {
   padding: 20px 20px 12px;
 }
 
-/* 標題上方留一列給右上角的使用者身分切換 */
-.panel-header {
-  padding-top: 52px;
-}
-
-/* ---------- 使用者身分切換（畫面右上角） ---------- */
-
-.role-toggle {
-  position: fixed;
-  top: 14px;
-  right: 16px;
-  z-index: 1100; /* 高於 Leaflet 控制項 */
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  padding: 3px;
-  background: var(--paper);
-  border: 1px solid var(--rule);
-  border-radius: 999px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.24);
-}
-
-.role-toggle-label {
-  padding: 0 6px 0 8px;
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.role-toggle button {
-  padding: 3px 11px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--muted);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.role-toggle button.on {
-  background: var(--action);
-  color: var(--on-action);
-  font-weight: 500;
-}
-
 .panel-header h1 {
   margin: 0;
   color: var(--action);

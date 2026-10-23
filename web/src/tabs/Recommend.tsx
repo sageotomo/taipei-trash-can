@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import type L from "leaflet";
 import {
   DEFAULT_INDICATORS,
@@ -23,10 +23,8 @@ import { HexLayer, MapClick } from "../map/layers";
 import { PoiLayer, PoiIcon, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
-import { storyOf } from "../lib/stories";
 import { pointLabel } from "../lib/pointLabel";
 import { CELL_WIDTH_M } from "../lib/hexgrid";
-import type { Role } from "../lib/role";
 import type { AppData } from "../data";
 import { MAP } from "../lib/theme";
 
@@ -49,10 +47,9 @@ interface LayersProps {
   onSelect: (cell: string) => void;
   visible: Visibility;
   place: Placer;
-  role: Role;
 }
 
-export function RecommendLayers({ data, layers, cells, result, recommended, selected, onSelect, visible, place, role }: LayersProps) {
+export function RecommendLayers({ data, layers, cells, result, recommended, selected, onSelect, visible, place }: LayersProps) {
   const hexStyle = useCallback(
     (i: number): L.PathOptions => {
       const r = result.cells[i];
@@ -75,11 +72,9 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
       const r = result.cells[i];
       const k = levelOf(r.value, result.maxPossible);
       const d = place.district(cellCenter(r.cell));
-      // 市民版不顯示指數數字，只顯示分級
-      if (role === "citizen") return k < 0 ? `${d}・不缺` : `${d}・${LEVELS[k].label}`;
       return k < 0 ? `${d}・不缺（缺桶指數 0）` : `${d}・缺桶指數 ${r.value.toFixed(2)}（${LEVELS[k].label}）`;
     },
-    [result, place, role]
+    [result, place]
   );
 
   const onClick = useCallback((i: number) => onSelect(cells[i]), [cells, onSelect]);
@@ -144,7 +139,6 @@ interface PanelProps {
   /** 匯入資料的元件，放在「新增指標」旁邊 */
   importTool?: ReactNode;
   onRemoveLayer?: (id: string) => void;
-  role: Role;
 }
 
 export function RecommendPanel(props: PanelProps) {
@@ -165,11 +159,6 @@ export function RecommendPanel(props: PanelProps) {
   useEffect(() => {
     if (selected) detailRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
   }, [selected]);
-
-  // 所有 hook 都在上面；市民版用同一份資料與開關，只是畫面不同
-  if (props.role === "citizen") {
-    return <CitizenPanel {...props} toggle={toggle} detailRef={detailRef} />;
-  }
 
   return (
     <>
@@ -630,7 +619,7 @@ function AddIndicator({ layers, indicators, onAdd, onCancel }: {
 }
 
 // ---------------- 說明框 ----------------
-// 市民版與政府單位版共用：格子大小、顏色意思、怎麼操作，加上分級圖例
+// 格子大小、顏色意思、怎麼操作，加上分級圖例
 
 function IntroBox() {
   const blockM = Math.round(CELL_WIDTH_M / 10) * 10;
@@ -653,159 +642,6 @@ function IntroBox() {
           </span>
         ))}
       </div>
-    </div>
-  );
-}
-
-// ---------------- 市民版 ----------------
-// 市民看不到公式與權重，只看到七個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
-
-function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => void; detailRef: RefObject<HTMLDivElement | null> }) {
-  const { data, layers, indicators, result, recommendations, selected, onSelect, place, toggle, detailRef } = props;
-  const selectedResult = selected ? result.byCell.get(selected) : undefined;
-  const allOn = indicators.every(isOn);
-
-  return (
-    <>
-      <div ref={detailRef} className="detail-anchor">
-        {selected && selectedResult ? (
-          <CitizenCellDetail
-            result={result}
-            r={selectedResult}
-            indicators={indicators}
-            layerOf={(id) => layers.find((l) => l.id === id)}
-            place={place(cellCenter(selected))}
-            isRecommended={recommendations.some((x) => x.cell === selected)}
-            onClose={() => onSelect(null)}
-          />
-        ) : (
-          <IntroBox />
-        )}
-      </div>
-
-      <Section
-        title="影響缺桶的生活情境"
-        aside={
-          <button className="link-button" disabled={allOn} onClick={() => props.onIndicators(indicators.map((i) => ({ ...i, enabled: true })))}>
-            全部打開
-          </button>
-        }
-      >
-        <ul className="story-list">
-          {indicators.map((ind, k) => {
-            const story = storyOf(ind.id);
-            const layer = layers.find((l) => l.id === ind.layer);
-            const on = isOn(ind);
-            return (
-              <li key={ind.id} className={`story-card ${ind.sign > 0 ? "plus-card" : "minus-card"}${on ? "" : " off"}`}>
-                <div className="story-body">
-                  <div className="story-title">
-                    {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
-                    <span>{story ? story.title : ind.label}</span>
-                  </div>
-                  {story ? <p className="story-detail">{story.detail}</p> : null}
-                  <div className="story-meta">
-                    <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>
-                      {ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}
-                    </span>
-                    <span className="muted">{layer ? `${layer.label} ${fmt(layer.points.length)} ${layer.unit}` : ""}</span>
-                    {layer?.custom ? <span className="tag tag-import">匯入</span> : <SourceTag source={data.sources.find((s) => s.key === indicatorSource(ind, layer))} />}
-                  </div>
-                </div>
-                <div className="story-controls">
-                  <label className="story-control">
-                    <span>加入需求計算：</span>
-                    <Switch on={on} onChange={(v) => toggle(k, v)} label={`把「${story?.title ?? ind.label}」加入需求計算`} />
-                  </label>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </Section>
-
-      <Section title={`最需要垃圾桶的 ${recommendations.length} 個地方`}>
-        {recommendations.length === 0 ? (
-          <p className="hint-box">目前的情境組合下，每個地方都不缺垃圾桶。試著打開更多「↑ 需要桶」的情境。</p>
-        ) : null}
-        <ol className="rank-list">
-          {recommendations.map((r, i) => {
-            const k = mainReason(r);
-            const lv = levelOf(r.value, result.maxPossible);
-            const why = k >= 0 ? (storyOf(indicators[k].id)?.title ?? indicators[k].label) : null;
-            return (
-              <li key={r.cell}>
-                <button className={r.cell === selected ? "rank-item active" : "rank-item"} onClick={() => onSelect(r.cell, true)}>
-                  <span className="rank-no">{i + 1}</span>
-                  <span className="rank-main">
-                    {place(cellCenter(r.cell))}
-                    {why ? <small>{why}</small> : null}
-                  </span>
-                  {lv >= 0 ? (
-                    <span className="level-chip" style={{ background: LEVELS[lv].color }}>
-                      {LEVELS[lv].label}
-                    </span>
-                  ) : null}
-                </button>
-              </li>
-            );
-          })}
-        </ol>
-      </Section>
-    </>
-  );
-}
-
-/** 市民版的格子明細：只列出格內有什麼、往哪個方向影響，不顯示權重與計算 */
-function CitizenCellDetail({ result, r, indicators, layerOf, place, isRecommended, onClose }: {
-  result: IndexResult;
-  r: CellResult;
-  indicators: Indicator[];
-  layerOf: (id: string) => DataLayer | undefined;
-  place: string;
-  isRecommended: boolean;
-  onClose: () => void;
-}) {
-  const k = levelOf(r.value, result.maxPossible);
-  const rows = indicators
-    .map((ind, j) => ({ ind, j }))
-    .filter(({ ind, j }) => isOn(ind) && ind.weight > 0 && r.raw[j] > 0)
-    .sort((a, b) => Math.abs(r.term[b.j]) - Math.abs(r.term[a.j]));
-
-  return (
-    <div className="detail">
-      <div className="detail-head">
-        <div>
-          <div className="detail-rank">{k >= 0 ? LEVELS[k].label : "不缺垃圾桶"}</div>
-          <div className="muted">
-            {place}
-            {isRecommended ? "・建議增設垃圾桶" : ""}
-          </div>
-        </div>
-        <button className="icon-button" onClick={onClose} aria-label="關閉">
-          ×
-        </button>
-      </div>
-      {rows.length === 0 ? (
-        <p className="muted">這一格裡沒有開啟中的情境資料。</p>
-      ) : (
-        <ul className="why-list">
-          {rows.map(({ ind, j }) => {
-            const layer = layerOf(ind.layer);
-            const unit = indicatorUnit(ind, layer);
-            return (
-              <li key={ind.id}>
-                {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
-                <span className="why-label">{ind.label}</span>
-                <span className="why-value">
-                  {hidesValue(ind) ? "" : `${fmtValue(r.raw[j], unit)} ${unit}`}
-                </span>
-                <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>{ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}</span>
-              </li>
-            );
-          })}
-        </ul>
-      )}
     </div>
   );
 }
