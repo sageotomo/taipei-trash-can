@@ -795,13 +795,6 @@ textarea {
   grid-template-columns: repeat(4, 1fr);
 }
 
-.battery-icon {
-  width: 11px;
-  height: 7px;
-  border: 1.5px solid #f0c75e;
-  border-radius: 2px;
-}
-
 .fill-summary strong {
   grid-column: 1 / -1;
   font-family: var(--font-display);

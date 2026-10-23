@@ -2,7 +2,8 @@
 
 缺桶指數完全在瀏覽器裡算（web/src/lib/indicators.ts）：每一格只看格內的點，
 使用者可以自己加減指標、調整權重，所以這裡只負責把點位整理好：
-  pois.geojson        捷運站（含每日人流、行政區）、公車站、YouBike、店家
+  pois.json           捷運站（含每日人流、行政區）、公車站、YouBike、店家
+                      （欄位式格式，比 GeoJSON 小約 3 倍；網頁讀進來後轉回 GeoJSON，見 web/src/data.ts）
   bins.geojson        垃圾桶（含格子編號、模擬的填滿速度）
   reports_seed.json   歷史通報（模擬）
   residential.geojson 住宅區：有門牌資料時每格一點（住家門牌數），沒有時為模擬點（每點 1）
@@ -44,6 +45,23 @@ def bin_fill_rates(bins, stations, shops) -> np.ndarray:
 def with_name(df: pd.DataFrame) -> pd.DataFrame:
     """模擬資料沒有名稱欄位時補空字串"""
     return df if "name" in df.columns else df.assign(name="")
+
+
+def point_columns(df: pd.DataFrame, props: list[str], kind: str, simulated: bool) -> dict:
+    """同一類點位存成欄位式（每個欄位一個陣列），不用每個點重複寫 GeoJSON 的鍵。
+    沒有值存成 null，網頁轉回 GeoJSON 時會省略，和 point_features 的結果相同。"""
+    def clean(v):
+        if v is None or isinstance(v, float) and math.isnan(v) or v == "":
+            return None
+        return v.item() if hasattr(v, "item") else v
+
+    return {
+        "kind": kind,
+        "simulated": bool(simulated),
+        "lng": [round(float(v), 5) for v in df["lng"]],
+        "lat": [round(float(v), 5) for v in df["lat"]],
+        "props": {k: [clean(v) for v in df[k]] for k in props},
+    }
 
 
 def point_features(df: pd.DataFrame, props: list[str], kind: str | None = None) -> list[dict]:
@@ -95,13 +113,15 @@ def main() -> None:
     })
 
     stations_out = stations.assign(daily_flow=stations["daily_flow"].round(0).astype(int), simulated=sim["mrt"])
-    pois = (
-        point_features(stations_out, ["name", "daily_flow", "district", "simulated"], "mrt")
-        + point_features(with_name(bus).assign(simulated=sim["bus"]), ["name", "simulated"], "bus")
-        + point_features(with_name(youbike).assign(simulated=sim["youbike"]), ["name", "simulated"], "youbike")
-        + point_features(with_name(shops).assign(simulated=sim["shops"]), ["name", "type", "simulated"], "shop")
-    )
-    write_json(OUT / "pois.geojson", {"type": "FeatureCollection", "features": pois})
+    groups = [
+        point_columns(stations_out, ["name", "daily_flow", "district"], "mrt", sim["mrt"]),
+        point_columns(with_name(bus), ["name"], "bus", sim["bus"]),
+        point_columns(with_name(youbike), ["name"], "youbike", sim["youbike"]),
+        point_columns(with_name(shops), ["name", "type"], "shop", sim["shops"]),
+    ]
+    write_json(OUT / "pois.json", {"groups": groups})
+    (OUT / "pois.geojson").unlink(missing_ok=True)  # 舊格式
+    n_pois = sum(len(g["lat"]) for g in groups)
 
     write_json(OUT / "residential.geojson", {
         "type": "FeatureCollection",
@@ -112,7 +132,7 @@ def main() -> None:
     write_json(OUT / "reports_seed.json", reports_out.to_dict(orient="records"))
     write_json(OUT / "sources.json", sources, compact=False)
 
-    print(f"  點位 {len(pois)} 個、垃圾桶 {len(bins)} 個（{bins['cell'].nunique()} 格）、通報 {len(reports)} 件")
+    print(f"  點位 {n_pois} 個、垃圾桶 {len(bins)} 個（{bins['cell'].nunique()} 格）、通報 {len(reports)} 件")
 
 
 if __name__ == "__main__":

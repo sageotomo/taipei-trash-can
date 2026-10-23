@@ -94,7 +94,7 @@
 pipeline/        Python：把原始資料算成靜態 JSON（只需要跑一次）
   01_load.py       讀 data/raw/ 的真實資料
   02_simulate.py   補齊模擬資料
-  03_grid.py       整理點位 → pois.geojson、bins.geojson 等
+  03_grid.py       整理點位 → pois.json、bins.geojson 等
   hexgrid.py       自訂正六角形網格
   04_fill_sim.py   填滿模擬 → fill.json
   05_smart_bins.py 智慧垃圾桶電量、廠牌、贊助商 → smart_bins.json
