@@ -32,3 +32,11 @@
 .report-page .field {
   grid-template-columns: minmax(0, 1fr);
 }
+
+/* 通報頁頂端 Logo */
+.report-logo {
+  display: block;
+  width: min(72%, 260px);
+  height: auto;
+  margin: 4px auto 16px;
+}

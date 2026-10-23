@@ -150,6 +150,25 @@ textarea {
   letter-spacing: 0.02em;
 }
 
+/* Logo 取代文字標題：寬度跟側欄走，但不超過 300px */
+.panel-header h1.brand {
+  line-height: 0;
+}
+
+.panel-header h1.brand img {
+  display: block;
+  width: min(100%, 300px);
+  height: auto;
+}
+
+.brand-topic {
+  margin-top: 10px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
 .panel-header p {
   margin: 6px 0 0;
   color: var(--muted);

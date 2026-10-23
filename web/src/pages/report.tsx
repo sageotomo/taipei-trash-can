@@ -57,6 +57,7 @@ function ReportPage() {
 
   return (
     <main className="report-page">
+      <img className="report-logo" src="./brand/logo.png" alt="桶桶沒問題！" width="640" height="199" />
       <p className="lead">看到垃圾桶滿出來、附近有人亂丟？告訴承辦單位，不用登入。</p>
       {error ? <p className="warn-text">{error}，請重新整理。</p> : null}
       {!bin && !error ? <p className="muted">載入中…</p> : null}

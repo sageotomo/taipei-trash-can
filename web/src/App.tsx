@@ -296,7 +296,10 @@ export default function App() {
 
       <aside id="side-panel" className="panel">
         <header className="panel-header">
-          <h1>找回消失的垃圾桶</h1>
+          <h1 className="brand">
+            <img src="./brand/logo.png" alt="桶桶沒問題！" width="640" height="199" />
+          </h1>
+          <div className="brand-topic">找回消失的垃圾桶</div>
           <p>台北行人垃圾桶從近 3,000 組剩下約 800 組。哪裡最缺？為什麼？</p>
         </header>
 
