@@ -13,8 +13,6 @@ export const MAP = {
   gridLine: "#ffffff",
   /** 不缺／沒資料的格子 */
   empty: "#ffffff",
-  /** 不缺的格子在圖例上的樣子 */
-  emptySwatch: "#3a4b55",
   /** 背景點（非重點） */
   dim: "#7d9095",
   /** 範圍圈 */

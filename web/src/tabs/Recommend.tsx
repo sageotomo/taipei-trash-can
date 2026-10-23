@@ -3,6 +3,7 @@ import type L from "leaflet";
 import {
   DEFAULT_INDICATORS,
   LEVELS,
+  NO_NEED_COLOR,
   freeMethods,
   methodKey,
   usedMethods,
@@ -60,8 +61,8 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
       const isSelected = r.cell === selected;
       const isRec = recommended.has(r.cell);
       return {
-        fillColor: k < 0 ? MAP.empty : LEVELS[k].color,
-        fillOpacity: k < 0 ? 0.04 : 0.42,
+        fillColor: k < 0 ? NO_NEED_COLOR : LEVELS[k].color,
+        fillOpacity: k < 0 ? 0 : LEVELS[k].fillOpacity,
         color: isSelected ? MAP.selected : isRec ? MAP.emphasis : MAP.gridLine,
         weight: isSelected ? 3 : isRec ? 2 : 0.5,
         opacity: isSelected || isRec ? 1 : 0.5,
@@ -266,7 +267,7 @@ export function RecommendPanel(props: PanelProps) {
         <p className="footnote">地圖上要顯示哪些圖層，用地圖左下角的「顯示 icon」。放大地圖，圓點會換成圖示；滑鼠移到點上可以看名稱。</p>
         <div className="legend">
           <span className="legend-item">
-            <Swatch color={MAP.emptySwatch} shape="hex" />
+            <Swatch color={NO_NEED_COLOR} shape="hex" />
             不缺
           </span>
           {LEVELS.map((l) => (
@@ -679,7 +680,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             </p>
             <div className="legend">
               <span className="legend-item">
-                <Swatch color={MAP.emptySwatch} shape="hex" />
+                <Swatch color={NO_NEED_COLOR} shape="hex" />
                 不缺
               </span>
               {LEVELS.map((l) => (
@@ -752,7 +753,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
                     {why ? <small>{why}</small> : null}
                   </span>
                   {lv >= 0 ? (
-                    <span className="level-chip" style={{ background: LEVELS[lv].color }}>
+                    <span className="level-chip" style={{ background: LEVELS[lv].color, color: LEVELS[lv].ink }}>
                       {LEVELS[lv].label}
                     </span>
                   ) : null}

@@ -272,11 +272,15 @@ export function mainReason(r: CellResult): number {
 
 // ---------------- 分級 ----------------
 
+/** 不缺（指數 0）的格子在圖例上的顏色；地圖上不缺的格子是全透明 */
+export const NO_NEED_COLOR = "#c3d5dd";
+
+/** ink：放在這個顏色底上的文字顏色；fillOpacity：地圖格子的填色不透明度 */
 export const LEVELS = [
-  { label: "還夠用", color: "#a0775c" },
-  { label: "有點缺", color: "#c9673f" },
-  { label: "缺", color: "#e16f4c" },
-  { label: "很缺", color: "#ff9a73" },
+  { label: "還夠用", color: "#acbfc8", ink: "#14202a", fillOpacity: 0.45 },
+  { label: "有點缺", color: "#a9975d", ink: "#14202a", fillOpacity: 0.35 },
+  { label: "缺", color: "#b55736", ink: "#f4f1ec", fillOpacity: 0.3 },
+  { label: "很缺", color: "#6e1d19", ink: "#f4f1ec", fillOpacity: 0.25 },
 ] as const;
 
 /** 分級門檻：佔理論最大值（正向權重合計）的比例 */
