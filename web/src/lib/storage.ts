@@ -1,7 +1,7 @@
 // 使用者的指標設定與匯入的圖層存在這台裝置的瀏覽器（localStorage），重新整理後還在。
 // 無痕模式或封鎖網站資料時讀寫可能失敗，都包在 try/catch 裡；失敗就用預設值。
 
-import { DEFAULT_INDICATORS, dedupeIndicators, type DataLayer, type Indicator } from "./indicators";
+import { DEFAULT_INDICATORS, STARTING_INDICATORS, dedupeIndicators, type DataLayer, type Indicator } from "./indicators";
 import { latLngToCell } from "./hexgrid";
 
 // v2：預設指標改成七個故事、飲料店與餐飲店拆成兩個圖層
@@ -27,11 +27,11 @@ function isIndicator(x: unknown): x is Indicator {
 export function loadIndicators(): Indicator[] {
   try {
     const raw = localStorage.getItem(INDICATORS_KEY);
-    if (!raw) return DEFAULT_INDICATORS;
+    if (!raw) return STARTING_INDICATORS;
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.every(isIndicator) ? inDefaultOrder(dedupeIndicators(parsed)) : DEFAULT_INDICATORS;
+    return Array.isArray(parsed) && parsed.every(isIndicator) ? inDefaultOrder(dedupeIndicators(parsed)) : STARTING_INDICATORS;
   } catch {
-    return DEFAULT_INDICATORS;
+    return STARTING_INDICATORS;
   }
 }
 

@@ -1480,35 +1480,6 @@ textarea {
   color: var(--minus);
 }
 
-.formula {
-  padding: 12px 14px;
-  border: 1px solid var(--rule);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.formula-title {
-  font-family: var(--font-display);
-  font-size: 17px;
-}
-
-.formula-body {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 2px 10px;
-  margin-top: 4px;
-  font-size: 14px;
-  line-height: 1.7;
-}
-
-.term {
-  white-space: nowrap;
-}
-
-.formula .footnote {
-  margin-bottom: 0;
-}
-
 .calc-table {
   width: 100%;
   margin-top: 10px;

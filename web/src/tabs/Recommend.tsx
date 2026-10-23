@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode, type RefObject } from "react";
 import type L from "leaflet";
 import {
-  DEFAULT_INDICATORS,
+  STARTING_INDICATORS,
   LEVELS,
   freeMethods,
   methodKey,
@@ -193,8 +193,6 @@ export function RecommendPanel(props: PanelProps) {
         每一格只看格內的資料：人潮、店家越多越需要垃圾桶，已經有桶的地方就扣分。調整下面的指標，看看建議點怎麼移動。
       </p>
 
-      <Formula indicators={indicators} />
-
       <div ref={detailRef} className="detail-anchor">
         {selected && selectedResult ? (
           <CellDetail
@@ -206,9 +204,7 @@ export function RecommendPanel(props: PanelProps) {
             isRecommended={recommendations.some((x) => x.cell === selected)}
             onClose={() => onSelect(null)}
           />
-        ) : (
-          <p className="hint-box">點地圖上任一格，看它的缺桶指數怎麼算出來的。</p>
-        )}
+        ) : null}
       </div>
 
       <IndicatorEditor
@@ -223,7 +219,7 @@ export function RecommendPanel(props: PanelProps) {
 
       <Section title={`建議增設前 ${recommendations.length} 名`}>
         {recommendations.length === 0 ? (
-          <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。調高「需要桶」指標的權重，就會出現建議點。</p>
+          <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。打開「需要桶」的指標或調高權重，就會出現建議點。</p>
         ) : null}
         <ol className="rank-list">
           {recommendations.map((r, i) => {
@@ -281,30 +277,6 @@ export function RecommendPanel(props: PanelProps) {
         </div>
       </Section>
     </>
-  );
-}
-
-// ---------------- 公式 ----------------
-
-function Formula({ indicators }: { indicators: Indicator[] }) {
-  const counted = indicators.filter((i) => isOn(i) && i.weight > 0);
-  const active = [...counted.filter((i) => i.sign > 0), ...counted.filter((i) => i.sign < 0)];
-  return (
-    <div className="formula" aria-live="polite">
-      <div className="formula-title">缺桶指數 ＝</div>
-      <div className="formula-body">
-        {active.length === 0 ? <span className="muted">（沒有開啟中的指標）</span> : null}
-        {active.map((ind, j) => (
-          <span key={ind.id} className={ind.sign > 0 ? "term plus" : "term minus"}>
-            {ind.sign < 0 ? "− " : j > 0 ? "+ " : ""}
-            {ind.weight.toFixed(2)} × {curveOf(ind) === "sqrt" ? `√${ind.label}` : ind.label}
-          </span>
-        ))}
-      </div>
-      <p className="footnote">
-        每一項的分數 ＝ 格內數值 ÷ 上限，超過上限算 1；標 √ 的項目再開根號，讓數值小的格子不會被最大的那格壓到接近 0。只看格內的資料；結果低於 0 算 0。
-      </p>
-    </div>
   );
 }
 
@@ -409,14 +381,14 @@ function IndicatorEditor({ indicators, onChange, onToggle, result, layers, sourc
   const [adding, setAdding] = useState(false);
   // 現有圖層還有沒用過的算法時，才顯示「用現有資料新增指標」
   const canAdd = layers.some((l) => freeMethods(l, indicators).length > 0);
-  const isDefault = JSON.stringify(indicators) === JSON.stringify(DEFAULT_INDICATORS);
+  const isDefault = JSON.stringify(indicators) === JSON.stringify(STARTING_INDICATORS);
   const update = (k: number, patch: Partial<Indicator>) => onChange(indicators.map((x, i) => (i === k ? { ...x, ...patch } : x)));
 
   return (
     <Section
       title="指標與權重"
       aside={
-        <button className="link-button" onClick={() => onChange(DEFAULT_INDICATORS)} disabled={isDefault}>
+        <button className="link-button" onClick={() => onChange(STARTING_INDICATORS)} disabled={isDefault}>
           恢復預設
         </button>
       }
