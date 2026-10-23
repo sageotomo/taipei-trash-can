@@ -3,10 +3,11 @@
 //
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
+// 感測器只試辦在大安區、中山區（lib/pilot.ts），這頁只看這兩區的垃圾桶，地圖上框出兩區邊界。
 // 政府單位另外有「區域滿桶警示」：同一清潔隊轄區、300 m 內 3 桶以上 ≥90% 就跳通知（lib/fullAlert.ts）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Circle } from "react-leaflet";
+import { Circle, Polygon, Tooltip, useMap } from "react-leaflet";
 import { PANES } from "../map/layers";
 import { ImagePointLayer, type ImagePointStyle } from "../map/icons";
 import { binPlaceNames } from "../lib/place";
@@ -16,10 +17,14 @@ import type { AppData } from "../data";
 import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
 import { DEMO_ALERT, demoBinIndices } from "../lib/demoAlert";
+import { PILOT_LABEL, areaOutlines, pilotBinIndices, pilotSummary } from "../lib/pilot";
 import { ALERT, findFullClusters, neighborIndex, nextAlertHour, type FullCluster } from "../lib/fullAlert";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 const LIVE: Strategy = "B";
+
+/** 試辦區的淺橘色填色（不畫框線） */
+const PILOT_FILL = "#f6a35c";
 
 // 顏色和垃圾桶圖示同色
 export const FILL_COLORS = { ok: "#75c2b4", warn: "#e4c659", full: "#f06241" };
@@ -57,6 +62,11 @@ export interface FillState {
 
 export const DEFAULT_FILL_STATE: FillState = { selected: null };
 
+/** 試辦區裡的垃圾桶索引；這頁所有地方都只看這些桶 */
+function usePilot(data: AppData) {
+  return useMemo(() => pilotBinIndices(data.bins), [data.bins]);
+}
+
 function useBinPoints(data: AppData) {
   return useMemo(
     () => data.bins.features.map((f) => ({ lat: f.geometry.coordinates[1], lng: f.geometry.coordinates[0] })),
@@ -66,28 +76,32 @@ function useBinPoints(data: AppData) {
 
 /** 此刻的區域滿桶警示；鄰居表只跟位置有關，只在換資料時重算 */
 function useFullClusters(data: AppData, hour: number) {
+  const pilot = usePilot(data);
   const bins = useMemo(
     () =>
-      data.bins.features.map((f) => ({
+      pilot.map((i) => data.bins.features[i]).map((f) => ({
         lat: f.geometry.coordinates[1],
         lng: f.geometry.coordinates[0],
         district: f.properties.district,
         road: f.properties.road,
       })),
-    [data.bins]
+    [data.bins, pilot]
   );
   const neighbors = useMemo(() => neighborIndex(bins), [bins]);
-  const levels = data.fill.levels[LIVE];
+  const levels = useMemo(() => pilot.map((i) => data.fill.levels[LIVE][i]), [data.fill, pilot]);
   const demo = useMemo(() => demoBinIndices(data.bins), [data.bins]);
   const clusters = useMemo(
     () =>
-      findFullClusters(bins, levels.map((row) => row[hour]), neighbors).map((c) =>
-        // Demo 的那一區用分隊名稱，和載入時跳出的通知一致
-        demo.length && demo.every((i) => c.members.includes(i)) ? { ...c, team: DEMO_ALERT.team, demo: true } : c
-      ),
-    [bins, levels, neighbors, hour, demo]
+      findFullClusters(bins, levels.map((row) => row[hour]), neighbors)
+        // 分群用的是試辦區子集合的索引，換回全部垃圾桶的索引
+        .map((c) => ({ ...c, members: c.members.map((k) => pilot[k]) }))
+        .map((c) =>
+          // Demo 的那一區用分隊名稱，和載入時跳出的通知一致
+          demo.length && demo.every((i) => c.members.includes(i)) ? { ...c, team: DEMO_ALERT.team, demo: true } : c
+        ),
+    [bins, levels, neighbors, hour, demo, pilot]
   );
-  return { bins, neighbors, clusters };
+  return { bins, levels, neighbors, clusters };
 }
 
 // ---------------- 地圖 ----------------
@@ -100,13 +114,18 @@ interface LayerProps {
 }
 
 export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
-  const points = useBinPoints(data);
+  const allPoints = useBinPoints(data);
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
   const { clusters } = useFullClusters(data, time.hour);
+  const pilot = usePilot(data);
+  // 地圖只畫試辦區的桶；PointLayer 的索引 k 對應 pilot[k]
+  const points = useMemo(() => pilot.map((i) => allPoints[i]), [pilot, allPoints]);
+  const outlines = useMemo(() => areaOutlines(data.pilotArea), [data.pilotArea]);
 
   const style = useCallback(
-    (i: number): ImagePointStyle => {
+    (k: number): ImagePointStyle => {
+      const i = pilot[k];
       const level = levels[i][time.hour];
       const picked = i === state.selected;
       return {
@@ -116,21 +135,36 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
         front: picked || level >= 80,
       };
     },
-    [levels, time.hour, state.selected]
+    [levels, time.hour, state.selected, pilot]
   );
 
   // 提示文字含此刻的填滿度，所以每個整點重建一次
   const tooltip = useCallback(
-    (i: number) => {
+    (k: number) => {
+      const i = pilot[k];
       const level = levels[i][time.hour];
       return `${escapeHtml(places[i])}<br><strong>填滿 ${level}%</strong>（${fillStatus(level).label}）`;
     },
-    [levels, time.hour, places]
+    [levels, time.hour, places, pilot]
   );
   const hourPoints = useMemo(() => points.slice(), [points, time.hour]);
+  const pickBin = useCallback((k: number) => onPickBin(pilot[k]), [onPickBin, pilot]);
 
   return (
     <>
+      <FitPilot outlines={outlines} skip={state.selected !== null} />
+      {outlines.map((o) => (
+        <Polygon
+          key={o.district}
+          positions={o.rings}
+          pathOptions={{ stroke: false, fillColor: PILOT_FILL, fillOpacity: 0.28 }}
+          interactive={false}
+        >
+          <Tooltip direction="center" permanent className="pilot-label">
+            {o.district}・感測器試辦區
+          </Tooltip>
+        </Polygon>
+      ))}
       {clusters.map((c) => (
         <Circle
           key={c.key}
@@ -140,9 +174,21 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
           eventHandlers={{ click: () => onPickBin(c.members[0]) }}
         />
       ))}
-      <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />
+      <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={pickBin} tooltip={tooltip} />
     </>
   );
+}
+
+/** 進到這頁時把地圖拉到兩個試辦區（已經選了桶或位置就不動，例如從通知點進來） */
+function FitPilot({ outlines, skip }: { outlines: { rings: [number, number][][] }[]; skip: boolean }) {
+  const map = useMap();
+  const skipRef = useRef(skip);
+  useEffect(() => {
+    if (skipRef.current) return;
+    const pts = outlines.flatMap((o) => o.rings.flat());
+    if (pts.length) map.fitBounds(pts, { padding: [24, 24] });
+  }, [map, outlines]);
+  return null;
 }
 
 // ---------------- 面板 ----------------
@@ -159,11 +205,12 @@ interface PanelProps {
 export function FillPanel(props: PanelProps) {
   const { data, time } = props;
   const levels = data.fill.levels[LIVE];
+  const pilot = usePilot(data);
   const counts = useMemo(() => {
     const c = { ok: 0, warn: 0, full: 0 };
-    for (const row of levels) c[fillStatus(row[time.hour]).tone]++;
+    for (const i of pilot) c[fillStatus(levels[i][time.hour]).tone]++;
     return c;
-  }, [levels, time.hour]);
+  }, [levels, time.hour, pilot]);
   const fillSource = data.sources.find((s) => s.key === "fill");
 
   return (
@@ -175,6 +222,9 @@ export function FillPanel(props: PanelProps) {
         <SourceTag source={fillSource} />
       </div>
       <p className="lead">每個智慧垃圾桶裡的感測器會回報裝了幾 %。</p>
+      <p className="pilot-note">
+        感測器目前試辦於<strong>{PILOT_LABEL}</strong>，共 {fmt(pilot.length)} 個垃圾桶；其他行政區尚未安裝，這頁不顯示。
+      </p>
 
       <div className="fill-summary">
         <div>
@@ -235,15 +285,16 @@ function GovView(props: PanelProps) {
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: "level", desc: true });
   const selectedRow = useRef<HTMLTableRowElement | null>(null);
 
+  const pilot = usePilot(data);
   const districts = useMemo(
-    () => ["全部", ...Array.from(new Set(data.bins.features.map((f) => f.properties.district))).sort()],
-    [data.bins]
+    () => ["全部", ...Array.from(new Set(pilot.map((i) => data.bins.features[i].properties.district))).sort()],
+    [data.bins, pilot]
   );
 
   const rows = useMemo(() => {
     const q = query.trim();
-    const idx = data.bins.features
-      .map((f, i) => ({ i, f }))
+    const idx = pilot
+      .map((i) => ({ i, f: data.bins.features[i] }))
       .filter(({ i, f }) => {
         if (district !== "全部" && f.properties.district !== district) return false;
         if (filter === "dispatch" && levels[i][time.hour] < 80) return false;
@@ -265,7 +316,7 @@ function GovView(props: PanelProps) {
       const c = typeof va === "number" ? va - (vb as number) : va.localeCompare(vb as string, "zh-TW");
       return sort.desc ? -c : c;
     });
-  }, [data.bins, district, filter, query, sort, levels, time.hour, places]);
+  }, [data.bins, pilot, district, filter, query, sort, levels, time.hour, places]);
 
   // 在地圖上點了某個桶，表格捲到那一列
   useEffect(() => {
@@ -386,8 +437,7 @@ function notifySupported(): boolean {
 }
 
 function FullAlerts({ data, time, onFocus }: PanelProps) {
-  const { bins, neighbors, clusters } = useFullClusters(data, time.hour);
-  const levels = data.fill.levels[LIVE];
+  const { bins, levels, neighbors, clusters } = useFullClusters(data, time.hour);
   const ids = (c: FullCluster) => c.members.map((i) => data.bins.features[i].properties.id);
   const next = useMemo(
     () => (clusters.length ? null : nextAlertHour(bins, levels, neighbors, time.hour)),
@@ -505,6 +555,11 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
 /** 一週模擬：為什麼要裝感測器（固定排程 vs 滿了才派車） */
 function StrategyCompare({ data }: { data: AppData }) {
   const { fill } = data;
+  const pilot = usePilot(data);
+  const summary = useMemo(
+    () => ({ A: pilotSummary(fill, pilot, "A"), B: pilotSummary(fill, pilot, "B") }),
+    [fill, pilot]
+  );
   const strategies: { id: Strategy; label: string; desc: string }[] = [
     {
       id: "A",
@@ -524,17 +579,17 @@ function StrategyCompare({ data }: { data: AppData }) {
             <dl>
               <div>
                 <dt>滿溢小時數</dt>
-                <dd>{fmt(fill.summary[s.id].overflow_hours)}</dd>
+                <dd>{fmt(summary[s.id].overflow_hours)}</dd>
               </div>
               <div>
                 <dt>出車次數</dt>
-                <dd>{fmt(fill.summary[s.id].trips)}</dd>
+                <dd>{fmt(summary[s.id].trips)}</dd>
               </div>
             </dl>
           </div>
         ))}
       </div>
-      <p className="footnote">一週合計。滿溢小時數＝每個桶處於滿溢狀態的小時加總；每清一個桶算一次出車。上方即時畫面採用感測派車。</p>
+      <p className="footnote">試辦區（{PILOT_LABEL}）一週合計。滿溢小時數＝每個桶處於滿溢狀態的小時加總；每清一個桶算一次出車。上方即時畫面採用感測派車。</p>
     </details>
   );
 }

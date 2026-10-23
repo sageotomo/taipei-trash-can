@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { demoBinIndices, withDemoFill } from "./lib/demoAlert";
+import type { PilotArea } from "./lib/pilot";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, SmartBin, Source } from "./types";
 
 /** 住宅區：homes = 住家門牌數（真實資料時每格一點；模擬時每點 1） */
@@ -14,6 +15,8 @@ export interface AppData {
   fill: FillData;
   smartBins: SmartBin[];
   residential: FeatureCollection<ResidentialProps>;
+  /** 感測器試辦區（大安區、中山區）的邊界 */
+  pilotArea: PilotArea;
 }
 
 /** pipeline/03_grid.py 輸出的 pois.json：同一類點位存成欄位式，比 GeoJSON 小約 3 倍 */
@@ -65,11 +68,12 @@ export function useAppData() {
       load<FillData>("fill.json"),
       load<FeatureCollection<ResidentialProps>>("residential.geojson"),
       load<SmartBin[]>("smart_bins.json"),
+      load<PilotArea>("pilot_districts.geojson"),
     ])
-      .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins]) => {
+      .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins, pilotArea]) => {
         // Demo：固定警示對應的桶在即時畫面一律滿溢（lib/demoAlert.ts）
         const liveFill = withDemoFill(fill, demoBinIndices(bins));
-        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill: liveFill, residential, smartBins });
+        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill: liveFill, residential, smartBins, pilotArea });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {

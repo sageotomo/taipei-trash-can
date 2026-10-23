@@ -2870,3 +2870,31 @@ textarea {
 .button.done:disabled {
   opacity: 1;
 }
+
+/* 動態調度：感測器試辦區 */
+.pilot-note {
+  margin: 8px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--action);
+  border-radius: 6px;
+  background: var(--action-soft);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pilot-note strong {
+  color: var(--ink);
+}
+
+.leaflet-tooltip.pilot-label {
+  padding: 2px 8px;
+  border: 0;
+  background: rgba(19, 31, 36, 0.8);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: none;
+}
+
+.leaflet-tooltip.pilot-label::before {
+  display: none;
+}

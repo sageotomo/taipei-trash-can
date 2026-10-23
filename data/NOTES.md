@@ -15,6 +15,10 @@
 | `addresses_100m.csv` | [臺北市門牌位置數值資料](https://data.taipei/dataset/detail?id=b7c8e724-1e98-45ee-a0bd-f3840623ed97) | 民政局 | 1,157,763 筆 → 11,910 格 | 2026-10-02 版。原始 CSV 約 119 MB（UTF-8、TWD97 二度分帶），在瀏覽器裡串流彙總成 100 公尺方格：`bx`、`by`＝TWD97 座標 ÷ 100 取整，`n`＝門牌數。每層樓一筆門牌，接近戶數。已用店家位置交叉驗證座標是 TWD97（不位移時相關最高） |
 | `vendor_markets.csv` | [臺北市臨時攤販集中場](https://data.taipei/dataset/detail?id=c013d9ec-a550-46bd-ac60-45f085930706) | 產業局 | 47 處 | 攤販沒有商業登記，用來把夜市、攤販集中場周邊 300 m 標成商圈（住宅區計算用） |
 
+## 動態調度的試辦區邊界
+
+`web/public/data/pilot_districts.geojson`：大安區、中山區的行政區界，給動態調度框出感測器試辦區用。取自 npm 套件 [taiwan-atlas](https://www.npmjs.com/package/taiwan-atlas) 2021.9.20 版的 `towns-10t.json`（內政部 1:1 萬鄉鎮市區界的 TopoJSON，MIT 授權；縣市名寫成「台北市」），用 topojson-client 轉成 GeoJSON，座標取到小數點後 5 位。資料裡的大安區 45 桶全在框內；中山區 50 桶有 49 桶在框內，1 桶落在界線外側。
+
 ## 仍是模擬的資料
 
 - 歷史市民通報、智慧垃圾桶填滿紀錄、增設進度
