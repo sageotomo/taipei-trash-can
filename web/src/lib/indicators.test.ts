@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cellCenter, gridDisk, latLngToCell } from "./hexgrid";
 import {
   DEFAULT_INDICATORS,
+  LEVELS,
   aggregate,
   autoCap,
   cellUniverse,
@@ -185,5 +186,28 @@ describe("indicatorSource", () => {
     const base = { id: "x", label: "x", layer: "bins", sign: 1 as const, weight: 0.1, cap: null };
     expect(indicatorSource({ ...base, method: "count" }, bins)).toBe("bins");
     expect(indicatorSource({ ...base, method: "sum", field: "fill" }, bins)).toBe("fill");
+  });
+});
+
+describe("缺桶分級顏色", () => {
+  // 相對亮度（WCAG 公式）
+  const luminance = (hex: string) => {
+    const [r, g, b] = [1, 3, 5].map((i) => {
+      const c = parseInt(hex.slice(i, i + 2), 16) / 255;
+      return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+    });
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  };
+
+  it("越缺顏色越深", () => {
+    const l = LEVELS.map((lv) => luminance(lv.color));
+    for (let i = 1; i < l.length; i++) expect(l[i]).toBeLessThan(l[i - 1]);
+  });
+
+  it("分級標籤上的文字看得清楚（對比至少 4.5:1）", () => {
+    for (const lv of LEVELS) {
+      const [a, b] = [luminance(lv.color), luminance(lv.ink)].sort((x, y) => y - x);
+      expect((a + 0.05) / (b + 0.05)).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

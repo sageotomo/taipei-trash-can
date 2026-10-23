@@ -58,7 +58,8 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
       const isRec = recommended.has(r.cell);
       return {
         fillColor: k < 0 ? MAP.empty : LEVELS[k].color,
-        fillOpacity: k < 0 ? 0.04 : 0.42,
+        // 透明度固定，只靠顏色深淺分級，地圖上的深淺才會和圖例一致
+        fillOpacity: k < 0 ? 0.04 : 0.62,
         color: isSelected ? MAP.selected : isRec ? MAP.emphasis : MAP.gridLine,
         weight: isSelected ? 3 : isRec ? 2 : 0.5,
         opacity: isSelected || isRec ? 1 : 0.5,

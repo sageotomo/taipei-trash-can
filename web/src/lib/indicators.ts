@@ -272,11 +272,12 @@ export function mainReason(r: CellResult): number {
 
 // ---------------- 分級 ----------------
 
+/** 缺桶分級：還夠用是淺灰，其他同一個橘紅色系由淺到深，越深越缺。ink 是放在這個顏色上的文字顏色（深底配淺字） */
 export const LEVELS = [
-  { label: "還夠用", color: "#a0775c" },
-  { label: "有點缺", color: "#c9673f" },
-  { label: "缺", color: "#e16f4c" },
-  { label: "很缺", color: "#ff9a73" },
+  { label: "還夠用", color: "#d2d2d2", ink: "#14202a" },
+  { label: "有點缺", color: "#f3b495", ink: "#14202a" },
+  { label: "缺", color: "#c24a26", ink: "#fff4ee" },
+  { label: "很缺", color: "#5c1608", ink: "#fff4ee" },
 ] as const;
 
 /** 分級門檻：佔理論最大值（正向權重合計）的比例 */
