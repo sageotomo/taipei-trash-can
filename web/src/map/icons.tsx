@@ -2,7 +2,7 @@
 // 縮小地圖時，附近的點會聚集成橘色的數字圓圈（用 supercluster 計算），
 // 全部畫在 canvas 上，上萬個點也不會卡。
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import L from "leaflet";
 import Supercluster, { type ClusterFeature, type PointFeature } from "supercluster";
 import { useMap } from "react-leaflet";
@@ -215,6 +215,137 @@ export function ClusteredPoiLayer({ groups, pane = PANES.top }: { groups: PoiGro
       layer.remove();
     };
   }, [map, renderer, pane, index, groups]);
+
+  return null;
+}
+
+// ---------------- 圖片點位（滿桶狀況的垃圾桶圖示） ----------------
+
+export interface ImagePointStyle {
+  /** 圖片網址（public 底下的相對路徑） */
+  src: string;
+  /** 相對於一般尺寸的倍數 */
+  scale?: number;
+  /** 選取時在圖示外面加一圈框線 */
+  ring?: string;
+  /** 畫在其他點上面 */
+  front?: boolean;
+}
+
+/** 圖片裡圓框直徑占整張圖的比例（其餘是光暈或留白），點擊範圍只算圓框 */
+const IMAGE_CONTENT = 0.82;
+
+const imageCache = new Map<string, HTMLImageElement>();
+function loadImage(src: string, onReady: () => void): HTMLImageElement {
+  let img = imageCache.get(src);
+  if (!img) {
+    img = new Image();
+    img.src = src;
+    imageCache.set(src, img);
+  }
+  if (!img.complete) img.addEventListener("load", onReady, { once: true });
+  return img;
+}
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const ImageMarker = L.CircleMarker.extend({
+  _project(this: any) {
+    const ringPx = iconSizeAt(this._map.getZoom()) * (this.options.scale ?? 1);
+    this._ringRadius = ringPx / 2;
+    this._radius = ringPx / IMAGE_CONTENT / 2;
+    (L.CircleMarker.prototype as any)._project.call(this);
+  },
+  _containsPoint(this: any, p: L.Point) {
+    return p.distanceTo(this._point) <= this._ringRadius + this._clickTolerance();
+  },
+  _updatePath(this: any) {
+    const renderer = this._renderer;
+    if (!renderer._drawing || this._empty()) return;
+    const ctx: CanvasRenderingContext2D = renderer._ctx;
+    const { x, y } = this._point;
+    if (this.options.ring) {
+      ctx.beginPath();
+      ctx.arc(x, y, this._ringRadius + 2.5, 0, Math.PI * 2);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = this.options.ring;
+      ctx.stroke();
+    }
+    const img: HTMLImageElement = this.options.image;
+    if (!img.complete || !img.naturalWidth) return;
+    const r = this._radius;
+    ctx.drawImage(img, x - r, y - r, r * 2, r * 2);
+  },
+}) as unknown as new (latlng: L.LatLngExpression, options: L.CircleMarkerOptions & Record<string, unknown>) => L.CircleMarker;
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
+interface ImagePointLayerProps {
+  points: LatLngPoint[];
+  style: (index: number) => ImagePointStyle;
+  pane?: string;
+  onClick?: (index: number) => void;
+  tooltip?: (index: number) => string | undefined;
+}
+
+/** 每個點畫成一張圖片（畫在 canvas 上），用法和 PointLayer 一樣 */
+export function ImagePointLayer({ points, style, pane = PANES.points, onClick, tooltip }: ImagePointLayerProps) {
+  const map = useMap();
+  const renderer = useMemo(() => L.canvas({ pane, padding: 0.3 }), [pane]);
+  const markers = useRef<L.CircleMarker[]>([]);
+  const onClickRef = useRef(onClick);
+  onClickRef.current = onClick;
+  const tooltipRef = useRef(tooltip);
+  tooltipRef.current = tooltip;
+  const styleRef = useRef(style);
+  styleRef.current = style;
+
+  const redraw = useMemo(() => () => (renderer as unknown as { _redraw?: () => void })._redraw?.(), [renderer]);
+  const options = useCallback(
+    (s: ImagePointStyle) => ({
+      image: loadImage(s.src, redraw),
+      scale: s.scale ?? 1,
+      ring: s.ring ?? null,
+    }),
+    [redraw]
+  );
+
+  const applyStyles = useCallback(() => {
+    const front: L.CircleMarker[] = [];
+    markers.current.forEach((m, i) => {
+      const s = styleRef.current(i);
+      L.setOptions(m, options(s));
+      const mm = m as unknown as { _map?: L.Map; _project(): void };
+      if (mm._map) mm._project();
+      if (s.front) front.push(m);
+    });
+    front.forEach((m) => m.bringToFront());
+    redraw();
+  }, [options, redraw]);
+
+  useEffect(() => {
+    const group = L.layerGroup();
+    markers.current = points.map((p, i) => {
+      const m = new ImageMarker([p.lat, p.lng], { renderer, pane, stroke: false, fill: false, ...options(styleRef.current(i)) });
+      if (onClickRef.current) {
+        m.on("click", (e) => {
+          L.DomEvent.stopPropagation(e);
+          onClickRef.current?.(i);
+        });
+      }
+      const tip = tooltipRef.current?.(i);
+      if (tip) m.bindTooltip(tip, { direction: "top", offset: [0, -8] });
+      m.addTo(group);
+      return m;
+    });
+    group.addTo(map);
+    applyStyles();
+    return () => {
+      group.remove();
+    };
+  }, [points, map, renderer, pane, options, applyStyles]);
+
+  useEffect(() => {
+    applyStyles();
+  }, [style, applyStyles]);
 
   return null;
 }
