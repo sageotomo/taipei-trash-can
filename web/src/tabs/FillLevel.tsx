@@ -244,7 +244,7 @@ export function FillPanel(props: PanelProps) {
         </div>
       </div>
       <p className="footnote">
-        有空位：50% 以下　半滿：50–80%　需清運：80% 以上
+        有空位：50% 以下　半滿：50–80%　需清運：80%
       </p>
 
       <GovView {...props} />
