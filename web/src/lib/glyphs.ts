@@ -136,5 +136,3 @@ export const POI_TYPES: Record<PoiType, IconSpec & { label: string }> = {
   residential: { glyph: "home", label: "住宅區", color: "#8b6fd6" },
 };
 
-/** 縮小地圖時，附近的點聚集成這個顏色的數字圓圈 */
-export const CLUSTER_COLOR = "#f97316";

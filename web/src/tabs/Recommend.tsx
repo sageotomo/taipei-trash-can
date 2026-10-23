@@ -20,7 +20,7 @@ import {
 } from "../lib/indicators";
 import { cellCenter, latLngToCell } from "../lib/hexgrid";
 import { HexLayer, MapClick } from "../map/layers";
-import { ClusteredPoiLayer, PoiIcon, type LabeledPoint } from "../map/icons";
+import { PoiLayer, PoiIcon, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
 import { storyOf } from "../lib/stories";
@@ -124,7 +124,7 @@ export function PoiLayers({ data, layers, visible }: { data: AppData; layers: Da
     () => groups.filter((g) => visible[g.layer.id]).map((g) => ({ ...g, order: order(g.layer.id) })),
     [groups, visible]
   );
-  return shown.length ? <ClusteredPoiLayer groups={shown} /> : null;
+  return shown.length ? <PoiLayer groups={shown} /> : null;
 }
 
 // ---------------- 側邊面板 ----------------
