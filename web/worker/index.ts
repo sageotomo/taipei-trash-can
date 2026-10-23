@@ -121,12 +121,15 @@ export default {
     try {
       if (url.pathname === "/api/reports" && req.method === "POST") return await create(req, store);
       if (url.pathname === "/api/reports" && req.method === "GET") return json({ reports: await store.list() });
+      // 檢查用：瀏覽器打開這個網址，看得到 {"ok":true,...} 就代表 Worker 和資料庫都正常
+      if (url.pathname === "/api/health") return json({ ok: true, method: req.method, reports: (await store.list()).length });
       const m = /^\/api\/photo\/(Q\d{4}-[0-9A-Z]{4})$/.exec(url.pathname);
       if (m && req.method === "GET") return await photo(m[1], store);
       return fail(404, "找不到。");
     } catch (e) {
       console.error(e);
-      return fail(500, "伺服器暫時出錯，請稍後再試。");
+      // 展示用網站（有 Cloudflare Access），直接顯示錯誤原因方便除錯
+      return fail(500, `伺服器出錯：${e instanceof Error ? e.message : String(e)}`);
     }
   },
 };

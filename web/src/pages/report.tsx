@@ -33,9 +33,17 @@ async function send(bin: string, input: ReportInput): Promise<string> {
   } catch {
     throw new Error("網路連線失敗，請再按一次送出。");
   }
-  const out = (await r.json().catch(() => ({}))) as { id?: string; error?: string };
-  if (!r.ok || !out.id) throw new Error(out.error ?? "送出失敗，請稍後再試。");
-  return out.id;
+  const text = await r.text();
+  let out: { id?: string; error?: string } = {};
+  try {
+    out = JSON.parse(text);
+  } catch {
+    // 不是我們 API 回的 JSON（例如 Cloudflare 的錯誤頁、登入頁）：把狀態碼和開頭顯示出來方便除錯
+  }
+  if (r.ok && out.id) return out.id;
+  if (out.error) throw new Error(out.error);
+  const snippet = text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  throw new Error(`送出失敗（HTTP ${r.status}${r.redirected ? "，被轉址" : ""}）${snippet ? "：" + snippet : ""}`);
 }
 
 function ReportPage() {
