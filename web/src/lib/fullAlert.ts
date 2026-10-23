@@ -29,6 +29,8 @@ export interface FullCluster {
   lng: number;
   /** 涵蓋所有成員的半徑（公尺），畫圈用 */
   radiusM: number;
+  /** Demo 固定警示的那一區（lib/demoAlert.ts） */
+  demo?: boolean;
 }
 
 /** 每個桶在同一轄區、RADIUS_M 內的鄰居（含自己）。只跟位置有關，算一次就好。 */

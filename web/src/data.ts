@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { demoBinIndices, withDemoFill } from "./lib/demoAlert";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, SmartBin, Source } from "./types";
 
 /** 住宅區：homes = 住家門牌數（真實資料時每格一點；模擬時每點 1） */
@@ -66,7 +67,9 @@ export function useAppData() {
       load<SmartBin[]>("smart_bins.json"),
     ])
       .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins]) => {
-        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill, residential, smartBins });
+        // Demo：固定警示對應的桶在即時畫面一律滿溢（lib/demoAlert.ts）
+        const liveFill = withDemoFill(fill, demoBinIndices(bins));
+        if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill: liveFill, residential, smartBins });
       })
       .catch((e: Error) => !cancelled && setError(e.message));
     return () => {

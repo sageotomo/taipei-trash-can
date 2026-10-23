@@ -15,6 +15,7 @@ import { Section, SourceTag, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
+import { DEMO_ALERT, demoBinIndices } from "../lib/demoAlert";
 import { ALERT, findFullClusters, neighborIndex, nextAlertHour, type FullCluster } from "../lib/fullAlert";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
@@ -77,9 +78,14 @@ function useFullClusters(data: AppData, hour: number) {
   );
   const neighbors = useMemo(() => neighborIndex(bins), [bins]);
   const levels = data.fill.levels[LIVE];
+  const demo = useMemo(() => demoBinIndices(data.bins), [data.bins]);
   const clusters = useMemo(
-    () => findFullClusters(bins, levels.map((row) => row[hour]), neighbors),
-    [bins, levels, neighbors, hour]
+    () =>
+      findFullClusters(bins, levels.map((row) => row[hour]), neighbors).map((c) =>
+        // Demo 的那一區用分隊名稱，和載入時跳出的通知一致
+        demo.length && demo.every((i) => c.members.includes(i)) ? { ...c, team: DEMO_ALERT.team, demo: true } : c
+      ),
+    [bins, levels, neighbors, hour, demo]
   );
   return { bins, neighbors, clusters };
 }
@@ -394,7 +400,8 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
   const [desktop, setDesktop] = useState(() => notifySupported() && Notification.permission === "granted");
 
   useEffect(() => {
-    const fresh = clusters.filter((c) => !seen.current.has(c.key));
+    // Demo 那一區載入時已經跳過通知，這裡不重複跳
+    const fresh = clusters.filter((c) => !seen.current.has(c.key) && !c.demo);
     seen.current = new Set(clusters.map((c) => c.key));
     if (!fresh.length) return;
     setToasts((t) => [...fresh, ...t.filter((x) => clusters.some((c) => c.key === x.key))].slice(0, 3));

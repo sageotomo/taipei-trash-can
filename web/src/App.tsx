@@ -29,6 +29,7 @@ import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import { IconToggles } from "./map/IconToggles";
 import { useQrReports } from "./lib/qrFeed";
+import { DEMO_ALERT, demoBinIndices } from "./lib/demoAlert";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
@@ -187,6 +188,25 @@ export default function App() {
     [focusBin]
   );
 
+  // ---- Demo：載入 1 秒後跳出固定的即時提醒（lib/demoAlert.ts） ----
+  // hidden → shown（載入 1 秒後）→ viewed（按過地圖查看）→ dispatched（按過確認派工）
+  const [demoAlert, setDemoAlert] = useState<"hidden" | "shown" | "viewed" | "dispatched">("hidden");
+  const demoBins = useMemo(() => (data ? demoBinIndices(data.bins) : []), [data]);
+  useEffect(() => {
+    if (!data) return;
+    const id = window.setTimeout(() => setDemoAlert("shown"), DEMO_ALERT.delayMs);
+    return () => window.clearTimeout(id);
+  }, [data]);
+  // 按地圖查看後通知不關掉，按鈕換成「確認派工」
+  const openDemoAlert = () => {
+    setDemoAlert("viewed");
+    setTab("fill");
+    if (!data || !demoBins.length) return;
+    const pts = demoBins.map((i) => data.bins.features[i].geometry.coordinates);
+    flyTo(pts.reduce((s, p) => s + p[1], 0) / pts.length, pts.reduce((s, p) => s + p[0], 0) / pts.length, 17);
+    setFillState((st) => ({ ...st, selected: demoBins[0] }));
+  };
+
   const ready = data && place;
   // 動態調度與通報案件右側要放整張表格，面板加寬
   const wide = tab === "fill" || tab === "reports";
@@ -322,6 +342,33 @@ export default function App() {
           ) : null}
         </section>
       </aside>
+
+      {demoAlert !== "hidden" ? (
+        <div className="alert-toasts demo" role="alert">
+          <div className="alert-toast demo-toast">
+            <button className="alert-toast-close" aria-label="關閉通知" onClick={() => setDemoAlert("hidden")}>
+              ×
+            </button>
+            <p className="demo-title">{DEMO_ALERT.title}</p>
+            <p className="demo-message">{DEMO_ALERT.message}</p>
+            <div className="demo-actions">
+              {demoAlert === "shown" ? (
+                <button className="button primary" onClick={openDemoAlert}>
+                  地圖查看
+                </button>
+              ) : demoAlert === "viewed" ? (
+                <button className="button primary" onClick={() => setDemoAlert("dispatched")}>
+                  確認派工
+                </button>
+              ) : (
+                <button className="button done" disabled>
+                  ✓ 已確認派工
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

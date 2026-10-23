@@ -2814,3 +2814,59 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .alert-toast { animation: none; }
 }
+
+/* Demo 固定警示：放在畫面上方中央，比一般通知更醒目 */
+.alert-toasts.demo {
+  top: 16px;
+  bottom: auto;
+  left: 50%;
+  right: auto;
+  width: min(480px, calc(100vw - 32px));
+  transform: translateX(-50%);
+}
+
+.alert-toast.demo-toast {
+  position: relative;
+  display: block;
+  padding: 14px 40px 14px;
+  text-align: center;
+}
+
+.demo-toast .alert-toast-close {
+  position: absolute;
+  top: 4px;
+  right: 2px;
+}
+
+.demo-title {
+  margin: 0;
+  color: var(--full);
+  font-size: 18px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+.demo-message {
+  margin: 8px 0 12px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.6;
+}
+
+.demo-actions .button {
+  min-width: 132px;
+  font: inherit;
+  font-weight: 700;
+}
+
+.button.done {
+  border-color: var(--ok);
+  background: transparent;
+  color: var(--ok);
+}
+
+.button.done:disabled {
+  opacity: 1;
+}
