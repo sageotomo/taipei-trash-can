@@ -44,8 +44,8 @@ import { RoleToggle } from "./ui";
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "recommend", label: "佈建分析" },
   { id: "fill", label: "動態調度" },
+  { id: "recommend", label: "佈建分析" },
   { id: "reports", label: "通報案件" },
   { id: "progress", label: "數據統計" },
 ];
@@ -57,7 +57,7 @@ export type Focus = { lat: number; lng: number; zoom?: number; key: number } | n
 
 export default function App() {
   const { data, error } = useAppData();
-  const [tab, setTab] = useState<TabId>("recommend");
+  const [tab, setTab] = useState<TabId>("fill");
   const [role, setRole] = useState<Role>(loadRole);
   useEffect(() => saveRole(role), [role]);
   const [indicators, setIndicators] = useState<Indicator[]>(loadIndicators);
