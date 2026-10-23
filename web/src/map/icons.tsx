@@ -232,7 +232,7 @@ export interface ImagePointStyle {
   front?: boolean;
 }
 
-/** 圖片裡圓框直徑占整張圖的比例（其餘是光暈或留白），點擊範圍只算圓框 */
+/** 圖示本體約占整張圖的比例（其餘是陰影和留白），點擊範圍只算本體 */
 const IMAGE_CONTENT = 0.82;
 
 const imageCache = new Map<string, HTMLImageElement>();

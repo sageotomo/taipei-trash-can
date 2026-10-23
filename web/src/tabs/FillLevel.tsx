@@ -23,14 +23,14 @@ const NEARBY = 5;
 const NEARBY_MAX_M = 1500;
 const LOW_BATTERY = 20;
 
-// 顏色和圖示裡的圓框同色
-export const FILL_COLORS = { ok: "#84d6e7", warn: "#e9ac4f", full: "#f75a64" };
+// 顏色和垃圾桶圖示同色
+export const FILL_COLORS = { ok: "#75c2b4", warn: "#e4c659", full: "#f06241" };
 
-/** 垃圾桶圖示：有空位藍、半滿橘、需清運紅（紅色帶光暈、蓋子掀開） */
+/** 垃圾桶圖示：有空位青綠、半滿黃、需清運橘紅（蓋子掀開） */
 export const FILL_ICONS = {
-  ok: `${import.meta.env.BASE_URL}icons/fill-ok.png`,
-  warn: `${import.meta.env.BASE_URL}icons/fill-half.png`,
-  full: `${import.meta.env.BASE_URL}icons/fill-full.png`,
+  ok: `${import.meta.env.BASE_URL}icons/bin-ok.png`,
+  warn: `${import.meta.env.BASE_URL}icons/bin-half.png`,
+  full: `${import.meta.env.BASE_URL}icons/bin-full.png`,
 };
 
 export function levelIcon(level: number): string {
