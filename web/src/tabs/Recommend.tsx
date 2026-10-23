@@ -19,8 +19,8 @@ import {
   type IndexResult,
 } from "../lib/indicators";
 import { cellCenter, latLngToCell } from "../lib/hexgrid";
-import { HexLayer, MapClick, PANES } from "../map/layers";
-import { PoiIcon, PoiPointLayer, type LabeledPoint } from "../map/icons";
+import { HexLayer, MapClick } from "../map/layers";
+import { ClusteredPoiLayer, PoiIcon, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
 import { storyOf } from "../lib/stories";
@@ -120,23 +120,11 @@ export function PoiLayers({ data, layers, visible }: { data: AppData; layers: Da
 
   // 捷運、垃圾桶畫在最上面
   const order = (id: string) => (id === "mrt" ? 2 : id === "bins" ? 1 : 0);
-  return (
-    <>
-      {[...groups]
-        .sort((a, b) => order(a.layer.id) - order(b.layer.id))
-        .map((g) =>
-          visible[g.layer.id] ? (
-            <PoiPointLayer
-              key={g.key}
-              icon={g.icon}
-              label={g.label}
-              points={g.points}
-              pane={order(g.layer.id) > 0 ? PANES.top : PANES.points}
-            />
-          ) : null
-        )}
-    </>
+  const shown = useMemo(
+    () => groups.filter((g) => visible[g.layer.id]).map((g) => ({ ...g, order: order(g.layer.id) })),
+    [groups, visible]
   );
+  return shown.length ? <ClusteredPoiLayer groups={shown} /> : null;
 }
 
 // ---------------- 側邊面板 ----------------
