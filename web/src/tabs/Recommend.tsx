@@ -190,9 +190,7 @@ export function RecommendPanel(props: PanelProps) {
 
   return (
     <>
-      <p className="lead">
-        每一格只看格內的資料：人潮、店家越多越需要垃圾桶，已經有桶的地方就扣分。調整下面的指標，看看建議點怎麼移動。
-      </p>
+      <IntroBox />
 
       <div ref={detailRef} className="detail-anchor">
         {selected && selectedResult ? (
@@ -648,6 +646,34 @@ function AddIndicator({ layers, indicators, onAdd, onCancel }: {
   );
 }
 
+// ---------------- 說明框 ----------------
+// 市民版與政府單位版共用：格子大小、顏色意思、怎麼操作，加上分級圖例
+
+function IntroBox() {
+  const blockM = Math.round(CELL_WIDTH_M / 10) * 10;
+  // 一般步行速度約 80 公尺／分鐘
+  const walkMin = Math.max(1, Math.round(blockM / 80));
+  return (
+    <div className="hint-box">
+      <p className="hint-text">
+        地圖上每一格約 {fmt(blockM)} 公尺寬，大概是走路 {walkMin} 分鐘的距離。顏色越深，代表那一帶越缺垃圾桶。以下情境會增加或減少對垃圾桶的需求，你可以打開或關掉這些情境參數，看看哪裡最需要垃圾桶，也可以點任一格，看那裡為什麼缺（或不缺）垃圾桶。
+      </p>
+      <div className="legend">
+        <span className="legend-item">
+          <Swatch color={MAP.emptySwatch} shape="hex" />
+          不缺
+        </span>
+        {LEVELS.map((l) => (
+          <span key={l.label} className="legend-item">
+            <Swatch color={l.color} shape="hex" />
+            {l.label}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ---------------- 市民版 ----------------
 // 市民看不到公式與權重，只看到七個故事（參數）與開關，用來互動；同一組指標，政府單位那邊可以細調。
 
@@ -655,9 +681,6 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
   const { data, layers, indicators, result, recommendations, selected, onSelect, place, toggle, detailRef } = props;
   const selectedResult = selected ? result.byCell.get(selected) : undefined;
   const allOn = indicators.every(isOn);
-  const blockM = Math.round(CELL_WIDTH_M / 10) * 10;
-  // 一般步行速度約 80 公尺／分鐘
-  const walkMin = Math.max(1, Math.round(blockM / 80));
 
   return (
     <>
@@ -673,23 +696,7 @@ function CitizenPanel(props: PanelProps & { toggle: (k: number, on: boolean) => 
             onClose={() => onSelect(null)}
           />
         ) : (
-          <div className="hint-box">
-            <p className="hint-text">
-              地圖上每一格約 {fmt(blockM)} 公尺寬，大概是走路 {walkMin} 分鐘的距離。顏色越深，代表那一帶越缺垃圾桶。以下情境會增加或減少對垃圾桶的需求，你可以打開或關掉這些情境參數，看看哪裡最需要垃圾桶，也可以點任一格，看那裡為什麼缺（或不缺）垃圾桶。
-            </p>
-            <div className="legend">
-              <span className="legend-item">
-                <Swatch color={MAP.emptySwatch} shape="hex" />
-                不缺
-              </span>
-              {LEVELS.map((l) => (
-                <span key={l.label} className="legend-item">
-                  <Swatch color={l.color} shape="hex" />
-                  {l.label}
-                </span>
-              ))}
-            </div>
-          </div>
+          <IntroBox />
         )}
       </div>
 
