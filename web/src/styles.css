@@ -5,16 +5,18 @@
   --paper: #131f24;
   --surface: #19242e;
   --surface-2: #1f2c37;
-  --ink: #e4ebe8;
-  --muted: #8a9ea3;
+  --ink: #eef3f1;
+  --muted: #c3d0d2;
+  /* 比 --muted 再淡一階：停用的按鈕 */
+  --faint: #7d9095;
   --rule: #2b3b45;
   --action: #e16f4c;
   --action-strong: #f08a64;
   --action-soft: #3a2620;
   --on-action: #14202a;
   --teal: #3f7f8a;
-  --teal-soft: #1f404b;
-  --teal-ink: #7fb3bb;
+  --teal-soft: #1a3640;
+  --teal-ink: #d6eef1;
 
   /* 填滿狀態 */
   --ok: #4caf7d;
@@ -305,7 +307,7 @@ textarea {
 }
 
 .link-button:disabled {
-  color: var(--rule);
+  color: var(--faint);
   cursor: default;
 }
 
@@ -353,12 +355,12 @@ textarea {
 
 /* 真實／模擬：實心底色，放在淺綠、淺粉紅卡片上也看得出來 */
 .tag-real {
-  background: var(--teal);
+  background: #7fc4cd;
   color: var(--on-action);
 }
 
 .tag-sim {
-  background: #b86b16;
+  background: #e8a35a;
   color: var(--on-action);
 }
 
@@ -1495,8 +1497,8 @@ textarea {
 /* ---------- 缺桶指數：公式、明細、指標設定 ---------- */
 
 :root {
-  --plus: #4caf7d;
-  --minus: #e0566a;
+  --plus: #6fd39f;
+  --minus: #ff8a98;
   --minus-soft: #3a2228;
   /* 指標卡片底色：正相關（↑ 需要桶）淺綠、負相關（↓ 較不需要）淺粉紅 */
   --plus-card: #1b2f28;
