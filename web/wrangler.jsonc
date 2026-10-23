@@ -1,15 +1,30 @@
-// Cloudflare Workers（靜態網站）設定：只上傳 npm run build 產生的 dist/，沒有後端程式。
+// Cloudflare Workers 設定：靜態網站（npm run build 產生的 dist/）＋ /api/* 的小後端（worker/index.ts）。
 // name 必須和 Cloudflare 後台的 Worker 名稱相同。
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "taipei-trash-can",
+  "main": "worker/index.ts",
   "compatibility_date": "2026-10-01",
   // 明確開啟 workers.dev 網址與分支預覽網址（兩者都受 Cloudflare Access 保護）
   "workers_dev": true,
   "preview_urls": true,
-  // 非 main 分支的 build 用 `npx wrangler preview` 產生預覽，這個指令需要 previews 區塊（可以是空的）
-  "previews": {},
+  // 非 main 分支的 build 用 `npx wrangler preview` 產生預覽，這個指令需要 previews 區塊。
+  // 預覽不會繼承上層的綁定：程式從 env 讀的 Durable Object 綁定要在這裡再宣告一次
+  // （class 和 migrations 留在上層；每個預覽會自動有自己的一份資料）
+  "previews": {
+    "durable_objects": {
+      "bindings": [{ "name": "REPORTS", "class_name": "ReportStore" }]
+    }
+  },
   "assets": {
-    "directory": "./dist"
-  }
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // 只有 /api/* 先進 Worker，其他網址直接回靜態檔
+    "run_worker_first": ["/api/*"]
+  },
+  // 掃 QR code 的通報存在 Durable Object（內建 SQLite），不用到後台建資料庫；每個分支預覽各有一份
+  "durable_objects": {
+    "bindings": [{ "name": "REPORTS", "class_name": "ReportStore" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReportStore"] }]
 }
