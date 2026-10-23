@@ -107,10 +107,8 @@ export function RecommendLayers({ data, layers, cells, result, recommended, sele
 /** 住宅值是自訂的指數，畫面上不顯示數字，只顯示它換算後的分數或方向 */
 const hidesValue = (ind: Indicator) => ind.layer === "residential" && ind.method !== "count" && ind.field === "homes";
 
-const ICON_ZOOM: Record<string, number> = { mrt: 13, bins: 15, bus: 16, youbike: 16, reports: 16, food: 17 };
 
-
-/** 各圖層的點，其他分頁也會用到。縮小時是圓點，放大後換成圖示 */
+/** 各圖層的點，其他分頁也會用到。全部畫成同樣大小的圖示 */
 export function PoiLayers({ data, layers, visible }: { data: AppData; layers: DataLayer[]; visible: Visibility }) {
   const groups = useMemo(() => {
     const isSim = (key?: string) => data.sources.find((s) => s.key === key)?.real === false;
@@ -133,10 +131,7 @@ export function PoiLayers({ data, layers, visible }: { data: AppData; layers: Da
               icon={g.icon}
               label={g.label}
               points={g.points}
-              iconZoom={ICON_ZOOM[g.layer.id] ?? 15}
               pane={order(g.layer.id) > 0 ? PANES.top : PANES.points}
-              radius={g.layer.id === "mrt" ? 7 : g.layer.id === "bins" ? 4.5 : 3.5}
-              zIndexOffset={order(g.layer.id) * 500}
             />
           ) : null
         )}

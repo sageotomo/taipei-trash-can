@@ -1,14 +1,13 @@
-// 點位圖示：放大地圖時，每種點位用不同的圖示標記，一眼就看得出是什麼。
-// 縮小時點位太多，改用 canvas 圓點（同色），避免畫面和效能負擔。
+// 點位圖示：每種點位用不同的圖示標記，一眼就看得出是什麼。
+// 所有圖層用同一個尺寸，畫在 canvas 上，點再多也不會退回成圓點。
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo } from "react";
 import L from "leaflet";
 import { useMap } from "react-leaflet";
-import { PointLayer, PANES, type LatLngPoint } from "./layers";
+import { PANES, type LatLngPoint } from "./layers";
 import type { IconSpec } from "../types";
 
 import { GLYPHS } from "../lib/glyphs";
-import { MAP } from "../lib/theme";
 export { CUSTOM_COLORS, CUSTOM_GLYPHS, GLYPHS, POI_TYPES, type PoiType } from "../lib/glyphs";
 
 function svg(glyph: string, size: number): string {
@@ -27,24 +26,55 @@ export function PoiIcon({ icon, size = 20 }: { icon: IconSpec; size?: number }) 
   );
 }
 
-const iconCache = new Map<string, L.DivIcon>();
-function divIcon(icon: IconSpec): L.DivIcon {
-  const key = `${icon.glyph}|${icon.color}`;
-  let out = iconCache.get(key);
-  if (!out) {
-    out = L.divIcon({
-      className: "",
-      html: `<span class="poi-marker" style="background:${icon.color}">${svg(icon.glyph, 15)}</span>`,
-      iconSize: [24, 24],
-      iconAnchor: [12, 12],
-      tooltipAnchor: [0, -12],
-    });
-    iconCache.set(key, out);
-  }
-  return out;
+/** 所有點位共用同一個圖示尺寸（px），只隨縮放等級一起變大變小 */
+export function iconSizeAt(zoom: number): number {
+  if (zoom <= 12) return 12;
+  if (zoom <= 13) return 14;
+  if (zoom <= 14) return 16;
+  if (zoom <= 15) return 19;
+  return 22;
 }
 
-const MAX_MARKERS = 700;
+// 圖示先畫成高解析度的點陣圖，canvas 再依目前尺寸縮放貼上
+const BITMAP_PX = 64;
+const bitmapCache = new Map<string, HTMLImageElement>();
+function bitmap(icon: IconSpec, onReady: () => void): HTMLImageElement {
+  const key = `${icon.glyph}|${icon.color}`;
+  let img = bitmapCache.get(key);
+  if (!img) {
+    const path = (GLYPHS[icon.glyph] ?? GLYPHS.pin).path;
+    const svgText =
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="${BITMAP_PX}" height="${BITMAP_PX}">` +
+      `<circle cx="12" cy="12" r="11.4" fill="rgba(0,0,0,0.45)"/>` +
+      `<circle cx="12" cy="12" r="10.6" fill="${icon.color}" stroke="#fff" stroke-width="1.4"/>` +
+      `<g transform="translate(12 12) scale(0.62) translate(-12 -12)" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${path}</g>` +
+      `</svg>`;
+    img = new Image();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+    bitmapCache.set(key, img);
+  }
+  if (!img.complete) img.addEventListener("load", onReady, { once: true });
+  return img;
+}
+
+// 用 canvas 畫的圖示標記：沿用 CircleMarker 的點擊判定、tooltip、canvas 效能，
+// 只把「畫圓」換成「貼圖示」，所以上萬個點也能全部顯示成圖示
+/* eslint-disable @typescript-eslint/no-explicit-any */
+const IconMarker = L.CircleMarker.extend({
+  _project(this: any) {
+    this._radius = iconSizeAt(this._map.getZoom()) / 2;
+    (L.CircleMarker.prototype as any)._project.call(this);
+  },
+  _updatePath(this: any) {
+    const renderer = this._renderer;
+    if (!renderer._drawing || this._empty()) return;
+    const img: HTMLImageElement = this.options.image;
+    if (!img.complete || !img.naturalWidth) return;
+    const size = this._radius * 2;
+    renderer._ctx.drawImage(img, this._point.x - this._radius, this._point.y - this._radius, size, size);
+  },
+}) as unknown as new (latlng: L.LatLngExpression, options: L.CircleMarkerOptions & { image: HTMLImageElement }) => L.CircleMarker;
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export type LabeledPoint = LatLngPoint & { label?: string };
 
@@ -52,64 +82,28 @@ interface Props {
   icon: IconSpec;
   label: string;
   points: LabeledPoint[];
-  /** 這個縮放等級以上才換成圖示 */
-  iconZoom: number;
   pane?: string;
-  /** 縮小時的圓點半徑 */
-  radius?: number;
-  zIndexOffset?: number;
 }
 
-export function PoiPointLayer({ icon, label, points, iconZoom, pane = PANES.points, radius = 3.5, zIndexOffset = 0 }: Props) {
+/** 一個圖層的所有點：任何縮放等級都畫成同樣大小的圖示 */
+export function PoiPointLayer({ icon, label, points, pane = PANES.points }: Props) {
   const map = useMap();
-  const [zoom, setZoom] = useState(map.getZoom());
+  const renderer = useMemo(() => L.canvas({ pane, padding: 0.3 }), [pane]);
 
   useEffect(() => {
-    const onZoom = () => setZoom(map.getZoom());
-    map.on("zoomend", onZoom);
+    const group = L.layerGroup();
+    const redraw = () => (renderer as unknown as { _redraw?: () => void })._redraw?.();
+    const image = bitmap(icon, redraw);
+    for (const p of points) {
+      new IconMarker([p.lat, p.lng], { renderer, pane, image, stroke: false, fill: false, interactive: true })
+        .bindTooltip(p.label ?? label, { direction: "top", offset: [0, -6] })
+        .addTo(group);
+    }
+    group.addTo(map);
     return () => {
-      map.off("zoomend", onZoom);
-    };
-  }, [map]);
-
-  const dotStyle = useMemo(
-    () => () => ({ radius, fillColor: icon.color, color: MAP.outline, weight: 1.2, fillOpacity: 1 }),
-    [radius, icon.color]
-  );
-  const tooltip = useMemo(() => (i: number) => points[i].label ?? label, [points, label]);
-
-  if (zoom < iconZoom) return <PointLayer points={points} style={dotStyle} pane={pane} tooltip={tooltip} />;
-  return <IconMarkers icon={icon} label={label} points={points} zIndexOffset={zIndexOffset} />;
-}
-
-/** 只把畫面範圍內的點畫成圖示標記，地圖移動時更新 */
-function IconMarkers({ icon, label, points, zIndexOffset }: { icon: IconSpec; label: string; points: LabeledPoint[]; zIndexOffset: number }) {
-  const map = useMap();
-
-  useEffect(() => {
-    const group = L.layerGroup().addTo(map);
-    const marker = divIcon(icon);
-    const renderer = L.canvas({ pane: PANES.points });
-    const refresh = () => {
-      group.clearLayers();
-      const bounds = map.getBounds().pad(0.2);
-      const visible = points.filter((p) => bounds.contains([p.lat, p.lng]));
-      // 畫面內的點太多時，圖示會疊成一團又拖慢地圖，改畫圓點
-      const asDots = visible.length > MAX_MARKERS;
-      for (const p of visible) {
-        const m = asDots
-          ? L.circleMarker([p.lat, p.lng], { renderer, radius: 4, fillColor: icon.color, color: MAP.outline, weight: 1, fillOpacity: 1 })
-          : L.marker([p.lat, p.lng], { icon: marker, keyboard: false, zIndexOffset });
-        m.bindTooltip(p.label ?? label, { direction: "top" }).addTo(group);
-      }
-    };
-    refresh();
-    map.on("moveend", refresh);
-    return () => {
-      map.off("moveend", refresh);
       group.remove();
     };
-  }, [map, icon, label, points, zIndexOffset]);
+  }, [map, renderer, pane, icon, label, points]);
 
   return null;
 }
