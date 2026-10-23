@@ -29,7 +29,10 @@ export function loadIndicators(): Indicator[] {
     const raw = localStorage.getItem(INDICATORS_KEY);
     if (!raw) return STARTING_INDICATORS;
     const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed) && parsed.every(isIndicator) ? inDefaultOrder(dedupeIndicators(parsed)) : STARTING_INDICATORS;
+    // 存過的權重和自訂指標照留，但每次打開頁面開關都從全關開始
+    return Array.isArray(parsed) && parsed.every(isIndicator)
+      ? inDefaultOrder(dedupeIndicators(parsed)).map((i) => ({ ...i, enabled: false }))
+      : STARTING_INDICATORS;
   } catch {
     return STARTING_INDICATORS;
   }
