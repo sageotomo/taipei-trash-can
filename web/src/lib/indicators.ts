@@ -87,7 +87,7 @@ export const DEFAULT_INDICATORS: Indicator[] = [
   { id: "residential", label: "住宅區", layer: "residential", method: "sum", field: "homes", sign: -1, weight: 0.2, cap: null },
   { id: "bus", label: "公車站", layer: "bus", method: "count", sign: 1, weight: 0.2, cap: null },
   { id: "bins", label: "現有垃圾桶", layer: "bins", method: "count", sign: -1, weight: 0.4, cap: null },
-  { id: "reports", label: "市民通報", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
+  { id: "reports", label: "市民反應缺桶數", layer: "reports", method: "count", sign: 1, weight: 0.15, cap: null },
   // 格內所有垃圾桶的填滿速度加總 ≈ 這格丟進桶子的垃圾量；和上面「現有垃圾桶」的扣分一起看，就是「垃圾量 − 桶子數」
   { id: "fill", label: "滿溢速度", layer: "bins", method: "sum", field: "fill", sign: 1, weight: 0.15, cap: null },
 ];
