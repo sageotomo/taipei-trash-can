@@ -1,0 +1,34 @@
+/* 通報頁：沒有地圖，表單置中，手機優先 */
+.report-page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px 40px;
+  min-height: 100%;
+}
+
+.report-page .detail {
+  margin-top: 12px;
+}
+
+.report-page .sent-box .button {
+  justify-self: start;
+  margin-top: 8px;
+}
+
+/* iPhone 輸入框字小於 16px 會自動放大畫面 */
+.report-page input,
+.report-page textarea {
+  font-size: 16px;
+}
+
+
+/* 表單卡片：和頁面底色區分 */
+.report-page .detail {
+  background: var(--surface);
+  border: 1px solid var(--rule);
+}
+
+/* 窄手機上日期欄和「就是現在」不要撐出卡片（grid 子元素預設不會縮到比內容窄） */
+.report-page .field {
+  grid-template-columns: minmax(0, 1fr);
+}

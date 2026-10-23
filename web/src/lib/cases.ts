@@ -54,7 +54,7 @@ export interface StatusRecord {
 
 /** 歷史通報的模擬處理進度（新通報一律從「待處理」開始） */
 export function simulatedStatus(r: Report): StatusRecord {
-  if (r.local) return { status: "待處理", updated_at: r.created_at };
+  if (r.local || r.qr) return { status: "待處理", updated_at: r.created_at };
   const age = Math.max(0, daysBetween(r.created_at, SIM_DAY));
   const odds = statusOdds(age);
   const u = hash01(r.id);
@@ -164,7 +164,7 @@ export function buildCases(
       district,
       owner: ownerOf(r.category, district),
       bin: nearestBin(r.lat, r.lng, bins),
-      contact: r.local ? r.contact || undefined : simulatedContact(r),
+      contact: r.local || r.qr ? r.contact || undefined : simulatedContact(r),
       age,
       overdue: rec.status !== "已結案" && age > SLA_DAYS,
     };

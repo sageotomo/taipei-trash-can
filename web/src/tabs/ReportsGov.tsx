@@ -236,6 +236,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
                     <td className="nowrap">
                       {r.id}
                       {r.local ? <span className="new-tag">新</span> : null}
+                      {r.qr ? <span className="new-tag" title={`掃垃圾桶 ${r.bin} 的 QR code 通報`}>掃碼</span> : null}
                       {r.photo ? <span title="有照片" className="attach-photo" aria-label="有照片" /> : null}
                       {c.contact ? <span title="可回覆通報人" className="attach-contact" aria-label="有聯絡方式" /> : null}
                       <small>{short(r.created_at)}・{c.age === 0 ? "今天" : `${c.age} 天前`}</small>

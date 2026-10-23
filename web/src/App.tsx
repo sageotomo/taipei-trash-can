@@ -37,6 +37,7 @@ import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import { IconToggles } from "./map/IconToggles";
 import type { Report } from "./types";
+import { useQrReports } from "./lib/qrFeed";
 import { loadRole, saveRole, type Role } from "./lib/role";
 import { RoleToggle } from "./ui";
 
@@ -87,7 +88,8 @@ export default function App() {
     setFocus({ lat, lng, zoom, key: Date.now() });
   }, []);
 
-  const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...localReports], [data, localReports]);
+  const qrReports = useQrReports(data?.bins);
+  const allReports = useMemo(() => [...(data?.reportsSeed ?? []), ...qrReports, ...localReports], [data, qrReports, localReports]);
   const place = useMemo(() => (data ? makePlacer(data) : null), [data]);
 
   // ---- 圖層與缺桶指數 ----

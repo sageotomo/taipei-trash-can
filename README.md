@@ -13,6 +13,8 @@
 | 市民通報 | 市民：點地圖通報亂丟垃圾、垃圾桶滿溢、家戶垃圾棄置，可附現場照片、留 email 或手機追蹤處理進度；每格依通報量給出「增設／加強清運／加強取締」建議。政府單位：所有通報列成案件表（編號、類別、地點、最近垃圾桶編號、處理進度、承辦單位），可篩選、排序、改進度、匯出 CSV，超過 7 天未結案標為逾期 |
 | 增桶進度 | 可選週次（以週為單位）看當週的建議增設前 30 名、設置狀態、更新日期與負責清潔隊，以及當週新進／移出的點；可依行政區篩選 |
 
+**掃碼通報（展示用）**：`/qr` 是只有一個 QR code 的空白頁，掃了會打開 `/report`：沒有地圖、只有市民通報表單（和「市民通報」分頁同一份），隨機帶入一個真實垃圾桶編號（網址加 `?bin=B0365` 可指定）。送出後存在伺服器，政府單位視角的「市民通報」10 秒內出現，案件表標「掃碼」。整個網站有 Cloudflare Access，只有團隊登入後能填。
+
 畫面右上角可以切換「市民／政府單位」兩種視角（沒有登入，只是展示用）。
 
 缺桶程度分頁的地圖左下角有「顯示 icon」小框，每個圖層（捷運站、公車站、YouBike、飲料店、現有垃圾桶、住宅區、市民通報）一個開關，只控制地圖上要不要標出那類地點。生活情境卡片（政府單位視角是指標卡片）最下面的「加入需求計算」才決定算不算進缺桶程度，兩者互不影響。
@@ -121,7 +123,7 @@ make test
 
 ## 部署
 
-網站部署在 **Cloudflare Workers**（純靜態網站，沒有後端），並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
+網站部署在 **Cloudflare Workers**（靜態網站＋`web/worker/index.ts` 處理 `/api/*`；掃碼通報存在 Durable Object 的 SQLite，不用在後台建資料庫，每個分支預覽各有一份獨立資料，上限 500 筆），並用 **Cloudflare Access** 限制只有團隊成員能看（登入時寄 email 驗證碼）。
 
 - Cloudflare 連接這個 GitHub repo，push 到 `main` 後自動 build 與部署；其他分支會產生預覽網址。
 - **分支預覽**：Settings → Builds → Previews Base 的 Preview command 是 `npx wrangler preview`，`web/wrangler.jsonc` 必須有 `"previews": {}` 區塊（可以是空的）。每個分支的預覽網址是 `https://<分支名稱，斜線換成 ->-taipei-trash-can.sage-otomo.workers.dev`，例如 `feat/rename-terms` → `feat-rename-terms-taipei-trash-can.sage-otomo.workers.dev`。

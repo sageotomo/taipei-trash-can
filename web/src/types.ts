@@ -50,6 +50,8 @@ export interface Report {
   local?: boolean; // 這台瀏覽器新增的
   photo?: string;   // 檢舉照片（壓縮後的 JPEG data URL），只有網頁上新增的通報有
   contact?: string; // 市民留的 email 或電話（選填），追蹤處理進度用
+  qr?: boolean;     // 掃垃圾桶 QR code 送出、存在伺服器的通報（lib/qrFeed.ts）
+  bin?: string;     // 掃碼通報的垃圾桶編號
 }
 
 export interface Source {
