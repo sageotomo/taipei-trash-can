@@ -1,6 +1,6 @@
 // 滿桶狀況：每個智慧垃圾桶此刻填了幾 %。
 // 市民：看填滿度、用自己的位置找附近還有空位的垃圾桶。
-// 政府單位：看填滿度，右側用表格列出所有垃圾桶的即時狀況（填滿、電量、廠牌、贊助商）。
+// 政府單位：看填滿度，右側用表格列出所有垃圾桶的即時狀況（地點、填滿度）。
 //
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
@@ -21,7 +21,6 @@ const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週�
 const LIVE: Strategy = "B";
 const NEARBY = 5;
 const NEARBY_MAX_M = 1500;
-const LOW_BATTERY = 20;
 
 export const FILL_COLORS = { ok: "#4caf7d", warn: "#e3b23c", full: "#e0566a" };
 
@@ -97,10 +96,9 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
   const tooltip = useCallback(
     (i: number) => {
       const level = levels[i][time.hour];
-      const extra = role === "gov" ? `・電量 ${data.smartBins[i]?.battery ?? "—"}%` : "";
-      return `${escapeHtml(places[i])}<br><strong>填滿 ${level}%</strong>（${fillStatus(level).label}）${extra}`;
+      return `${escapeHtml(places[i])}<br><strong>填滿 ${level}%</strong>（${fillStatus(level).label}）`;
     },
-    [levels, time.hour, role, places, data.smartBins]
+    [levels, time.hour, places]
   );
   const hourPoints = useMemo(() => points.slice(), [points, time.hour, role]);
 
@@ -152,7 +150,6 @@ export function FillPanel(props: PanelProps) {
   }, [levels, time.hour]);
   const fillSource = data.sources.find((s) => s.key === "fill");
   const gov = props.role === "gov";
-  const lowBattery = useMemo(() => data.smartBins.filter((s) => s.battery < LOW_BATTERY).length, [data.smartBins]);
 
   return (
     <>
@@ -164,7 +161,7 @@ export function FillPanel(props: PanelProps) {
       </div>
       <p className="lead">每個智慧垃圾桶裡的感測器會回報裝了幾 %。</p>
 
-      <div className={gov ? "fill-summary four" : "fill-summary"}>
+      <div className="fill-summary">
         <div>
           <Swatch color={FILL_COLORS.ok} />
           <span>有空位</span>
@@ -180,16 +177,9 @@ export function FillPanel(props: PanelProps) {
           <span>{gov ? "需清運" : "快滿／已滿"}</span>
           <strong className={gov ? "tone-full" : undefined}>{fmt(counts.full)}</strong>
         </div>
-        {gov ? (
-          <div>
-            <span className="battery-icon" aria-hidden="true" />
-            <span>低電量</span>
-            <strong className="tone-warn">{fmt(lowBattery)}</strong>
-          </div>
-        ) : null}
       </div>
       <p className="footnote">
-        有空位：50% 以下　半滿：50–80%　{gov ? "需清運" : "快滿"}：80% 以上{gov ? `　低電量：${LOW_BATTERY}% 以下` : ""}
+        有空位：50% 以下　半滿：50–80%　{gov ? "需清運" : "快滿"}：80% 以上
       </p>
 
       {props.role === "citizen" ? <CitizenView {...props} /> : <GovView {...props} />}
@@ -368,27 +358,22 @@ function FillBar({ level }: { level: number }) {
 
 // ---------------- 政府單位：所有垃圾桶即時狀況表 ----------------
 
-type SortKey = "place" | "level" | "battery" | "brand" | "sponsor";
-type Filter = "all" | "dispatch" | "battery";
+type SortKey = "place" | "level";
+type Filter = "all" | "dispatch";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "全部" },
   { id: "dispatch", label: "需清運（80% 以上）" },
-  { id: "battery", label: `低電量（${LOW_BATTERY}% 以下）` },
 ];
 
 const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: "place", label: "地點" },
   { key: "level", label: "填滿", num: true },
-  { key: "battery", label: "電量", num: true },
-  { key: "brand", label: "廠牌" },
-  { key: "sponsor", label: "贊助商" },
 ];
 
 function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
-  const smart = data.smartBins;
   const [filter, setFilter] = useState<Filter>("all");
   const [district, setDistrict] = useState("全部");
   const [query, setQuery] = useState("");
@@ -407,9 +392,7 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
       .filter(({ i, f }) => {
         if (district !== "全部" && f.properties.district !== district) return false;
         if (filter === "dispatch" && levels[i][time.hour] < 80) return false;
-        if (filter === "battery" && smart[i].battery >= LOW_BATTERY) return false;
-        if (q && !(places[i].includes(q) || f.properties.id.includes(q.toUpperCase()) || smart[i].sponsor.includes(q) || smart[i].brand.includes(q)))
-          return false;
+        if (q && !(places[i].includes(q) || f.properties.id.includes(q.toUpperCase()))) return false;
         return true;
       })
       .map(({ i }) => i);
@@ -417,12 +400,6 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
       switch (sort.key) {
         case "level":
           return levels[i][time.hour];
-        case "battery":
-          return smart[i].battery;
-        case "brand":
-          return smart[i].brand;
-        case "sponsor":
-          return smart[i].sponsor;
         default:
           return places[i];
       }
@@ -433,7 +410,7 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
       const c = typeof va === "number" ? va - (vb as number) : va.localeCompare(vb as string, "zh-TW");
       return sort.desc ? -c : c;
     });
-  }, [data.bins, district, filter, query, sort, levels, time.hour, smart, places]);
+  }, [data.bins, district, filter, query, sort, levels, time.hour, places]);
 
   // 在地圖上點了某個桶，表格捲到那一列
   useEffect(() => {
@@ -443,11 +420,11 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
   const toggleSort = (key: SortKey) =>
     setSort((s) => (s.key === key ? { key, desc: !s.desc } : { key, desc: key === "level" }));
 
-  const smartSource = data.sources.find((s) => s.key === "smart_bins");
+  const fillSource = data.sources.find((s) => s.key === "fill");
 
   return (
     <>
-      <Section title="所有垃圾桶即時狀況" aside={<SourceTag source={smartSource} />}>
+      <Section title="所有垃圾桶即時狀況" aside={<SourceTag source={fillSource} />}>
         <div className="table-tools">
           <div className="chips" role="radiogroup" aria-label="篩選">
             {FILTERS.map((f) => (
@@ -475,7 +452,7 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜尋地點、編號、贊助商"
+              placeholder="搜尋地點、編號"
               aria-label="搜尋垃圾桶"
             />
           </div>
@@ -506,7 +483,6 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
             <tbody>
               {rows.map((i) => {
                 const level = levels[i][time.hour];
-                const s = smart[i];
                 const active = i === state.selected;
                 return (
                   <tr
@@ -528,9 +504,6 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
                         <span className={level >= 80 ? "tone-full" : undefined}>{level}%</span>
                       </span>
                     </td>
-                    <td className={s.battery < LOW_BATTERY ? "num tone-warn strong" : "num"}>{s.battery}%</td>
-                    <td className="nowrap" title={s.brand}>{s.brand.split(" ")[0]}</td>
-                    <td className="nowrap">{s.sponsor}</td>
                   </tr>
                 );
               })}
