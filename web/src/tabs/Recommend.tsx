@@ -31,7 +31,8 @@ import type { AppData } from "../data";
 import { MAP } from "../lib/theme";
 
 export type Visibility = Record<string, boolean>;
-export const DEFAULT_VISIBILITY: Visibility = { bins: true, mrt: true };
+// 地圖 icon 預設全部不顯示，需要時再從「顯示 icon」打開
+export const DEFAULT_VISIBILITY: Visibility = {};
 
 const PLUS = "#4caf7d";
 const MINUS = "#e0566a";
@@ -193,8 +194,6 @@ export function RecommendPanel(props: PanelProps) {
         每一格只看格內的資料：人潮、店家越多越需要垃圾桶，已經有桶的地方就扣分。調整下面的指標，看看建議點怎麼移動。
       </p>
 
-      <Formula indicators={indicators} />
-
       <div ref={detailRef} className="detail-anchor">
         {selected && selectedResult ? (
           <CellDetail
@@ -206,9 +205,7 @@ export function RecommendPanel(props: PanelProps) {
             isRecommended={recommendations.some((x) => x.cell === selected)}
             onClose={() => onSelect(null)}
           />
-        ) : (
-          <p className="hint-box">點地圖上任一格，看它的缺桶指數怎麼算出來的。</p>
-        )}
+        ) : null}
       </div>
 
       <IndicatorEditor
@@ -281,30 +278,6 @@ export function RecommendPanel(props: PanelProps) {
         </div>
       </Section>
     </>
-  );
-}
-
-// ---------------- 公式 ----------------
-
-function Formula({ indicators }: { indicators: Indicator[] }) {
-  const counted = indicators.filter((i) => isOn(i) && i.weight > 0);
-  const active = [...counted.filter((i) => i.sign > 0), ...counted.filter((i) => i.sign < 0)];
-  return (
-    <div className="formula" aria-live="polite">
-      <div className="formula-title">缺桶指數 ＝</div>
-      <div className="formula-body">
-        {active.length === 0 ? <span className="muted">（沒有開啟中的指標）</span> : null}
-        {active.map((ind, j) => (
-          <span key={ind.id} className={ind.sign > 0 ? "term plus" : "term minus"}>
-            {ind.sign < 0 ? "− " : j > 0 ? "+ " : ""}
-            {ind.weight.toFixed(2)} × {curveOf(ind) === "sqrt" ? `√${ind.label}` : ind.label}
-          </span>
-        ))}
-      </div>
-      <p className="footnote">
-        每一項的分數 ＝ 格內數值 ÷ 上限，超過上限算 1；標 √ 的項目再開根號，讓數值小的格子不會被最大的那格壓到接近 0。只看格內的資料；結果低於 0 算 0。
-      </p>
-    </div>
   );
 }
 
