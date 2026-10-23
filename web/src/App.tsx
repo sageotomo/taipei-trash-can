@@ -43,10 +43,10 @@ import { RoleToggle } from "./ui";
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
 const TABS: { id: TabId; label: string }[] = [
-  { id: "recommend", label: "缺桶程度" },
-  { id: "fill", label: "滿桶狀況" },
-  { id: "reports", label: "市民通報" },
-  { id: "progress", label: "增桶進度" },
+  { id: "recommend", label: "佈建分析" },
+  { id: "fill", label: "動態調度" },
+  { id: "reports", label: "通報案件" },
+  { id: "progress", label: "數據統計" },
 ];
 
 // 台北市中心
