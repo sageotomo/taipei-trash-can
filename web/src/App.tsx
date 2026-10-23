@@ -75,7 +75,6 @@ export default function App() {
   const [progressWeek, setProgressWeek] = useState(WEEKS.length - 1);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
   // 右側面板可收起，讓地圖佔滿整個畫面
-  const [panelOpen, setPanelOpen] = useState(true);
   const liveTime = useLiveTime();
 
   const [customLayers, setCustomLayers] = useState<DataLayer[]>(loadCustomLayers);
@@ -228,80 +227,72 @@ export default function App() {
   const wide = (tab === "fill" || tab === "reports") && role === "gov";
 
   return (
-    <div className={["app", wide ? "wide" : "", panelOpen ? "" : "collapsed"].filter(Boolean).join(" ")}>
+    <div className={wide ? "app wide" : "app"}>
       <RoleToggle role={role} onChange={setRole} />
-      <button
-        type="button"
-        className="panel-toggle"
-        aria-controls="side-panel"
-        aria-expanded={panelOpen}
-        aria-label={panelOpen ? "收起側邊欄" : "打開側邊欄"}
-        title={panelOpen ? "收起側邊欄" : "打開側邊欄"}
-        onClick={() => setPanelOpen((v) => !v)}
-      >
-        <span aria-hidden="true">{panelOpen ? "›" : "‹"}</span>
-      </button>
-      <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
-        <BaseMap />
-        <MapPanes />
-        <FlyTo target={focus} />
-        <CellScale />
-        <InvalidateSize dep={`${wide}-${panelOpen}`} />
-        {ready && tab === "recommend" ? (
-          <RecommendLayers
-            data={data}
-            layers={layers}
-            cells={cells}
-            result={result}
-            recommended={recommendedSet}
-            selected={selected}
-            onSelect={selectCell}
-            visible={visible}
-            place={place}
-            role={role}
-          />
-        ) : null}
-        {ready && tab === "recommend" ? <IconToggles layers={layers} visible={visible} onVisible={setVisible} /> : null}
-        {ready && tab === "fill" ? (
-          <>
-            <PoiLayers data={data} layers={fixedLayers} visible={{ mrt: true }} />
-            <FillLayers
+      {/* 地圖放在內縮的框裡，外圍用側邊欄的底色 */}
+      <div className="map-frame">
+        <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
+          <BaseMap />
+          <MapPanes />
+          <FlyTo target={focus} />
+          <CellScale />
+          <InvalidateSize dep={String(wide)} />
+          {ready && tab === "recommend" ? (
+            <RecommendLayers
               data={data}
-              time={liveTime}
+              layers={layers}
+              cells={cells}
+              result={result}
+              recommended={recommendedSet}
+              selected={selected}
+              onSelect={selectCell}
+              visible={visible}
+              place={place}
               role={role}
-              state={fillState}
-              onPickBin={pickFillBin}
-              onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
             />
-          </>
-        ) : null}
-        {ready && tab === "reports" ? (
-          <>
-            {role === "citizen" ? (
-              <>
-                <MapClick onClick={pickReportLocation} />
-                <ReportMapHint draft={draft} />
-              </>
-            ) : null}
-            <ReportLayers
-              data={data}
-              reports={allReports}
-              reportCounts={reportCounts}
-              selected={reportCell}
-              draft={draft}
-              role={role}
-              cases={caseById}
-              selectedId={role === "gov" ? selectedReport : null}
-              onPickReport={role === "gov" ? (id) => pickCase(id, false) : undefined}
-            />
-          </>
-        ) : null}
-        {ready && tab === "progress" ? (
-          <ProgressLayers data={data} items={progress} district={district} selected={progressSelected} onSelect={selectProgress} />
-        ) : null}
-      </MapContainer>
+          ) : null}
+          {ready && tab === "recommend" ? <IconToggles layers={layers} visible={visible} onVisible={setVisible} /> : null}
+          {ready && tab === "fill" ? (
+            <>
+              <PoiLayers data={data} layers={fixedLayers} visible={{ mrt: true }} />
+              <FillLayers
+                data={data}
+                time={liveTime}
+                role={role}
+                state={fillState}
+                onPickBin={pickFillBin}
+                onPickLocation={(location) => setFillState((s) => ({ ...s, location }))}
+              />
+            </>
+          ) : null}
+          {ready && tab === "reports" ? (
+            <>
+              {role === "citizen" ? (
+                <>
+                  <MapClick onClick={pickReportLocation} />
+                  <ReportMapHint draft={draft} />
+                </>
+              ) : null}
+              <ReportLayers
+                data={data}
+                reports={allReports}
+                reportCounts={reportCounts}
+                selected={reportCell}
+                draft={draft}
+                role={role}
+                cases={caseById}
+                selectedId={role === "gov" ? selectedReport : null}
+                onPickReport={role === "gov" ? (id) => pickCase(id, false) : undefined}
+              />
+            </>
+          ) : null}
+          {ready && tab === "progress" ? (
+            <ProgressLayers data={data} items={progress} district={district} selected={progressSelected} onSelect={selectProgress} />
+          ) : null}
+        </MapContainer>
+      </div>
 
-      <aside id="side-panel" className="panel" aria-hidden={!panelOpen} inert={!panelOpen}>
+      <aside id="side-panel" className="panel">
         <header className="panel-header">
           <h1>找回消失的垃圾桶</h1>
           <p>台北行人垃圾桶從近 3,000 組剩下約 800 組。哪裡最缺？為什麼？</p>
