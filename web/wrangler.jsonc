@@ -8,8 +8,14 @@
   // 明確開啟 workers.dev 網址與分支預覽網址（兩者都受 Cloudflare Access 保護）
   "workers_dev": true,
   "preview_urls": true,
-  // 非 main 分支的 build 用 `npx wrangler preview` 產生預覽，這個指令需要 previews 區塊（可以是空的）
-  "previews": {},
+  // 非 main 分支的 build 用 `npx wrangler preview` 產生預覽，這個指令需要 previews 區塊。
+  // 預覽不會繼承上層的綁定：程式從 env 讀的 Durable Object 綁定要在這裡再宣告一次
+  // （class 和 migrations 留在上層；每個預覽會自動有自己的一份資料）
+  "previews": {
+    "durable_objects": {
+      "bindings": [{ "name": "REPORTS", "class_name": "ReportStore" }]
+    }
+  },
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",

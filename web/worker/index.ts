@@ -28,7 +28,8 @@ export interface StoredReport {
 
 interface Env {
   ASSETS: { fetch(req: Request): Promise<Response> };
-  REPORTS: DurableObjectNamespace<ReportStore>;
+  /** 設定漏掉時是 undefined（例如預覽沒在 previews 區塊宣告） */
+  REPORTS?: DurableObjectNamespace<ReportStore>;
 }
 
 export class ReportStore extends DurableObject<Env> {
@@ -117,8 +118,9 @@ export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     const url = new URL(req.url);
     if (!url.pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
-    const store = env.REPORTS.getByName("demo");
     try {
+      if (!env.REPORTS) return fail(500, "伺服器沒有綁定通報資料庫（REPORTS），請檢查 wrangler.jsonc。");
+      const store = env.REPORTS.getByName("demo");
       if (url.pathname === "/api/reports" && req.method === "POST") return await create(req, store);
       if (url.pathname === "/api/reports" && req.method === "GET") return json({ reports: await store.list() });
       // 檢查用：瀏覽器打開這個網址，看得到 {"ok":true,...} 就代表 Worker 和資料庫都正常

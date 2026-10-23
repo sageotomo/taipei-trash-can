@@ -16,5 +16,5 @@
 ## 其他
 
 - 測試：`cd web && npm test`；build：`cd web && npm run build`。推之前兩個都要通過。
-- 分支預覽需要 `web/wrangler.jsonc` 裡的 `"previews": {}` 區塊，不要刪掉。部署細節見 README 的「部署」段落。
+- 分支預覽需要 `web/wrangler.jsonc` 裡的 `"previews"` 區塊，不要刪掉。預覽不會繼承上層的綁定：新增任何綁定（Durable Object、D1、KV…）時，`previews` 裡也要宣告一次，否則預覽會出現「Worker threw exception」。部署細節見 README 的「部署」段落。
 - 回覆使用者一律用繁體中文。
