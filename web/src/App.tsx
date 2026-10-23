@@ -290,6 +290,7 @@ export default function App() {
               state={fillState}
               onChange={setFillState}
               onFocusBin={focusBin}
+              onFocus={flyTo}
             />
           ) : null}
           {ready && tab === "reports" ? (

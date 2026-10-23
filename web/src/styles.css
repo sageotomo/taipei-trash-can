@@ -2696,3 +2696,121 @@ textarea {
   flex: none;
   margin: -2px 2px -2px -3px;
 }
+
+/* ---------- 動態調度：區域滿桶警示 ---------- */
+.alert-count {
+  padding: 1px 10px;
+  border-radius: 999px;
+  background: var(--full);
+  color: var(--on-action);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.alert-empty {
+  margin: 8px 0;
+}
+
+.alert-list {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.alert-item {
+  display: grid;
+  gap: 2px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--full);
+  border-left-width: 4px;
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.alert-item:hover {
+  background: var(--paper);
+}
+
+.alert-team {
+  font-weight: 700;
+}
+
+.alert-area {
+  font-size: 14px;
+  color: var(--muted);
+}
+
+.alert-area strong {
+  color: var(--full);
+}
+
+.alert-item small {
+  color: var(--faint);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.alert-toasts {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 2000;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+}
+
+.alert-toast {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: start;
+  border: 1px solid var(--full);
+  border-left-width: 5px;
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  animation: alert-in 0.25s ease-out;
+}
+
+.alert-toast-main {
+  display: grid;
+  gap: 4px;
+  padding: 12px 4px 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.alert-toast-main span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.alert-toast-close {
+  padding: 8px 12px;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@keyframes alert-in {
+  from { transform: translateY(12px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-toast { animation: none; }
+}

@@ -3,8 +3,10 @@
 //
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
+// 政府單位另外有「區域滿桶警示」：同一清潔隊轄區、300 m 內 3 桶以上 ≥90% 就跳通知（lib/fullAlert.ts）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Circle } from "react-leaflet";
 import { PANES } from "../map/layers";
 import { ImagePointLayer, type ImagePointStyle } from "../map/icons";
 import { binPlaceNames } from "../lib/place";
@@ -13,6 +15,7 @@ import { Section, SourceTag, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
+import { ALERT, findFullClusters, neighborIndex, nextAlertHour, type FullCluster } from "../lib/fullAlert";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 const LIVE: Strategy = "B";
@@ -60,6 +63,27 @@ function useBinPoints(data: AppData) {
   );
 }
 
+/** 此刻的區域滿桶警示；鄰居表只跟位置有關，只在換資料時重算 */
+function useFullClusters(data: AppData, hour: number) {
+  const bins = useMemo(
+    () =>
+      data.bins.features.map((f) => ({
+        lat: f.geometry.coordinates[1],
+        lng: f.geometry.coordinates[0],
+        district: f.properties.district,
+        road: f.properties.road,
+      })),
+    [data.bins]
+  );
+  const neighbors = useMemo(() => neighborIndex(bins), [bins]);
+  const levels = data.fill.levels[LIVE];
+  const clusters = useMemo(
+    () => findFullClusters(bins, levels.map((row) => row[hour]), neighbors),
+    [bins, levels, neighbors, hour]
+  );
+  return { bins, neighbors, clusters };
+}
+
 // ---------------- 地圖 ----------------
 
 interface LayerProps {
@@ -73,6 +97,7 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
   const points = useBinPoints(data);
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
+  const { clusters } = useFullClusters(data, time.hour);
 
   const style = useCallback(
     (i: number): ImagePointStyle => {
@@ -98,7 +123,20 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
   );
   const hourPoints = useMemo(() => points.slice(), [points, time.hour]);
 
-  return <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />;
+  return (
+    <>
+      {clusters.map((c) => (
+        <Circle
+          key={c.key}
+          center={[c.lat, c.lng]}
+          radius={c.radiusM}
+          pathOptions={{ color: FILL_COLORS.full, weight: 2, fillColor: FILL_COLORS.full, fillOpacity: 0.12, dashArray: "6 4" }}
+          eventHandlers={{ click: () => onPickBin(c.members[0]) }}
+        />
+      ))}
+      <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />
+    </>
+  );
 }
 
 // ---------------- 面板 ----------------
@@ -109,6 +147,7 @@ interface PanelProps {
   state: FillState;
   onChange: (s: FillState) => void;
   onFocusBin: (i: number) => void;
+  onFocus: (lat: number, lng: number, zoom?: number) => void;
 }
 
 export function FillPanel(props: PanelProps) {
@@ -180,7 +219,8 @@ const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
   { key: "level", label: "填滿", num: true },
 ];
 
-function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
+function GovView(props: PanelProps) {
+  const { data, time, state, onChange, onFocusBin } = props;
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
   const [filter, setFilter] = useState<Filter>("all");
@@ -233,6 +273,8 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
 
   return (
     <>
+      <FullAlerts {...props} />
+
       <Section title="所有垃圾桶即時狀況" aside={<SourceTag source={fillSource} />}>
         <div className="table-tools">
           <div className="chips" role="radiogroup" aria-label="篩選">
@@ -323,6 +365,132 @@ function GovView({ data, time, state, onChange, onFocusBin }: PanelProps) {
       </Section>
 
       <StrategyCompare data={data} />
+    </>
+  );
+}
+
+// ---------------- 政府單位：區域滿桶警示 ----------------
+
+function hourLabel(hour: number): string {
+  return `${DAYS[Math.floor(hour / 24) % 7]} ${String(hour % 24).padStart(2, "0")}:00`;
+}
+
+function notifySupported(): boolean {
+  return typeof window !== "undefined" && "Notification" in window;
+}
+
+function FullAlerts({ data, time, onFocus }: PanelProps) {
+  const { bins, neighbors, clusters } = useFullClusters(data, time.hour);
+  const levels = data.fill.levels[LIVE];
+  const ids = (c: FullCluster) => c.members.map((i) => data.bins.features[i].properties.id);
+  const next = useMemo(
+    () => (clusters.length ? null : nextAlertHour(bins, levels, neighbors, time.hour)),
+    [clusters.length, bins, levels, neighbors, time.hour]
+  );
+
+  // 新出現的警示才跳通知；同一區還沒清掉就不重複跳
+  const seen = useRef<Set<string>>(new Set());
+  const [toasts, setToasts] = useState<FullCluster[]>([]);
+  const [desktop, setDesktop] = useState(() => notifySupported() && Notification.permission === "granted");
+
+  useEffect(() => {
+    const fresh = clusters.filter((c) => !seen.current.has(c.key));
+    seen.current = new Set(clusters.map((c) => c.key));
+    if (!fresh.length) return;
+    setToasts((t) => [...fresh, ...t.filter((x) => clusters.some((c) => c.key === x.key))].slice(0, 3));
+    if (desktop && notifySupported() && Notification.permission === "granted") {
+      for (const c of fresh) {
+        try {
+          new Notification(`${c.team}：${c.members.length} 個垃圾桶快滿了`, {
+            body: `${c.area}有 ${c.members.length} 個垃圾桶 ≥${ALERT.LEVEL}%，建議一起派車。`,
+            tag: c.key,
+          });
+        } catch {
+          // 有些瀏覽器（例如手機）不允許直接 new Notification，畫面上的通知還是會出現
+        }
+      }
+    }
+  }, [clusters, desktop]);
+
+  useEffect(() => {
+    if (!toasts.length) return;
+    const id = window.setTimeout(() => setToasts((t) => t.slice(0, -1)), 10_000);
+    return () => window.clearTimeout(id);
+  }, [toasts]);
+
+  const enableDesktop = async () => {
+    if (!notifySupported()) return;
+    const p = Notification.permission === "default" ? await Notification.requestPermission() : Notification.permission;
+    setDesktop(p === "granted");
+  };
+
+  const focus = (c: FullCluster) => onFocus(c.lat, c.lng, 17);
+
+  return (
+    <>
+      <Section
+        title="區域滿桶警示"
+        aside={
+          clusters.length ? <span className="alert-count">{fmt(clusters.length)} 區</span> : undefined
+        }
+      >
+        <p className="footnote">
+          同一清潔隊轄區、{ALERT.RADIUS_M} 公尺內有 {ALERT.MIN_BINS} 個以上垃圾桶 ≥{ALERT.LEVEL}%，就會跳通知，建議一起派車。
+        </p>
+        {clusters.length === 0 ? (
+          <p className="muted alert-empty">
+            目前沒有。{next !== null ? `依模擬，下一次預計在 ${hourLabel(next)} 出現。` : ""}
+          </p>
+        ) : (
+          <ul className="alert-list">
+            {clusters.map((c) => (
+              <li key={c.key}>
+                <button className="alert-item" onClick={() => focus(c)}>
+                  <span className="alert-team">{c.team}</span>
+                  <span className="alert-area">
+                    {c.area}・<strong>{c.members.length} 桶</strong> ≥{ALERT.LEVEL}%
+                  </span>
+                  <small>{ids(c).join("、")}</small>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {notifySupported() ? (
+          desktop ? (
+            <p className="footnote">已開啟桌面通知：切到別的分頁也會收到。</p>
+          ) : (
+            <button className="link-button" onClick={enableDesktop}>
+              也用桌面通知提醒我
+            </button>
+          )
+        ) : null}
+        <p className="footnote">清潔隊依行政區劃分轄區。開放資料沒有官方箱號，編號是本站自編的。</p>
+      </Section>
+
+      {toasts.length ? (
+        <div className="alert-toasts" role="status" aria-live="polite">
+          {toasts.map((c) => (
+            <div key={c.key} className="alert-toast">
+              <button className="alert-toast-main" onClick={() => focus(c)}>
+                <strong>
+                  {c.team}：{c.members.length} 個垃圾桶快滿了
+                </strong>
+                <span>
+                  {c.area}，都已 ≥{ALERT.LEVEL}%。點這裡在地圖上查看。
+                </span>
+              </button>
+              <button
+                className="alert-toast-close"
+                aria-label="關閉通知"
+                onClick={() => setToasts((t) => t.filter((x) => x.key !== c.key))}
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : null}
     </>
   );
 }
