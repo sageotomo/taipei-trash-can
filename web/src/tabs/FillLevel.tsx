@@ -522,7 +522,6 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
             </button>
           )
         ) : null}
-        <p className="footnote">清潔隊依行政區劃分轄區。開放資料沒有官方箱號，編號是本站自編的。</p>
       </Section>
 
       {toasts.length ? (
