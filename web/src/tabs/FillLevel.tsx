@@ -6,13 +6,13 @@
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type L from "leaflet";
 import { Circle, CircleMarker } from "react-leaflet";
-import { MapClick, PointLayer, PANES } from "../map/layers";
+import { MapClick, PANES } from "../map/layers";
+import { ImagePointLayer, type ImagePointStyle } from "../map/icons";
 import { binPlaceNames } from "../lib/place";
 import { fillStatus, nearest, walkMinutes, type LiveTime } from "../lib/live";
 import type { Role } from "../lib/role";
-import { Section, SourceTag, Swatch, escapeHtml, fmt } from "../ui";
+import { Section, SourceTag, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
@@ -22,7 +22,25 @@ const LIVE: Strategy = "B";
 const NEARBY = 5;
 const NEARBY_MAX_M = 1500;
 
-export const FILL_COLORS = { ok: "#4caf7d", warn: "#e3b23c", full: "#e0566a" };
+// 顏色和垃圾桶圖示同色
+export const FILL_COLORS = { ok: "#75c2b4", warn: "#e4c659", full: "#f06241" };
+
+/** 垃圾桶圖示：有空位青綠、半滿黃、需清運橘紅（蓋子掀開） */
+export const FILL_ICONS = {
+  ok: `${import.meta.env.BASE_URL}icons/bin-ok.png`,
+  warn: `${import.meta.env.BASE_URL}icons/bin-half.png`,
+  full: `${import.meta.env.BASE_URL}icons/bin-full.png`,
+};
+
+export function levelIcon(level: number): string {
+  if (level >= 80) return FILL_ICONS.full;
+  if (level >= 50) return FILL_ICONS.warn;
+  return FILL_ICONS.ok;
+}
+
+function FillIcon({ src, size = 22 }: { src: string; size?: number }) {
+  return <img className="fill-icon" src={src} width={size} height={size} alt="" aria-hidden="true" />;
+}
 
 export function levelColor(level: number): string {
   if (level >= 80) return FILL_COLORS.full;
@@ -77,16 +95,14 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
   }, [role, state.location, points]);
 
   const style = useCallback(
-    (i: number): L.CircleMarkerOptions => {
+    (i: number): ImagePointStyle => {
       const level = levels[i][time.hour];
-      const full = level >= 100;
       const picked = i === state.selected || nearbySet.has(i);
       return {
-        radius: picked ? 8 : full ? 7 : 5,
-        fillColor: levelColor(level),
-        fillOpacity: 0.95,
-        color: picked ? MAP.selected : full ? MAP.emphasis : MAP.outline,
-        weight: picked ? 3 : full ? 2 : 1,
+        src: levelIcon(level),
+        scale: picked ? 1.35 : level >= 80 ? 1.1 : 0.9,
+        ring: picked ? MAP.selected : undefined,
+        front: picked || level >= 80,
       };
     },
     [levels, time.hour, state.selected, nearbySet]
@@ -107,7 +123,7 @@ export function FillLayers({ data, time, role, state, onPickBin, onPickLocation 
       {role === "citizen" ? (
         <MapClick onClick={(lat, lng) => onPickLocation({ lat, lng, label: "地圖上選的位置" })} />
       ) : null}
-      <PointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />
+      <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={onPickBin} tooltip={tooltip} />
       {role === "citizen" && state.location ? (
         <>
           <Circle
@@ -163,17 +179,17 @@ export function FillPanel(props: PanelProps) {
 
       <div className="fill-summary">
         <div>
-          <Swatch color={FILL_COLORS.ok} />
+          <FillIcon src={FILL_ICONS.ok} />
           <span>有空位</span>
           <strong>{fmt(counts.ok)}</strong>
         </div>
         <div>
-          <Swatch color={FILL_COLORS.warn} />
+          <FillIcon src={FILL_ICONS.warn} />
           <span>半滿</span>
           <strong>{fmt(counts.warn)}</strong>
         </div>
         <div>
-          <Swatch color={FILL_COLORS.full} />
+          <FillIcon src={FILL_ICONS.full} />
           <span>{gov ? "需清運" : "快滿／已滿"}</span>
           <strong className={gov ? "tone-full" : undefined}>{fmt(counts.full)}</strong>
         </div>
