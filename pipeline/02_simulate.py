@@ -305,7 +305,7 @@ def homes_from_addresses(addresses: pd.DataFrame, shops: pd.DataFrame, stations:
 
 # 有真實資料時：說明 + 開放資料連結（網頁上滑鼠移到「真實資料」旁的 ! 會顯示）
 REAL_SOURCES = {
-    "bins": ("環保局「行人專用清潔箱總表」，681 處。檔案裡沒有北投區、南港區只有 4 處，總數也少於環保局 2026 年 8 月報告的 806 組，可能不是最新版。",
+    "bins": ("環保局「臺北市行人專用清潔箱」2026-10-21 版，661 處。檔案裡沒有北投區，總數也少於環保局 2026 年 8 月報告的 806 組。",
         [{"label": "行人專用清潔箱總表（政府資料開放平臺）", "url": "https://data.gov.tw/dataset/121355"}]),
     "mrt": ("捷運公司車站資料（74 站座標）＋各站分時進出量 2026 年 9 月，換算成每站每天的進出人次。",
         [{"label": "臺北捷運車站資料服務", "url": "https://data.taipei/dataset/detail?id=1eefa68d-7c8d-491b-8e75-66a161947426"}, {"label": "臺北捷運各站分時進出量統計", "url": "https://data.taipei/dataset/detail?id=63f31c7e-7fc3-418b-bd82-b95158755b4d"}]),

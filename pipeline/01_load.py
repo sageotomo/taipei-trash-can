@@ -44,6 +44,14 @@ def require(df: pd.DataFrame, name: str, *candidates: str) -> str:
     return col
 
 
+def clean_coord(s: pd.Series) -> pd.Series:
+    """原始檔的座標偶爾有雜字：「?121.595369」只留數字與小數點；
+    「121.513.652」多一個小數點，只保留第一個（→ 121.513652）。"""
+    t = s.astype(str).str.replace(r"[^0-9.]", "", regex=True)
+    t = t.str.replace(r"^(\d*\.)(.*)$", lambda m: m.group(1) + m.group(2).replace(".", ""), regex=True)
+    return pd.to_numeric(t, errors="coerce")
+
+
 # ---------- 各資料集 ----------
 
 def load_bins() -> pd.DataFrame | None:
@@ -56,11 +64,9 @@ def load_bins() -> pd.DataFrame | None:
     lng = require(df, "垃圾桶", "經度", "lng", "longitude")
     district = find_col(df, "行政區", "district")
     road = find_col(df, "路名", "地址", "road")
-    # 原始檔偶爾有雜字（例如「?121.595369」），只留數字與小數點
-    num = lambda col: pd.to_numeric(df[col].astype(str).str.replace(r"[^0-9.]", "", regex=True), errors="coerce")  # noqa: E731
     out = pd.DataFrame({
-        "lat": num(lat),
-        "lng": num(lng),
+        "lat": clean_coord(df[lat]),
+        "lng": clean_coord(df[lng]),
         "district": df[district].astype(str).str.strip() if district else "",
         "road": df[road].astype(str).str.strip() if road else "",
     }).dropna(subset=["lat", "lng"])
