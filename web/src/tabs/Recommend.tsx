@@ -23,6 +23,7 @@ import { HexLayer, MapClick } from "../map/layers";
 import { PoiLayer, PoiIcon, type LabeledPoint } from "../map/icons";
 import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
+import { explainLevel, type Factor } from "../lib/explain";
 import { pointLabel } from "../lib/pointLabel";
 import { CELL_WIDTH_M } from "../lib/hexgrid";
 import type { AppData } from "../data";
@@ -31,9 +32,6 @@ import { MAP } from "../lib/theme";
 export type Visibility = Record<string, boolean>;
 // 地圖 icon 預設全部不顯示，需要時再從「顯示 icon」打開
 export const DEFAULT_VISIBILITY: Visibility = {};
-
-const PLUS = "#4caf7d";
-const MINUS = "#e0566a";
 
 // ---------------- 地圖圖層 ----------------
 
@@ -167,7 +165,7 @@ export function RecommendPanel(props: PanelProps) {
 
       <div ref={detailRef} className="detail-anchor">
         {selected && selectedResult ? (
-          <CellDetail
+          <CellExplain
             result={result}
             r={selectedResult}
             indicators={indicators}
@@ -253,91 +251,6 @@ export function RecommendPanel(props: PanelProps) {
 }
 
 // ---------------- 格子明細 ----------------
-
-function CellDetail({ result, r, indicators, layerOf, place, isRecommended, onClose }: {
-  result: IndexResult;
-  r: CellResult;
-  indicators: Indicator[];
-  layerOf: (id: string) => DataLayer | undefined;
-  place: string;
-  isRecommended: boolean;
-  onClose: () => void;
-}) {
-  const k = levelOf(r.value, result.maxPossible);
-  const sum = r.term.reduce((a, b) => a + b, 0);
-  const rows = indicators.map((ind, j) => ({ ind, j })).filter(({ ind }) => isOn(ind) && ind.weight > 0);
-
-  return (
-    <div className="detail">
-      <div className="detail-head">
-        <div>
-          <div className="detail-rank">
-            {k >= 0 ? (
-              <>
-                缺桶指數 {r.value.toFixed(2)}
-                <small>（{LEVELS[k].label}）</small>
-              </>
-            ) : (
-              "不缺"
-            )}
-          </div>
-          <div className="muted">
-            {place}
-            <br />
-            {k >= 0 ? `全台北第 ${fmt(r.rank)} 名 / ${fmt(result.ranked)} 格` : "缺桶指數 0"}
-            {isRecommended ? "・列入建議增設" : ""}
-          </div>
-        </div>
-        <button className="icon-button" onClick={onClose} aria-label="關閉">
-          ×
-        </button>
-      </div>
-
-      <table className="calc-table">
-        <tbody>
-          {rows.map(({ ind, j }) => {
-            const layer = layerOf(ind.layer);
-            const unit = indicatorUnit(ind, layer);
-            const cap = result.stats[j].cap;
-            const raw = r.raw[j];
-            return (
-              <tr key={ind.id}>
-                <th>
-                  <Swatch color={ind.sign > 0 ? PLUS : MINUS} />
-                  {ind.label}
-                </th>
-                <td className="calc">
-                  {raw === 0 ? (
-                    <span className="muted">格內沒有</span>
-                  ) : (
-                    <>
-                      {curveOf(ind) === "sqrt" ? "√(" : ""}
-                      {hidesValue(ind) ? "住宅值 ÷ 上限" : <>{fmtValue(raw, unit)} {unit} ÷ {fmtValue(cap, unit)}</>}
-                      {curveOf(ind) === "sqrt" ? ")" : ""}
-                      {raw >= cap ? " → 滿分 1" : ` = ${r.score[j].toFixed(2)}`}
-                      <span className="muted"> × {ind.weight.toFixed(2)}</span>
-                    </>
-                  )}
-                </td>
-                <td className={r.term[j] > 0 ? "num plus" : r.term[j] < 0 ? "num minus" : "num muted"}>
-                  {r.term[j] > 0 ? "+" : r.term[j] < 0 ? "−" : ""}
-                  {Math.abs(r.term[j]).toFixed(2)}
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-        <tfoot>
-          <tr>
-            <th>缺桶指數</th>
-            <td className="calc muted">{sum < 0 ? `合計 −${Math.abs(sum).toFixed(2)}，低於 0 算 0` : "合計"}</td>
-            <td className="num">{r.value.toFixed(2)}</td>
-          </tr>
-        </tfoot>
-      </table>
-    </div>
-  );
-}
 
 // ---------------- 指標設定 ----------------
 
@@ -643,6 +556,73 @@ function IntroBox() {
           </span>
         ))}
       </div>
+    </div>
+  );
+}
+
+/** 點一格的明細：這格是哪一級、為什麼；不顯示指數數字與計算過程 */
+function CellExplain({ result, r, indicators, layerOf, place, isRecommended, onClose }: {
+  result: IndexResult;
+  r: CellResult;
+  indicators: Indicator[];
+  layerOf: (id: string) => DataLayer | undefined;
+  place: string;
+  isRecommended: boolean;
+  onClose: () => void;
+}) {
+  const k = levelOf(r.value, result.maxPossible);
+  const on = indicators.map((ind, j) => ({ ind, j })).filter(({ ind }) => isOn(ind) && ind.weight > 0);
+  const factors: Factor[] = on.map(({ ind, j }) => {
+    const unit = indicatorUnit(ind, layerOf(ind.layer));
+    return {
+      label: ind.label,
+      amount: hidesValue(ind) ? "" : `${fmtValue(r.raw[j], unit)} ${unit}`,
+      sign: ind.sign,
+      present: r.raw[j] > 0,
+      term: r.term[j],
+    };
+  });
+  const rows = on.filter(({ j }) => r.raw[j] > 0).sort((a, b) => Math.abs(r.term[b.j]) - Math.abs(r.term[a.j]));
+
+  return (
+    <div className="detail">
+      <div className="detail-head">
+        <div>
+          <div className="detail-rank">
+            {k >= 0 ? (
+              <span className="level-chip level-chip-lg" style={{ background: LEVELS[k].color, color: LEVELS[k].ink }}>
+                {LEVELS[k].label}
+              </span>
+            ) : (
+              "不缺"
+            )}
+          </div>
+          <div className="muted">
+            {place}
+            {isRecommended ? "・建議增設垃圾桶" : ""}
+          </div>
+        </div>
+        <button className="icon-button" onClick={onClose} aria-label="關閉">
+          ×
+        </button>
+      </div>
+      <p className="detail-why">{explainLevel(k >= 0 ? LEVELS[k].label : null, factors)}</p>
+      {rows.length > 0 ? (
+        <ul className="why-list">
+          {rows.map(({ ind, j }) => {
+            const layer = layerOf(ind.layer);
+            const unit = indicatorUnit(ind, layer);
+            return (
+              <li key={ind.id}>
+                {layer ? <PoiIcon icon={layer.icon} size={16} /> : null}
+                <span className="why-label">{ind.label}</span>
+                <span className="why-value">{hidesValue(ind) ? "" : `${fmtValue(r.raw[j], unit)} ${unit}`}</span>
+                <span className={ind.sign > 0 ? "effect plus" : "effect minus"}>{ind.sign > 0 ? "↑ 需要桶" : "↓ 較不需要"}</span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
     </div>
   );
 }
