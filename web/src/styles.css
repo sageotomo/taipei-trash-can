@@ -2861,16 +2861,6 @@ textarea {
   font-weight: 700;
 }
 
-.button.done {
-  border-color: var(--ok);
-  background: transparent;
-  color: var(--ok);
-}
-
-.button.done:disabled {
-  opacity: 1;
-}
-
 /* 動態調度：感測器試辦區 */
 .pilot-note {
   margin: 8px 0 0;

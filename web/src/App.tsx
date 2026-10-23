@@ -189,8 +189,8 @@ export default function App() {
   );
 
   // ---- Demo：載入 1 秒後跳出固定的即時提醒（lib/demoAlert.ts） ----
-  // hidden → shown（載入 1 秒後）→ viewed（按過地圖查看）→ dispatched（按過確認派工）
-  const [demoAlert, setDemoAlert] = useState<"hidden" | "shown" | "viewed" | "dispatched">("hidden");
+  // hidden → shown（載入 1 秒後）→ viewed（按過地圖查看）→ 按確認派工後關閉回 hidden
+  const [demoAlert, setDemoAlert] = useState<"hidden" | "shown" | "viewed">("hidden");
   const demoBins = useMemo(() => (data ? demoBinIndices(data.bins) : []), [data]);
   useEffect(() => {
     if (!data) return;
@@ -356,13 +356,9 @@ export default function App() {
                 <button className="button primary" onClick={openDemoAlert}>
                   地圖查看
                 </button>
-              ) : demoAlert === "viewed" ? (
-                <button className="button primary" onClick={() => setDemoAlert("dispatched")}>
-                  確認派工
-                </button>
               ) : (
-                <button className="button done" disabled>
-                  ✓ 已確認派工
+                <button className="button primary" onClick={() => setDemoAlert("hidden")}>
+                  確認派工
                 </button>
               )}
             </div>
