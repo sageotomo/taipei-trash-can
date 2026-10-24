@@ -26,7 +26,8 @@ describe("fillStatus", () => {
   it("分級", () => {
     expect(fillStatus(10).label).toBe("有空位");
     expect(fillStatus(60).label).toBe("半滿");
-    expect(fillStatus(85).label).toBe("快滿了");
+    expect(fillStatus(85).label).toBe("半滿");
+    expect(fillStatus(95).label).toBe("快滿了");
     expect(fillStatus(100).label).toBe("已滿");
   });
 });

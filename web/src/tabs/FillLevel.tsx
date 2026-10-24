@@ -4,7 +4,7 @@
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
 // 感測器只試辦在大安區、中山區（lib/pilot.ts），這頁只看這兩區的垃圾桶，地圖上框出兩區邊界。
-// 「需出動分隊」：把 ≥80% 的桶依負責清潔分隊分組，列出此刻要出動的分隊（lib/dispatch.ts）。
+// 「需出動分隊」：把 ≥ DISPATCH.LEVEL% 的桶依負責清潔分隊分組，列出此刻要出動的分隊（lib/dispatch.ts）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Polygon, Tooltip, useMap } from "react-leaflet";
@@ -37,7 +37,7 @@ export const FILL_ICONS = {
 };
 
 export function levelIcon(level: number): string {
-  if (level >= 80) return FILL_ICONS.full;
+  if (level >= DISPATCH.LEVEL) return FILL_ICONS.full;
   if (level >= 50) return FILL_ICONS.warn;
   return FILL_ICONS.ok;
 }
@@ -47,7 +47,7 @@ function FillIcon({ src, size = 22 }: { src: string; size?: number }) {
 }
 
 export function levelColor(level: number): string {
-  if (level >= 80) return FILL_COLORS.full;
+  if (level >= DISPATCH.LEVEL) return FILL_COLORS.full;
   if (level >= 50) return FILL_COLORS.warn;
   return FILL_COLORS.ok;
 }
@@ -118,9 +118,9 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
       const picked = i === state.selected;
       return {
         src: levelIcon(level),
-        scale: picked ? 1.35 : level >= 80 ? 1.1 : 0.9,
+        scale: picked ? 1.35 : level >= DISPATCH.LEVEL ? 1.1 : 0.9,
         ring: picked ? MAP.selected : undefined,
-        front: picked || level >= 80,
+        front: picked || level >= DISPATCH.LEVEL,
       };
     },
     [levels, time.hour, state.selected, pilot]
@@ -236,7 +236,7 @@ export function FillPanel(props: PanelProps) {
         </div>
       </div>
       <p className="footnote">
-        有空位：50% 以下　半滿：50–80%　需清運：80%
+        有空位：50% 以下　半滿：50–{DISPATCH.LEVEL}%　需清運：{DISPATCH.LEVEL}%
       </p>
 
       <GovView {...props} />
@@ -259,7 +259,7 @@ type Filter = "all" | "dispatch";
 
 const FILTERS: { id: Filter; label: string }[] = [
   { id: "all", label: "全部" },
-  { id: "dispatch", label: "需清運（80% 以上）" },
+  { id: "dispatch", label: `需清運（${DISPATCH.LEVEL}% 以上）` },
 ];
 
 const COLUMNS: { key: SortKey; label: string; num?: boolean }[] = [
@@ -297,7 +297,7 @@ function GovView(props: PanelProps) {
       .map((i) => ({ i, f: data.bins.features[i] }))
       .filter(({ i, f }) => {
         if (district !== "全部" && f.properties.district !== district) return false;
-        if (filter === "dispatch" && levels[i][time.hour] < 80) return false;
+        if (filter === "dispatch" && levels[i][time.hour] < DISPATCH.LEVEL) return false;
         if (q && !(places[i].includes(q) || squads[i].includes(q) || f.properties.id.includes(q.toUpperCase()))) return false;
         return true;
       })
@@ -412,7 +412,7 @@ function GovView(props: PanelProps) {
                     <td className="num">
                       <span className="level-cell">
                         <FillBar level={level} />
-                        <span className={level >= 80 ? "tone-full" : undefined}>{level}%</span>
+                        <span className={level >= DISPATCH.LEVEL ? "tone-full" : undefined}>{level}%</span>
                       </span>
                     </td>
                   </tr>

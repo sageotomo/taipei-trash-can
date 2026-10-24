@@ -7,19 +7,19 @@
 // 只改瀏覽器裡的資料，不動 fill.json；一週清運比較用的是 fill.json 的統計，不受影響。
 
 import type { BinProps, FeatureCollection, FillData } from "../types";
-import { distanceM } from "./live";
+import { FULL_LEVEL, distanceM } from "./live";
 import { pilotBinIndices } from "./pilot";
 import { squadLabel, squadOf } from "./squads";
 
 export const DISPATCH = {
   /** 需清運的門檻（%），和地圖的橘紅色、表格的「需清運」相同 */
-  LEVEL: 80,
+  LEVEL: FULL_LEVEL,
   /** 同一時間最多幾個分隊需要出動 */
   MAX_SQUADS: 3,
-  /** 被壓下來的桶，填滿度乘上這個比例（80%→60%、100%→75%） */
+  /** 被壓下來的桶，填滿度乘上這個比例（90%→68%、100%→75%） */
   DAMP: 0.75,
   /** 原本沒有需清運桶的時段，最滿的那一桶補到這個值 */
-  NIGHT_LEVEL: 85,
+  NIGHT_LEVEL: 95,
 } as const;
 
 /** 每個桶的負責分隊全名（「大安和平分隊」）；不在試辦區的是 null */

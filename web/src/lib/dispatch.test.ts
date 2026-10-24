@@ -25,10 +25,12 @@ describe("Demo 調整後的需出動分隊", () => {
   it("需清運的桶大約剩一半", () => {
     let before = 0;
     let after = 0;
+    // 只算原本就有 2 桶以上的時段；原本 0 桶的時段會補 1 桶，不算在「減半」裡
     for (let h = 0; h < fill.hours; h++) {
+      if (fullCount(fill, h) < 2) continue;
       before += fullCount(fill, h);
       after += fullCount(live, h);
-      if (fullCount(fill, h) >= 2) expect(fullCount(live, h)).toBeLessThanOrEqual(Math.ceil(fullCount(fill, h) / 2) + 1);
+      expect(fullCount(live, h)).toBeLessThanOrEqual(Math.ceil(fullCount(fill, h) / 2) + 1);
     }
     expect(after).toBeLessThan(before * 0.6);
   });

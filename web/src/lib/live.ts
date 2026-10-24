@@ -53,10 +53,13 @@ export function nearest(points: { lat: number; lng: number }[], lat: number, lng
     .slice(0, k);
 }
 
+/** 需清運的門檻（%）：地圖的橘紅色、表格的「需清運」、需出動分隊都用這個 */
+export const FULL_LEVEL = 90;
+
 /** 填滿度分級：給市民看的字 */
 export function fillStatus(level: number): { label: string; tone: "ok" | "warn" | "full" } {
   if (level >= 100) return { label: "已滿", tone: "full" };
-  if (level >= 80) return { label: "快滿了", tone: "full" };
+  if (level >= FULL_LEVEL) return { label: "快滿了", tone: "full" };
   if (level >= 50) return { label: "半滿", tone: "warn" };
   return { label: "有空位", tone: "ok" };
 }
