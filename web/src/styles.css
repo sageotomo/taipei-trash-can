@@ -2856,3 +2856,8 @@ textarea {
 .basemap-muted {
   filter: url(#basemap-tone);
 }
+/* leaflet.css 會在 tile 上加 will-change，同樣會讓 iOS 建 GPU 圖層而跳過濾鏡 */
+.basemap-muted,
+.basemap-muted .leaflet-tile {
+  will-change: auto !important;
+}

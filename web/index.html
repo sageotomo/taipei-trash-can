@@ -8,6 +8,12 @@
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <title>桶桶沒問題！｜找回消失的垃圾桶</title>
     <script>
+      // 關掉 Leaflet 的 3D 定位（translate3d）。iOS 的 WebKit 遇到 GPU 合成圖層時
+      // 會不套 SVG 濾鏡（filter: url(#basemap-tone)），底圖就變回原本的鮮豔顏色。
+      // 一定要在 Leaflet 載入之前設定。
+      window.L_DISABLE_3D = true;
+    </script>
+    <script>
       // 部署後舊的 JS 檔會被刪除；瀏覽器若還快取著舊首頁，載入程式檔會失敗而一片空白。
       // 只在「主程式檔」載入失敗時，帶時間參數重新載入一次。
       // 30 秒內最多重新載入一次，避免任何情況下無限重新整理。
