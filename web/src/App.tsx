@@ -407,7 +407,7 @@ export default function App() {
             <p className="demo-title">即時提醒</p>
             <p className="demo-message">
               {dispatchMessage(dispatchAtLoad)}
-              <span className="demo-note">(此為模擬通知，實際情況會通知訊息到各個分隊的裝置)</span>
+              <span className="demo-note">(此為模擬通知，實際情況將是通知訊息到各個分隊的裝置)</span>
             </p>
             <div className="demo-actions">
               <button className="button primary" onClick={() => setDemoAlert("hidden")}>
