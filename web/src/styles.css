@@ -2850,6 +2850,14 @@ textarea {
   line-height: 1.6;
 }
 
+.demo-note {
+  display: block;
+  margin-top: 6px;
+  color: var(--ink);
+  opacity: 0.7;
+  font-size: 13px;
+}
+
 .demo-actions .button {
   min-width: 132px;
   font: inherit;
