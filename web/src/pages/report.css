@@ -40,3 +40,18 @@
   height: auto;
   margin: 4px auto 16px;
 }
+
+/* 通關密語：表單下方留兩個畫面高的空白，欄位縮在最底的右下角、不加標籤 */
+.report-spacer {
+  height: 200vh;
+}
+
+.report-page input.report-corner {
+  display: block;
+  margin-left: auto;
+  width: 96px;
+  padding: 2px 6px;
+  border: 1px solid var(--rule);
+  background: transparent;
+  opacity: 0.5;
+}

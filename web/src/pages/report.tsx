@@ -1,6 +1,7 @@
 // 掃 QR code 後打開的通報頁（report.html）：只有市民通報表單，沒有地圖。
 // 垃圾桶編號：網址有 ?bin=B0365 就用它，沒有就從真實垃圾桶裡隨機挑一個（展示用）。
 // 送出到 /api/reports，政府單位視角的「市民通報」會在 10 秒內出現這筆。
+// 送出要附通關密語：欄位藏在頁面最下方右下角（要往下捲兩個畫面才看得到），密語錯誤伺服器會拒絕。
 
 import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -22,13 +23,13 @@ async function pickBin(): Promise<Bin> {
   return { id: f.properties.id, district: f.properties.district, road: f.properties.road };
 }
 
-async function send(bin: string, input: ReportInput): Promise<string> {
+async function send(bin: string, input: ReportInput, passphrase: string): Promise<string> {
   let r: Response;
   try {
     r = await fetch("./api/reports", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ bin, ...input }),
+      body: JSON.stringify({ bin, ...input, passphrase }),
     });
   } catch {
     throw new Error("網路連線失敗，請再按一次送出。");
@@ -50,6 +51,8 @@ function ReportPage() {
   const [bin, setBin] = useState<Bin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
+  // 送出成功後保留，連續通報不用重填
+  const [passphrase, setPassphrase] = useState("");
 
   useEffect(() => {
     pickBin().then(setBin, (e: Error) => setError(e.message));
@@ -80,10 +83,19 @@ function ReportPage() {
               </div>
             </div>
           </div>
-          <ReportForm onSubmit={async (input) => setSentId(await send(bin.id, input))} />
+          <ReportForm onSubmit={async (input) => setSentId(await send(bin.id, input, passphrase))} />
         </div>
       ) : null}
       <p className="footnote muted">市政 debug松 展示作品，不是臺北市政府的正式通報管道。</p>
+      <div className="report-spacer" aria-hidden="true" />
+      <input
+        className="report-corner"
+        type="password"
+        autoComplete="off"
+        aria-label="密語"
+        value={passphrase}
+        onChange={(e) => setPassphrase(e.target.value)}
+      />
     </main>
   );
 }
