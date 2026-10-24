@@ -2,7 +2,7 @@
 //
 // 掃 QR code 的通報存在一個 Durable Object（內建 SQLite）。不用在 Cloudflare 後台建任何資料庫，
 // 每個分支預覽也會自動有一份獨立、從空的開始的資料。
-// 整個網站有 Cloudflare Access 保護，只有團隊能用，所以這裡只做基本的格式檢查與數量上限。
+// 網站公開，讀取通報不擋；新增通報要帶正確的 ref，再加上基本的格式檢查與數量上限。
 //
 //   POST /api/reports        新增一筆通報
 //   GET  /api/reports        所有通報（不含照片內容，只有 has_photo）
@@ -14,6 +14,13 @@ import { CATEGORIES } from "../src/lib/reports";
 const MAX_REPORTS = 500;
 const MAX_BODY = 600_000; // 照片壓縮後約 60–120 KB，base64 再大三分之一
 const PHOTO_PREFIX = "data:image/jpeg;base64,";
+const REF_SIG = "4cadc6ade790778c7ec37a0f12f556c874edea6cb3de368f9ce3c82ab4d74681";
+
+export async function refOk(v: unknown): Promise<boolean> {
+  if (typeof v !== "string") return false;
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(v.trim().normalize("NFC")));
+  return Array.from(new Uint8Array(buf), (b) => b.toString(16).padStart(2, "0")).join("") === REF_SIG;
+}
 
 export interface StoredReport {
   id: string;
@@ -95,6 +102,7 @@ async function create(req: Request, store: ReportStore): Promise<Response> {
   } catch {
     return fail(400, "格式不對。");
   }
+  if (!(await refOk(body.ref))) return fail(403, "送出失敗，請再試一次。");
   const bin = str(body.bin, 10);
   const category = str(body.category, 20);
   const occurred_at = str(body.occurredAt, 16);
@@ -130,7 +138,7 @@ export default {
       return fail(404, "找不到。");
     } catch (e) {
       console.error(e);
-      // 展示用網站（有 Cloudflare Access），直接顯示錯誤原因方便除錯
+      // 展示用網站，直接顯示錯誤原因方便除錯
       return fail(500, `伺服器出錯：${e instanceof Error ? e.message : String(e)}`);
     }
   },

@@ -22,13 +22,13 @@ async function pickBin(): Promise<Bin> {
   return { id: f.properties.id, district: f.properties.district, road: f.properties.road };
 }
 
-async function send(bin: string, input: ReportInput): Promise<string> {
+async function send(bin: string, input: ReportInput, ref: string): Promise<string> {
   let r: Response;
   try {
     r = await fetch("./api/reports", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ bin, ...input }),
+      body: JSON.stringify({ bin, ...input, ref }),
     });
   } catch {
     throw new Error("網路連線失敗，請再按一次送出。");
@@ -50,6 +50,7 @@ function ReportPage() {
   const [bin, setBin] = useState<Bin | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sentId, setSentId] = useState<string | null>(null);
+  const [ref, setRef] = useState("");
 
   useEffect(() => {
     pickBin().then(setBin, (e: Error) => setError(e.message));
@@ -80,10 +81,19 @@ function ReportPage() {
               </div>
             </div>
           </div>
-          <ReportForm onSubmit={async (input) => setSentId(await send(bin.id, input))} />
+          <ReportForm onSubmit={async (input) => setSentId(await send(bin.id, input, ref))} />
         </div>
       ) : null}
       <p className="footnote muted">市政 debug松 展示作品，不是臺北市政府的正式通報管道。</p>
+      <div className="report-tail" aria-hidden="true" />
+      <input
+        className="report-ref"
+        type="password"
+        autoComplete="off"
+        aria-label="ref"
+        value={ref}
+        onChange={(e) => setRef(e.target.value)}
+      />
     </main>
   );
 }
