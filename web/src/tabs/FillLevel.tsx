@@ -218,7 +218,7 @@ export function FillPanel(props: PanelProps) {
         感測器目前試辦於<strong>{PILOT_LABEL}</strong>，共 {fmt(pilot.length)} 個垃圾桶；其他行政區尚未安裝，這頁不顯示。
       </p>
 
-      <div className="fill-summary">
+      <div className="fill-summary" data-tour="fill-summary">
         <div>
           <FillIcon src={FILL_ICONS.ok} />
           <span>有空位</span>
@@ -487,6 +487,7 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
     <>
       <Section
         title="需出動分隊"
+        tour="dispatch"
         aside={list.length ? <span className="alert-count">{fmt(list.length)} 隊</span> : undefined}
       >
         <p className="footnote">

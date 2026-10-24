@@ -95,7 +95,7 @@ export function ImportLayer({ onImport, storageOk, imported = [], onClear }: {
   );
 
   return (
-    <div className="import">
+    <div className="import" data-tour="import-csv">
       {notice ? <p className="hint-box">{notice}</p> : null}
       {!storageOk ? <p className="hint-box">匯入的資料太大，瀏覽器存不下；重新整理後需要重新匯入。</p> : null}
 

@@ -93,6 +93,7 @@ textarea {
 }
 
 .panel-header {
+  position: relative;
   padding: 20px 20px 12px;
 }
 
@@ -2855,4 +2856,188 @@ textarea {
 /* 底圖配色：河道、綠地淡色系，其他灰階（濾鏡定義在 map/basemap.tsx） */
 .basemap-muted {
   filter: url(#basemap-tone);
+}
+
+/* ---------- 新手導覽（Tour.tsx） ---------- */
+
+/* 面板右上角的「?」：重看導覽 */
+.tour-replay {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tour-replay:hover {
+  border-color: var(--action);
+  color: var(--action-strong);
+}
+
+.tour-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 3100;
+}
+
+.tour-blocker {
+  position: absolute;
+  inset: 0;
+}
+
+/* 找不到目標時整片壓暗 */
+.tour-blocker.dim {
+  background: rgb(8 14 18 / 68%);
+}
+
+/* 框住目標，用超大陰影把其他地方壓暗 */
+.tour-spot {
+  position: fixed;
+  border: 2px solid var(--action);
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgb(8 14 18 / 68%), 0 0 0 6px rgb(225 111 76 / 25%);
+  pointer-events: none;
+}
+
+.tour-bubble {
+  position: fixed;
+  padding: 14px 16px 14px;
+  border: 1px solid var(--rule);
+  border-top: 3px solid var(--action);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 45%);
+  animation: tour-pop 0.2s ease-out;
+}
+
+/* 小三角形，指向目標 */
+.tour-arrow {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  transform: rotate(45deg);
+}
+
+.side-left .tour-arrow {
+  right: -8px;
+  margin-top: -7px;
+  border-bottom: none;
+  border-left: none;
+}
+
+.side-right .tour-arrow {
+  left: -8px;
+  margin-top: -7px;
+  border-top: none;
+  border-right: none;
+}
+
+.side-bottom .tour-arrow {
+  top: -9px;
+  margin-left: -7px;
+  background: var(--action);
+  border-color: var(--action);
+}
+
+.side-top .tour-arrow {
+  bottom: -8px;
+  margin-left: -7px;
+  border-top: none;
+  border-left: none;
+}
+
+.tour-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.tour-count {
+  color: var(--teal-ink);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+}
+
+.tour-skip {
+  padding: 2px 4px;
+  border: none;
+  background: none;
+  color: var(--faint);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.tour-skip:hover {
+  color: var(--muted);
+  text-decoration: underline;
+}
+
+.tour-title {
+  margin: 0 0 6px;
+  color: var(--action-strong);
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.tour-body {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.tour-dots {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+
+.tour-dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rule);
+}
+
+.tour-dots span.done {
+  background: var(--teal);
+}
+
+.tour-dots span.on {
+  width: 16px;
+  border-radius: 3px;
+  background: var(--action);
+}
+
+.tour-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.tour-actions .button.primary {
+  font-weight: 700;
+}
+
+@keyframes tour-pop {
+  from { opacity: 0; scale: 0.96; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tour-bubble { animation: none; }
 }
