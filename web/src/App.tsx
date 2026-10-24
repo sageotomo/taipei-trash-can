@@ -190,8 +190,8 @@ export default function App() {
   );
 
   // ---- 載入 1 秒後跳出即時提醒：列出此刻所有需要出動的分隊（lib/dispatch.ts） ----
-  // hidden → shown（載入 1 秒後）→ viewed（按過地圖查看）→ 按確認派工後關閉回 hidden
-  const [demoAlert, setDemoAlert] = useState<"hidden" | "shown" | "viewed">("hidden");
+  // hidden → shown（載入 1 秒後）→ 按確認派工或 × 後關閉回 hidden
+  const [demoAlert, setDemoAlert] = useState<"hidden" | "shown">("hidden");
   // 通知內容固定在跳出的那一刻，之後整點換資料也不會改字
   const [dispatchAtLoad, setDispatchAtLoad] = useState<SquadDispatch[]>([]);
   useEffect(() => {
@@ -206,22 +206,6 @@ export default function App() {
     // 只在資料載入完成時跳一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
-  // 按地圖查看後通知不關掉，按鈕換成「確認派工」
-  const openDemoAlert = () => {
-    setDemoAlert("viewed");
-    setTab("fill");
-    const members = dispatchAtLoad.flatMap((d) => d.members);
-    if (!data || !members.length) return;
-    const pts = members.map((i) => data.bins.features[i].geometry.coordinates);
-    const lats = pts.map((p) => p[1]);
-    const lngs = pts.map((p) => p[0]);
-    // 只有一個分隊就拉近看；跨分隊就退遠一點，把所有需清運的桶都框進來
-    const spread = Math.max(Math.max(...lats) - Math.min(...lats), Math.max(...lngs) - Math.min(...lngs));
-    const zoom = spread < 0.004 ? 17 : spread < 0.012 ? 15 : spread < 0.03 ? 14 : 13;
-    flyTo((Math.max(...lats) + Math.min(...lats)) / 2, (Math.max(...lngs) + Math.min(...lngs)) / 2, zoom);
-    setFillState((st) => ({ ...st, selected: members[0] }));
-  };
-
   const ready = data && place;
   // 動態調度與通報案件右側要放整張表格，面板加寬
   const wide = tab === "fill" || tab === "reports";
@@ -365,17 +349,14 @@ export default function App() {
               ×
             </button>
             <p className="demo-title">即時提醒</p>
-            <p className="demo-message">{dispatchMessage(dispatchAtLoad)}</p>
+            <p className="demo-message">
+              {dispatchMessage(dispatchAtLoad)}
+              <span className="demo-note">(此為模擬通知，實際情況會通知訊息到各個分隊的裝置)</span>
+            </p>
             <div className="demo-actions">
-              {demoAlert === "shown" ? (
-                <button className="button primary" onClick={openDemoAlert}>
-                  地圖查看
-                </button>
-              ) : (
-                <button className="button primary" onClick={() => setDemoAlert("hidden")}>
-                  確認派工
-                </button>
-              )}
+              <button className="button primary" onClick={() => setDemoAlert("hidden")}>
+                確認派工
+              </button>
             </div>
           </div>
         </div>
