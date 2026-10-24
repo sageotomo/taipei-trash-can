@@ -17,7 +17,7 @@ import { cellCenter } from "./lib/hexgrid";
 import { FlyTo, InvalidateSize, MapPanes } from "./map/layers";
 import { CellScale } from "./map/CellScale";
 import { localDate } from "./lib/reports";
-import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, type StatusOverrides } from "./lib/cases";
+import { buildCases } from "./lib/cases";
 import { ReportLayers } from "./tabs/Reports";
 import { ReportGovPanel } from "./tabs/ReportsGov";
 import { DEFAULT_VISIBILITY, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
@@ -51,8 +51,6 @@ export default function App() {
   const [focus, setFocus] = useState<Focus>(null);
   const [reportCell, setReportCell] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [statusOverrides, setStatusOverrides] = useState<StatusOverrides>(loadStatusOverrides);
-  useEffect(() => saveStatusOverrides(statusOverrides), [statusOverrides]);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
   // 右側面板可收起，讓地圖佔滿整個畫面
   const liveTime = useLiveTime();
@@ -88,7 +86,7 @@ export default function App() {
     return counts;
   }, [allReports]);
 
-  // 通報案件（處理進度、承辦、最近的垃圾桶）
+  // 通報案件（承辦、最近的垃圾桶）
   const binPoints = useMemo(
     () =>
       data
@@ -97,8 +95,8 @@ export default function App() {
     [data]
   );
   const cases = useMemo(
-    () => (place ? buildCases(allReports, statusOverrides, binPoints, place.district, localDate()) : []),
-    [allReports, statusOverrides, binPoints, place]
+    () => (place ? buildCases(allReports, binPoints, place.district, localDate()) : []),
+    [allReports, binPoints, place]
   );
   const caseById = useMemo(() => new Map(cases.map((c) => [c.report.id, c])), [cases]);
 
@@ -146,10 +144,6 @@ export default function App() {
     },
     [caseById, flyTo]
   );
-
-  const setCaseStatus = useCallback((id: string, status: CaseStatus) => {
-    setStatusOverrides((prev) => ({ ...prev, [id]: { status, updated_at: localDate() } }));
-  }, []);
 
   const focusBin = useCallback(
     (i: number) => {
@@ -241,7 +235,6 @@ export default function App() {
               reports={allReports}
               reportCounts={reportCounts}
               selected={reportCell}
-              cases={caseById}
               selectedId={selectedReport}
               onPickReport={(id) => pickCase(id, false)}
             />
@@ -310,7 +303,6 @@ export default function App() {
               reportCounts={reportCounts}
               selectedId={selectedReport}
               onSelect={pickCase}
-              onStatus={setCaseStatus}
             />
           ) : null}
         </section>

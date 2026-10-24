@@ -12,12 +12,12 @@ const bins: FeatureCollection<BinProps> = {
     },
   ],
 };
-const row = { id: "Q1023-AAAA", bin: "B0365", category: "亂丟垃圾", occurred_at: "2026-10-23T18:00", note: "", contact: "a@b.tw", created_ms: Date.UTC(2026, 9, 23, 16, 30), has_photo: 1 };
+const row = { id: "Q1023-AAAA", bin: "B0365", category: "亂丟垃圾", occurred_at: "2026-10-23T18:00", note: "", created_ms: Date.UTC(2026, 9, 23, 16, 30), has_photo: 1 };
 
 describe("toReports", () => {
-  it("用垃圾桶座標，帶聯絡方式與照片網址", () => {
+  it("用垃圾桶座標，帶照片網址", () => {
     const [r] = toReports([row], bins);
-    expect(r).toMatchObject({ lat: 25.04106, lng: 121.56649, cell: "9_-5", qr: true, district: "信義區", contact: "a@b.tw", photo: "./api/photo/Q1023-AAAA" });
+    expect(r).toMatchObject({ lat: 25.04106, lng: 121.56649, cell: "9_-5", qr: true, district: "信義區", photo: "./api/photo/Q1023-AAAA" });
     expect(r.created_at).toBe("2026-10-24"); // UTC 16:30 已是台灣隔天
   });
   it("找不到的垃圾桶略過", () => {

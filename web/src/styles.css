@@ -763,10 +763,6 @@ textarea {
   color: var(--muted);
 }
 
-.fill-summary.four {
-  grid-template-columns: repeat(4, 1fr);
-}
-
 .fill-summary strong {
   grid-column: 1 / -1;
   font-family: var(--font-display);
@@ -2024,7 +2020,7 @@ textarea {
   white-space: nowrap;
 }
 
-/* ---------------- 市民通報：照片、聯絡方式 ---------------- */
+/* ---------------- 市民通報：照片 ---------------- */
 
 .field input[type="text"] {
   padding: 8px 10px;
@@ -2146,19 +2142,6 @@ textarea {
   border-radius: 4px;
 }
 
-.case-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
-  font-size: 12.5px;
-  white-space: nowrap;
-}
-
-.case-status.big {
-  gap: 4px;
-  font-size: 14px;
-}
-
 /* ---------------- 市民通報：政府單位案件表 ---------------- */
 
 .table-filters.three {
@@ -2223,22 +2206,9 @@ textarea {
   font-size: 11px;
 }
 
-.overdue-pill {
-  margin-left: 4px;
-}
 
-.overdue-dot {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--full);
-  border-radius: 50%;
-}
-
-
-/* 附件小圖示：照片（相框）、聯絡方式（信封） */
-.attach-photo,
-.attach-contact {
+/* 附件小圖示：照片（相框） */
+.attach-photo {
   display: inline-block;
   margin-left: 5px;
   vertical-align: -1px;
@@ -2250,12 +2220,6 @@ textarea {
 
 .attach-photo {
   background: radial-gradient(circle at 50% 55%, var(--muted) 2px, transparent 2.5px);
-}
-
-.attach-contact {
-  background:
-    linear-gradient(33deg, transparent 46%, var(--muted) 47%, var(--muted) 55%, transparent 56%) left / 50% 100% no-repeat,
-    linear-gradient(-33deg, transparent 46%, var(--muted) 47%, var(--muted) 55%, transparent 56%) right / 50% 100% no-repeat;
 }
 
 .case-detail {

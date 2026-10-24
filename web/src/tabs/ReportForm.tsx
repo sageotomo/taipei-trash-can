@@ -1,9 +1,8 @@
 // 市民通報表單：儀表板「市民通報」分頁（點地圖後）和掃 QR code 的通報頁（report.html）共用同一份。
-// 送出成功後清空表單（聯絡方式保留）；onSubmit 丟出錯誤時保留內容並顯示錯誤。
+// 送出成功後清空表單；onSubmit 丟出錯誤時保留內容並顯示錯誤。
 
 import { useRef, useState } from "react";
 import { CATEGORIES, OCCURRED_MAX_DAYS, localDateTime, occurredError, type Category, type ReportInput } from "../lib/reports";
-import { validContact } from "../lib/cases";
 import { compressPhoto } from "../lib/photo";
 import { Swatch } from "../ui";
 import { CATEGORY_COLORS } from "./reportColors";
@@ -15,15 +14,12 @@ export function ReportForm(props: { onSubmit: (input: ReportInput) => void | Pro
   const [occurredTouched, setOccurredTouched] = useState(false);
   const occurredMsg = occurredError(occurredAt);
   const occurredInput = useRef<HTMLInputElement>(null);
-  const [contact, setContact] = useState("");
-  const [contactTouched, setContactTouched] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoMsg, setPhotoMsg] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const contactOk = validContact(contact);
 
   const pickPhoto = async (file: File | undefined) => {
     if (!file) return;
@@ -41,17 +37,16 @@ export function ReportForm(props: { onSubmit: (input: ReportInput) => void | Pro
 
   const submit = async () => {
     if (sending) return;
-    if (occurredMsg || !contactOk) {
+    if (occurredMsg) {
       setOccurredTouched(true);
-      setContactTouched(true);
-      // 跳到第一個有問題的欄位，錯誤說明才不會在畫面外
-      if (occurredMsg) occurredInput.current?.focus();
+      // 跳到有問題的欄位，錯誤說明才不會在畫面外
+      occurredInput.current?.focus();
       return;
     }
     setSending(true);
     setSubmitError(null);
     try {
-      await props.onSubmit({ category, occurredAt, note, photo: photo ?? undefined, contact });
+      await props.onSubmit({ category, occurredAt, note, photo: photo ?? undefined });
     } catch (e) {
       // 送出失敗：保留填好的內容，讓市民可以再按一次
       setSubmitError(e instanceof Error && e.message ? e.message : "送出失敗，請稍後再試。");
@@ -64,8 +59,6 @@ export function ReportForm(props: { onSubmit: (input: ReportInput) => void | Pro
     setOccurredTouched(false);
     setPhoto(null);
     setPhotoMsg(null);
-    setContactTouched(false);
-    // 聯絡方式保留，下次通報不用再打
   };
 
   return (
@@ -156,26 +149,6 @@ export function ReportForm(props: { onSubmit: (input: ReportInput) => void | Pro
         onChange={(e) => setNote(e.target.value)}
         placeholder="例如：公車站旁常有人丟飲料杯"
       />
-    </label>
-    <label className="field">
-      <span>Email 或手機（選填，追蹤處理進度用）</span>
-      <input
-        type="text"
-        inputMode="email"
-        autoComplete="email"
-        maxLength={100}
-        value={contact}
-        onChange={(e) => setContact(e.target.value)}
-        onBlur={() => setContactTouched(true)}
-        placeholder="例如：0912345678 或 name@example.com"
-        aria-invalid={contactTouched && !contactOk}
-        aria-describedby="contact-help"
-      />
-      <small id="contact-help" className={contactTouched && !contactOk ? "field-help warn-text" : "field-help"}>
-        {contactTouched && !contactOk
-          ? "格式看起來不對：請填 email、手機（09 開頭 10 碼）或市話。"
-          : "只給承辦單位聯絡你，政府端畫面會遮蔽部分號碼，也不會出現在匯出檔。"}
-      </small>
     </label>
     {submitError ? (
       <p className="footnote warn-text" role="alert">

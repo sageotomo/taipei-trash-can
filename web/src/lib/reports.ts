@@ -1,5 +1,5 @@
 // 市民通報只存在這台裝置的瀏覽器（localStorage），不需要後端。
-// 照片與聯絡方式都是選填；照片先在瀏覽器壓縮（lib/photo.ts）再存，避免塞爆 localStorage。
+// 照片是選填；照片先在瀏覽器壓縮（lib/photo.ts）再存，避免塞爆 localStorage。
 // localStorage 在無痕模式或封鎖網站資料時可能讀寫失敗，所以都包在 try/catch 裡。
 
 import { latLngToCell } from "./hexgrid";
@@ -82,11 +82,9 @@ export interface ReportInput {
   occurredAt: string;
   note: string;
   photo?: string;
-  contact?: string;
 }
 
 export function createReport(input: ReportInput & { lat: number; lng: number }): Report {
-  const contact = input.contact?.trim().slice(0, 100);
   return {
     id: newReportId(),
     category: input.category,
@@ -98,7 +96,6 @@ export function createReport(input: ReportInput & { lat: number; lng: number }):
     occurred_at: input.occurredAt,
     local: true,
     ...(input.photo ? { photo: input.photo } : {}),
-    ...(contact ? { contact } : {}),
   };
 }
 

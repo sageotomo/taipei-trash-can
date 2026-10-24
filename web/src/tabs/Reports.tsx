@@ -1,7 +1,6 @@
 import { useCallback, useMemo } from "react";
 import type L from "leaflet";
 import { HexLayer, PointLayer, PANES } from "../map/layers";
-import { CASE_COLORS, type ReportCase } from "../lib/cases";
 import { escapeHtml } from "../ui";
 import type { AppData } from "../data";
 import type { Report } from "../types";
@@ -40,21 +39,13 @@ interface LayersProps {
   reports: Report[];
   reportCounts: Map<string, number>;
   selected: string | null;
-  cases: Map<string, ReportCase>;
   selectedId: string | null;
   onPickReport?: (id: string) => void;
 }
 
-export function ReportLayers({ data, reports, reportCounts, selected, cases, selectedId, onPickReport }: LayersProps) {
-  // 點的顏色是處理進度
-  const colorOf = useCallback(
-    (r: Report) => {
-      const c = cases.get(r.id);
-      if (c) return CASE_COLORS[c.status];
-      return CATEGORY_COLORS[r.category] ?? "#e0566a";
-    },
-    [cases]
-  );
+export function ReportLayers({ data, reports, reportCounts, selected, selectedId, onPickReport }: LayersProps) {
+  // 點的顏色是通報類別
+  const colorOf = useCallback((r: Report) => CATEGORY_COLORS[r.category] ?? "#e0566a", []);
   // 有通報的格子＋目前選的格子
   const cells = useMemo(() => {
     const set = new Set(reportCounts.keys());
@@ -92,32 +83,24 @@ export function ReportLayers({ data, reports, reportCounts, selected, cases, sel
       const r = reports[i];
       const fillColor = colorOf(r);
       if (r.id === selectedId) return { radius: 9, fillColor, color: MAP.selected, weight: 3, fillOpacity: 1 };
-      // 已結案的淡掉，讓還沒處理的案件跳出來
-      return cases.get(r.id)?.status === "已結案"
-        ? { radius: 3, fillColor, color: MAP.outline, weight: 0.5, fillOpacity: 0.5, opacity: 0.5 }
-        : { radius: 5, fillColor, color: MAP.outline, weight: 1.2, fillOpacity: 1 };
+      return { radius: 5, fillColor, color: MAP.outline, weight: 1.2, fillOpacity: 1 };
     },
-    [reports, colorOf, selectedId, cases]
+    [reports, colorOf, selectedId]
   );
   const reportTip = useCallback(
     (i: number) => {
       const r = reports[i];
-      const c = cases.get(r.id);
-      const head = c ? `${escapeHtml(r.id)}・${r.category}・${c.status}${c.overdue ? "（逾期）" : ""}` : `${escapeHtml(r.id)}・${r.category}`;
-      return `${head}${r.note ? `<br>${escapeHtml(r.note)}` : ""}`;
+      return `${escapeHtml(r.id)}・${r.category}${r.note ? `<br>${escapeHtml(r.note)}` : ""}`;
     },
-    [reports, cases]
+    [reports]
   );
   const pickReport = useCallback((i: number) => onPickReport?.(reports[i].id), [onPickReport, reports]);
-  // 點的提示與點擊只在建立時綁定，所以處理進度變了就重建這一層
-  const pointsKey = useMemo(() => reports.map((r) => cases.get(r.id)?.status ?? "").join(","), [reports, cases]);
 
   return (
     <>
       <HexLayer cells={cells} style={hexStyle} tooltip={tooltip} />
       <PointLayer points={bins} style={binStyle} />
       <PointLayer
-        key={pointsKey}
         points={reports}
         style={reportStyle}
         tooltip={reportTip}

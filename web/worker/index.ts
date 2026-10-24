@@ -21,7 +21,6 @@ export interface StoredReport {
   category: string;
   occurred_at: string;
   note: string;
-  contact: string;
   created_ms: number;
   has_photo: number;
 }
@@ -35,21 +34,22 @@ interface Env {
 export class ReportStore extends DurableObject<Env> {
   constructor(ctx: ConstructorParameters<typeof DurableObject>[0], env: Env) {
     super(ctx, env);
+    // contact 欄位已不再使用（不追蹤處理進度，不收聯絡方式），留著是為了相容既有資料
     this.ctx.storage.sql.exec(
       "CREATE TABLE IF NOT EXISTS reports (id TEXT PRIMARY KEY, bin TEXT, category TEXT, occurred_at TEXT, note TEXT, contact TEXT, photo TEXT, created_ms INTEGER)"
     );
   }
 
   /** 回傳新編號；滿了回傳 null */
-  add(r: { bin: string; category: string; occurred_at: string; note: string; contact: string; photo: string }): string | null {
+  add(r: { bin: string; category: string; occurred_at: string; note: string; photo: string }): string | null {
     const sql = this.ctx.storage.sql;
     const { n } = sql.exec<{ n: number }>("SELECT COUNT(*) AS n FROM reports").one();
     if (n >= MAX_REPORTS) return null;
     const now = Date.now();
     const id = newId(now);
     sql.exec(
-      "INSERT INTO reports (id, bin, category, occurred_at, note, contact, photo, created_ms) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      id, r.bin, r.category, r.occurred_at, r.note, r.contact, r.photo, now
+      "INSERT INTO reports (id, bin, category, occurred_at, note, photo, created_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+      id, r.bin, r.category, r.occurred_at, r.note, r.photo, now
     );
     return id;
   }
@@ -57,7 +57,7 @@ export class ReportStore extends DurableObject<Env> {
   list(): StoredReport[] {
     return this.ctx.storage.sql
       .exec<StoredReport>(
-        "SELECT id, bin, category, occurred_at, note, contact, created_ms, photo != '' AS has_photo FROM reports ORDER BY created_ms"
+        "SELECT id, bin, category, occurred_at, note, created_ms, photo != '' AS has_photo FROM reports ORDER BY created_ms"
       )
       .toArray();
   }
@@ -103,7 +103,7 @@ async function create(req: Request, store: ReportStore): Promise<Response> {
   if (!(CATEGORIES as readonly string[]).includes(category)) return fail(400, "請選擇類別。");
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(occurred_at)) return fail(400, "請填發生時間。");
   if (photo && !photo.startsWith(PHOTO_PREFIX)) return fail(400, "照片格式不對。");
-  const id = await store.add({ bin, category, occurred_at, note: str(body.note, 200), contact: str(body.contact, 100), photo });
+  const id = await store.add({ bin, category, occurred_at, note: str(body.note, 200), photo });
   return id ? json({ id }, 201) : fail(507, `已經有 ${MAX_REPORTS} 筆通報，展示用的空間滿了。`);
 }
 

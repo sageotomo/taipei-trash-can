@@ -15,7 +15,6 @@ export interface QrRow {
   category: string;
   occurred_at: string;
   note: string;
-  contact: string;
   created_ms: number;
   has_photo: number;
 }
@@ -44,7 +43,6 @@ export function toReports(rows: QrRow[], bins: FeatureCollection<BinProps>): Rep
       occurred_at: r.occurred_at,
       qr: true,
       bin: r.bin,
-      ...(r.contact ? { contact: r.contact } : {}),
       ...(r.has_photo ? { photo: `./api/photo/${r.id}` } : {}),
     });
   }
