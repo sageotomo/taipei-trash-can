@@ -3,7 +3,6 @@ import { MapContainer } from "react-leaflet";
 import { BaseMap } from "./map/basemap";
 import { useAppData } from "./data";
 import {
-  DEFAULT_INDICATORS,
   aggregate,
   cellUniverse,
   computeIndex,
@@ -13,7 +12,6 @@ import {
 } from "./lib/indicators";
 import { reportsLayer, staticLayers } from "./lib/datalayers";
 import { makePlacer } from "./lib/place";
-import { WEEKS, makeProgressHistory } from "./lib/progress";
 import { loadCustomLayers, loadIndicators, saveCustomLayers, saveIndicators } from "./lib/storage";
 import { cellCenter } from "./lib/hexgrid";
 import { FlyTo, InvalidateSize, MapPanes } from "./map/layers";
@@ -22,7 +20,6 @@ import { localDate } from "./lib/reports";
 import { buildCases, loadStatusOverrides, saveStatusOverrides, type CaseStatus, type StatusOverrides } from "./lib/cases";
 import { ReportLayers } from "./tabs/Reports";
 import { ReportGovPanel } from "./tabs/ReportsGov";
-import { ProgressLayers, ProgressPanel } from "./tabs/Progress";
 import { DEFAULT_VISIBILITY, RecommendLayers, RecommendPanel, type Visibility } from "./tabs/Recommend";
 import { DEFAULT_FILL_STATE, FillLayers, FillPanel, type FillState } from "./tabs/FillLevel";
 import { useLiveTime } from "./lib/live";
@@ -32,13 +29,12 @@ import { useQrReports } from "./lib/qrFeed";
 import { binSquads, dispatchMessage, squadDispatch, type SquadDispatch } from "./lib/dispatch";
 import { pilotBinIndices } from "./lib/pilot";
 
-export type TabId = "recommend" | "fill" | "reports" | "progress";
+export type TabId = "recommend" | "fill" | "reports";
 
 const TABS: { id: TabId; label: string }[] = [
   { id: "fill", label: "動態調度" },
   { id: "recommend", label: "佈建分析" },
   { id: "reports", label: "通報案件" },
-  { id: "progress", label: "數據統計" },
 ];
 
 // 台北市中心
@@ -57,10 +53,6 @@ export default function App() {
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [statusOverrides, setStatusOverrides] = useState<StatusOverrides>(loadStatusOverrides);
   useEffect(() => saveStatusOverrides(statusOverrides), [statusOverrides]);
-  const [district, setDistrict] = useState("全部");
-  const [progressSelected, setProgressSelected] = useState<number | null>(null);
-  // 增桶進度看哪一週，預設最新一週
-  const [progressWeek, setProgressWeek] = useState(WEEKS.length - 1);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
   // 右側面板可收起，讓地圖佔滿整個畫面
   const liveTime = useLiveTime();
@@ -110,18 +102,6 @@ export default function App() {
   );
   const caseById = useMemo(() => new Map(cases.map((c) => [c.report.id, c])), [cases]);
 
-  // 增桶進度：每週一用「截至上週日的歷史通報」、預設指標重算前 30 名，不隨使用者調整而改變
-  const progressHistory = useMemo(() => {
-    if (!data || !place) return [];
-    const rankings = WEEKS.map((w) => {
-      const base = [...fixedLayers, reportsLayer(data.reportsSeed.filter((r) => r.created_at < w.cutoff))];
-      const a = aggregate(base);
-      return pickRecommendations(computeIndex(a, cellUniverse(a), DEFAULT_INDICATORS));
-    });
-    return makeProgressHistory(rankings, place.district);
-  }, [data, fixedLayers, place]);
-  const progress = useMemo(() => progressHistory[progressWeek]?.items ?? [], [progressHistory, progressWeek]);
-
   const importLayer = useCallback(({ layer, addIndicator, sign }: ImportOptions) => {
     setCustomLayers((prev) => [...prev, layer]);
     setVisible((v) => ({ ...v, [layer.id]: true }));
@@ -163,14 +143,6 @@ export default function App() {
   const setCaseStatus = useCallback((id: string, status: CaseStatus) => {
     setStatusOverrides((prev) => ({ ...prev, [id]: { status, updated_at: localDate() } }));
   }, []);
-
-  const selectProgress = useCallback(
-    (i: number) => {
-      setProgressSelected(i);
-      flyTo(progress[i].lat, progress[i].lng, 16);
-    },
-    [progress, flyTo]
-  );
 
   const focusBin = useCallback(
     (i: number) => {
@@ -267,9 +239,6 @@ export default function App() {
               onPickReport={(id) => pickCase(id, false)}
             />
           ) : null}
-          {ready && tab === "progress" ? (
-            <ProgressLayers data={data} items={progress} district={district} selected={progressSelected} onSelect={selectProgress} />
-          ) : null}
         </MapContainer>
       </div>
 
@@ -335,22 +304,6 @@ export default function App() {
               selectedId={selectedReport}
               onSelect={pickCase}
               onStatus={setCaseStatus}
-            />
-          ) : null}
-          {ready && tab === "progress" ? (
-            <ProgressPanel
-              data={data}
-              history={progressHistory}
-              week={progressWeek}
-              onWeek={(w) => {
-                setProgressWeek(w);
-                setProgressSelected(null);
-              }}
-              place={place}
-              district={district}
-              onDistrict={setDistrict}
-              selected={progressSelected}
-              onSelect={selectProgress}
             />
           ) : null}
         </section>

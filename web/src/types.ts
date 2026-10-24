@@ -91,20 +91,3 @@ export interface FillData {
   summary: Record<Strategy, FillSummary>;
 }
 
-export type ProgressStatus = "已設置" | "施工中" | "規劃中" | "未處理";
-
-/** 增桶進度（模擬，lib/progress.ts 產生） */
-export interface ProgressItem {
-  /** 本週前 30 名的名次；已動工但掉出前 30 名的點為 null */
-  rank: number | null;
-  cell: string;
-  lat: number;
-  lng: number;
-  district: string;
-  status: ProgressStatus;
-  /** 第一次進入前 30 名的那週（週一） */
-  since: string;
-  updated_at: string;
-  owner: string;
-  simulated: boolean;
-}

@@ -1288,69 +1288,12 @@ textarea {
   cursor: default;
 }
 
-/* ---------- 施政進度 ---------- */
-
-.progress-head {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.progress-number {
-  font-family: var(--font-display);
-  font-size: 34px;
-  line-height: 1.1;
-}
-
-.progress-number small {
-  color: var(--muted);
-  font-size: 18px;
-}
-
 .select select {
   padding: 6px 10px;
   border: 1px solid var(--rule);
   border-radius: 8px;
   background: var(--surface);
   font-size: 14px;
-}
-
-.progress-bar {
-  height: 16px;
-  margin: 12px 0 6px;
-  border-radius: 8px;
-}
-
-.progress-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 14px;
-}
-
-.progress-table th {
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--rule);
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 400;
-  text-align: left;
-}
-
-.progress-table td {
-  padding: 7px 6px;
-  border-bottom: 1px solid var(--paper);
-  vertical-align: top;
-}
-
-.progress-table tr.active td {
-  background: var(--action-soft);
-}
-
-.progress-table small {
-  display: block;
-  color: var(--muted);
-  font-size: 12px;
 }
 
 .cell-button {
@@ -2632,58 +2575,6 @@ textarea {
 .occurred-row .button {
   flex: none;
   white-space: nowrap;
-}
-
-/* ---------- 增桶進度：週次 ---------- */
-
-.week-picker {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin: 0 0 16px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--paper);
-}
-
-.week-picker .select {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.week-picker-label {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.week-picker select {
-  font-weight: 500;
-}
-
-.week-steps {
-  display: flex;
-  gap: 6px;
-}
-
-.week-steps .button {
-  padding: 4px 10px;
-  font-size: 13px;
-}
-
-.week-steps .button:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-.progress-table tr.outside td {
-  background: repeating-linear-gradient(135deg, transparent 0 6px, rgba(255, 255, 255, 0.04) 6px 12px);
-}
-
-.progress-table tr.outside .cell-button {
-  color: var(--muted);
 }
 
 .fill-icon {
