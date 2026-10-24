@@ -25,7 +25,6 @@ import type { Placer } from "../lib/place";
 import { Section, SourceTag, Swatch, Switch, fmt, fmtValue } from "../ui";
 import { explainLevel, type Factor } from "../lib/explain";
 import { pointLabel } from "../lib/pointLabel";
-import { CELL_WIDTH_M } from "../lib/hexgrid";
 import type { AppData } from "../data";
 import { MAP } from "../lib/theme";
 
@@ -536,13 +535,10 @@ function AddIndicator({ layers, indicators, onAdd, onCancel }: {
 // 格子大小、顏色意思、怎麼操作，加上分級圖例
 
 function IntroBox() {
-  const blockM = Math.round(CELL_WIDTH_M / 10) * 10;
-  // 一般步行速度約 80 公尺／分鐘
-  const walkMin = Math.max(1, Math.round(blockM / 80));
   return (
     <div className="hint-box">
       <p className="hint-text">
-        地圖上每一格約 {fmt(blockM)} 公尺寬，大概是走路 {walkMin} 分鐘的距離。顏色越深，代表那一帶越缺垃圾桶。以下情境會增加或減少對垃圾桶的需求，你可以打開或關掉這些情境參數，看看哪裡最需要垃圾桶，也可以點任一格，看那裡為什麼缺（或不缺）垃圾桶。
+        透過六角形網格佈建分析模型，把捷運出入口人流、大眾運輸站點與 1999 陳情熱點等因子視覺化，顏色越深，代表該區域越缺垃圾桶。你可以試著調整情境參數及權重的設定，看看分析結果的變化，也可以點任一格，看那裡為什麼缺（或不缺）垃圾桶。
       </p>
       <div className="legend">
         <span className="legend-item">
