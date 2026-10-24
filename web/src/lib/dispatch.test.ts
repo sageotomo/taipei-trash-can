@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { DISPATCH, binSquads, dampForDemo, dispatchMessage, roadName, squadDispatch } from "./dispatch";
 import { pilotBinIndices } from "./pilot";
+import { distanceM } from "./live";
 import type { BinProps, FeatureCollection, FillData } from "../types";
 
 const read = <T,>(name: string): T => JSON.parse(readFileSync(new URL(`../../public/data/${name}`, import.meta.url), "utf8"));
@@ -18,6 +19,36 @@ describe("Demo 調整後的需出動分隊", () => {
       const list = squadDispatch(bins, squads, pilot, (i) => live.levels.B[i][h]);
       expect(list.length, `hour ${h}`).toBe(DISPATCH.SQUADS);
       for (const d of list) expect(d.members.length, `hour ${h} ${d.squad}`).toBe(DISPATCH.MIN_BINS);
+    }
+  });
+
+  const pos = (i: number) => bins.features[i].geometry.coordinates;
+  const dist = (lat: number, lng: number, i: number) => distanceM(lat, lng, pos(i)[1], pos(i)[0]);
+
+  it("範圍圈裡沒有別的分隊的桶，各分隊的圈互不重疊", () => {
+    for (let h = 0; h < fill.hours; h++) {
+      const list = squadDispatch(bins, squads, pilot, (i) => live.levels.B[i][h]);
+      for (const d of list) {
+        for (const i of pilot) {
+          if (squads[i] === d.squad) continue;
+          expect(dist(d.lat, d.lng, i), `hour ${h} ${d.squad} 圈內有 ${squads[i]} 的 ${bins.features[i].properties.id}`).toBeGreaterThan(d.radiusM);
+        }
+        expect(d.radiusM, `hour ${h} ${d.squad}`).toBeLessThanOrEqual(DISPATCH.MAX_RADIUS_M);
+        for (const o of list) {
+          if (o === d) continue;
+          expect(distanceM(d.lat, d.lng, o.lat, o.lng), `hour ${h} ${d.squad} / ${o.squad}`).toBeGreaterThanOrEqual(d.radiusM + o.radiusM);
+        }
+      }
+    }
+  });
+
+  it("同一分隊需清運的桶不疊在同一個位置", () => {
+    for (let h = 0; h < fill.hours; h++) {
+      for (const d of squadDispatch(bins, squads, pilot, (i) => live.levels.B[i][h])) {
+        for (const a of d.members)
+          for (const b of d.members)
+            if (a < b) expect(dist(pos(a)[1], pos(a)[0], b), `hour ${h} ${d.squad}`).toBeGreaterThanOrEqual(DISPATCH.MIN_GAP_M);
+      }
     }
   });
 
