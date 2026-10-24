@@ -1,7 +1,7 @@
 // 動態調度的「區域滿桶警示」：同一個清潔隊轄區裡，彼此相距 RADIUS_M 內
 // 有 MIN_BINS 個以上的垃圾桶填滿 ≥ LEVEL%，就算一個需要一起派車的區域。
 //
-// 清潔箱由轄區的區清潔隊負責收運，所以「行政區」就等於負責的清潔隊。
+// 清潔箱由轄區的區清潔隊負責收運；試辦區的桶再細分到分隊（lib/squads.ts），警示寫種子桶的分隊。
 // 開放資料沒有官方箱號，B0001… 是依檔案順序自己編的。
 
 import { distanceM } from "./live";
@@ -13,6 +13,8 @@ export interface AlertBin {
   lng: number;
   district: string;
   road?: string;
+  /** 負責的清潔分隊全名（「大安和平分隊」）；沒有就用區清潔隊 */
+  squad?: string;
 }
 
 export interface FullCluster {
@@ -84,7 +86,7 @@ export function findFullClusters(
     out.push({
       key: [...members].sort((a, b) => a - b).join("-"),
       district,
-      team: `${district}清潔隊`,
+      team: bins[seed].squad ?? `${district}清潔隊`,
       area: roads.length ? `${roads.join("、")}一帶` : `${district}`,
       members,
       lat,

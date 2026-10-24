@@ -18,6 +18,7 @@ import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
 import { DEMO_ALERT, demoBinIndices } from "../lib/demoAlert";
 import { PILOT_LABEL, areaOutlines, pilotBinIndices, pilotSummary } from "../lib/pilot";
+import { squadLabel, squadOf } from "../lib/squads";
 import { ALERT, findFullClusters, neighborIndex, nextAlertHour, type FullCluster } from "../lib/fullAlert";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
@@ -74,6 +75,12 @@ function useBinPoints(data: AppData) {
   );
 }
 
+/** 桶的負責分隊全名（「大安和平分隊」），沒有分隊資料回傳 undefined */
+function squadName(district: string, lat: number, lng: number): string | undefined {
+  const s = squadOf(district, lat, lng);
+  return s ? squadLabel(s) : undefined;
+}
+
 /** 此刻的區域滿桶警示；鄰居表只跟位置有關，只在換資料時重算 */
 function useFullClusters(data: AppData, hour: number) {
   const pilot = usePilot(data);
@@ -84,6 +91,7 @@ function useFullClusters(data: AppData, hour: number) {
         lng: f.geometry.coordinates[0],
         district: f.properties.district,
         road: f.properties.road,
+        squad: squadName(f.properties.district, f.geometry.coordinates[1], f.geometry.coordinates[0]),
       })),
     [data.bins, pilot]
   );
@@ -143,9 +151,11 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
     (k: number) => {
       const i = pilot[k];
       const level = levels[i][time.hour];
-      return `${escapeHtml(places[i])}<br><strong>填滿 ${level}%</strong>（${fillStatus(level).label}）`;
+      const f = data.bins.features[i];
+      const squad = squadName(f.properties.district, f.geometry.coordinates[1], f.geometry.coordinates[0]);
+      return `${escapeHtml(places[i])}${squad ? `<br>${escapeHtml(squad)}` : ""}<br><strong>填滿 ${level}%</strong>（${fillStatus(level).label}）`;
     },
-    [levels, time.hour, places, pilot]
+    [levels, time.hour, places, pilot, data.bins]
   );
   const hourPoints = useMemo(() => points.slice(), [points, time.hour]);
   const pickBin = useCallback((k: number) => onPickBin(pilot[k]), [onPickBin, pilot]);
@@ -291,6 +301,14 @@ function GovView(props: PanelProps) {
     [data.bins, pilot]
   );
 
+  const squads = useMemo(
+    () =>
+      data.bins.features.map((f) =>
+        squadName(f.properties.district, f.geometry.coordinates[1], f.geometry.coordinates[0]) ?? ""
+      ),
+    [data.bins]
+  );
+
   const rows = useMemo(() => {
     const q = query.trim();
     const idx = pilot
@@ -298,7 +316,7 @@ function GovView(props: PanelProps) {
       .filter(({ i, f }) => {
         if (district !== "全部" && f.properties.district !== district) return false;
         if (filter === "dispatch" && levels[i][time.hour] < 80) return false;
-        if (q && !(places[i].includes(q) || f.properties.id.includes(q.toUpperCase()))) return false;
+        if (q && !(places[i].includes(q) || squads[i].includes(q) || f.properties.id.includes(q.toUpperCase()))) return false;
         return true;
       })
       .map(({ i }) => i);
@@ -316,7 +334,7 @@ function GovView(props: PanelProps) {
       const c = typeof va === "number" ? va - (vb as number) : va.localeCompare(vb as string, "zh-TW");
       return sort.desc ? -c : c;
     });
-  }, [data.bins, pilot, district, filter, query, sort, levels, time.hour, places]);
+  }, [data.bins, pilot, district, filter, query, sort, levels, time.hour, places, squads]);
 
   // 在地圖上點了某個桶，表格捲到那一列
   useEffect(() => {
@@ -360,7 +378,7 @@ function GovView(props: PanelProps) {
               type="search"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="搜尋地點、編號"
+              placeholder="搜尋地點、編號、分隊"
               aria-label="搜尋垃圾桶"
             />
           </div>
@@ -404,7 +422,10 @@ function GovView(props: PanelProps) {
                   >
                     <td>
                       {places[i]}
-                      <small>{data.bins.features[i].properties.id}</small>
+                      <small>
+                        {data.bins.features[i].properties.id}
+                        {squads[i] ? `・${squads[i]}` : ""}
+                      </small>
                     </td>
                     <td className="num">
                       <span className="level-cell">
