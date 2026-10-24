@@ -3,9 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { Placer } from "../lib/place";
 import { ACTIONS, CATEGORIES, shortDateTime, suggestAction } from "../lib/reports";
 import { casesToCsv, type ReportCase } from "../lib/cases";
-import { Section, SourceTag, Swatch, fmt } from "../ui";
+import { Section, SourceTag, fmt } from "../ui";
 import type { AppData } from "../data";
-import { CATEGORY_COLORS, useBinStats } from "./Reports";
+import { categoryIcon, useBinStats } from "./Reports";
+import { PoiIcon } from "../map/icons";
 
 type SortKey = "id" | "category" | "bin" | "owner";
 const COLUMNS: { key: SortKey; label: string }[] = [
@@ -95,7 +96,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
       <div className="fill-summary">
         {summary.map(({ cat, n }) => (
           <div key={cat}>
-            <Swatch color={CATEGORY_COLORS[cat]} />
+            <PoiIcon icon={categoryIcon(cat)} size={20} />
             <span>{cat}</span>
             <strong>{fmt(n)}</strong>
           </div>
@@ -187,7 +188,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
                     </td>
                     <td>
                       <span className="nowrap">
-                        <Swatch color={CATEGORY_COLORS[r.category]} />
+                        <PoiIcon icon={categoryIcon(r.category)} size={16} />
                         {r.category}
                       </span>
                       <small>{places.get(r.id)}</small>

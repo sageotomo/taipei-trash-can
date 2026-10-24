@@ -49,7 +49,6 @@ export default function App() {
   const [selected, setSelected] = useState<string | null>(null);
   const [visible, setVisible] = useState<Visibility>(DEFAULT_VISIBILITY);
   const [focus, setFocus] = useState<Focus>(null);
-  const [reportCell, setReportCell] = useState<string | null>(null);
   const [selectedReport, setSelectedReport] = useState<string | null>(null);
   const [fillState, setFillState] = useState<FillState>(DEFAULT_FILL_STATE);
   // 右側面板可收起，讓地圖佔滿整個畫面
@@ -139,7 +138,6 @@ export default function App() {
       const c = caseById.get(id);
       if (!c) return;
       setSelectedReport(id);
-      setReportCell(c.report.cell);
       if (fly) flyTo(c.report.lat, c.report.lng, 17);
     },
     [caseById, flyTo]
@@ -231,10 +229,7 @@ export default function App() {
           ) : null}
           {ready && tab === "reports" ? (
             <ReportLayers
-              data={data}
               reports={allReports}
-              reportCounts={reportCounts}
-              selected={reportCell}
               selectedId={selectedReport}
               onPickReport={(id) => pickCase(id, false)}
             />

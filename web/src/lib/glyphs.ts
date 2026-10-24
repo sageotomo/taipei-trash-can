@@ -75,6 +75,38 @@ export const GLYPHS: Record<string, { label: string; path: string }> = {
       `<rect x="10.8" y="8" width="2.4" height="6.4" rx="1.2" fill="${DARK}"/>` +
       `<circle cx="12" cy="16.9" r="1.35" fill="${DARK}"/>`,
   },
+  // ---- 通報類別 ----
+  litter: {
+    label: "亂丟垃圾",
+    path:
+      // 倒在地上的飲料杯，旁邊散著紙屑
+      `<path d="M3.6 13.2 13.6 7.4l3 5.2-10 5.8a1.4 1.4 0 0 1-1.9-.5l-1.6-2.8a1.4 1.4 0 0 1 .5-1.9z" fill="${WHITE}"/>` +
+      `<path d="M12.2 8.2l3 5.2" stroke="#7d8e9e" stroke-width="1.4"/>` +
+      `<path d="M15.6 9.6l3.6-3.4" stroke="${DARK}" stroke-width="1.4" stroke-linecap="round"/>` +
+      `<path d="M14.6 17.4l2.4-1 1.2 1.8-2.2 1.4z" fill="#ffe08a"/>` +
+      `<circle cx="19.2" cy="13.6" r="1.3" fill="#ffe08a"/>` +
+      `<path d="M8.2 19.6h3" stroke="${WHITE}" stroke-width="1.4" stroke-linecap="round"/>`,
+  },
+  overflow: {
+    label: "垃圾桶滿溢",
+    path:
+      // 垃圾桶上面堆滿、滿出來
+      `<path d="M6.4 11h11.2l-1 9.2a1.6 1.6 0 0 1-1.6 1.4H9a1.6 1.6 0 0 1-1.6-1.4z" fill="#b9c7d4"/>` +
+      `<path d="M10 13v6.4M14 13v6.4" stroke="#8496a7" stroke-width="1.4" stroke-linecap="round"/>` +
+      `<rect x="4.8" y="9" width="14.4" height="2.6" rx="1.2" fill="#7d8e9e"/>` +
+      `<circle cx="9" cy="7.2" r="2.6" fill="${WHITE}"/><circle cx="14.4" cy="6.6" r="3" fill="#ffe08a"/>` +
+      `<path d="M10.6 3.2l1.6 4.2" stroke="${WHITE}" stroke-width="1.6" stroke-linecap="round"/>` +
+      `<circle cx="18.6" cy="15" r="1.3" fill="${WHITE}"/>`,
+  },
+  trashbag: {
+    label: "家戶垃圾棄置",
+    path:
+      // 綁起來的家用垃圾袋
+      `<path d="M10.4 7.6c-4 1.4-6.2 5-5.8 9.2.3 2.6 2.6 4 7.4 4s7.1-1.4 7.4-4c.4-4.2-1.8-7.8-5.8-9.2z" fill="#3b4250"/>` +
+      `<path d="M10.2 7.8 8.6 3.6l3.4 2.2 3.4-2.2-1.6 4.2z" fill="#3b4250"/>` +
+      `<rect x="9.8" y="7" width="4.4" height="1.6" rx=".8" fill="#ffcf3f"/>` +
+      `<path d="M8 13.4c.6-1.6 1.6-2.8 3-3.4" stroke="#8a93a3" stroke-width="1.2" stroke-linecap="round" fill="none"/>`,
+  },
   toilet: {
     label: "廁所",
     path:

@@ -2845,3 +2845,9 @@ textarea {
   margin: 6px 0 0 auto;
   font-size: 0.85em;
 }
+
+/* 通報案件表：類別前的小圖示 */
+.case-table .poi-icon {
+  margin-right: 4px;
+  vertical-align: -3px;
+}
