@@ -133,7 +133,8 @@ textarea {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr); /* 四個分頁名稱都是四個字，平均分配 */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr; /* 分頁不論幾個都平均分配、填滿整行 */
   gap: 4px;
   margin: 0 20px;
   padding: 4px;
