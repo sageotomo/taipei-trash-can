@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { demoBinIndices, withDemoFill } from "./lib/demoAlert";
+import { dampForDemo } from "./lib/dispatch";
 import type { PilotArea } from "./lib/pilot";
 import type { BinProps, FeatureCollection, FillData, PoiProps, Report, SmartBin, Source } from "./types";
 
@@ -71,8 +71,8 @@ export function useAppData() {
       load<PilotArea>("pilot_districts.geojson"),
     ])
       .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins, pilotArea]) => {
-        // Demo：固定警示對應的桶在即時畫面一律滿溢（lib/demoAlert.ts）
-        const liveFill = withDemoFill(fill, demoBinIndices(bins));
+        // Demo：即時畫面每小時只留 1～3 個分隊需要出動（lib/dispatch.ts）
+        const liveFill = dampForDemo(fill, bins);
         if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill: liveFill, residential, smartBins, pilotArea });
       })
       .catch((e: Error) => !cancelled && setError(e.message));

@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PILOT_DISTRICTS, areaOutlines, pilotBinIndices, pilotSummary, type PilotArea } from "./pilot";
-import { demoBinIndices } from "./demoAlert";
 import type { BinProps, FeatureCollection, FillData } from "../types";
 
 const read = <T,>(name: string): T => JSON.parse(readFileSync(new URL(`../../public/data/${name}`, import.meta.url), "utf8"));
@@ -20,10 +19,9 @@ describe("感測器試辦區", () => {
     expect(lng).toBeGreaterThan(121.4);
   });
 
-  it("只留大安區、中山區的桶，Demo 的桶也在裡面", () => {
+  it("只留大安區、中山區的桶", () => {
     expect(pilot.length).toBeGreaterThan(0);
     expect(pilot.every((i) => PILOT_DISTRICTS.includes(bins.features[i].properties.district as never))).toBe(true);
-    expect(demoBinIndices(bins).every((i) => pilot.includes(i))).toBe(true);
   });
 
   it("清運比較只加總試辦區的桶", () => {

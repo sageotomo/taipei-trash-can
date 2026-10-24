@@ -2,7 +2,6 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { SQUADS, squadLabel, squadOf } from "./squads";
 import { pilotBinIndices } from "./pilot";
-import { DEMO_ALERT, demoBinIndices } from "./demoAlert";
 import type { BinProps, FeatureCollection } from "../types";
 
 const bins: FeatureCollection<BinProps> = JSON.parse(
@@ -29,10 +28,12 @@ describe("清潔分隊分配", () => {
     expect(used.size).toBe(SQUADS.length);
   });
 
-  it("Demo 警示的 3 桶歸和平分隊，名稱和通知一致", () => {
-    const demo = demoBinIndices(bins);
-    expect(demo).toHaveLength(3);
-    for (const i of demo) expect(squadLabel(squadAt(i)!)).toBe(DEMO_ALERT.team);
+  it("和平東路二段 108、110 號歸大安和平分隊", () => {
+    const idx = bins.features.flatMap((f, i) =>
+      ["和平東路2段108號", "和平東路2段110號"].includes(f.properties.road) ? [i] : []
+    );
+    expect(idx).toHaveLength(2);
+    for (const i of idx) expect(squadLabel(squadAt(i)!)).toBe("大安和平分隊");
   });
 
   it("不在試辦區的行政區沒有分隊", () => {

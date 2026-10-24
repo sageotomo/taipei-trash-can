@@ -4,7 +4,7 @@
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
 // 感測器只試辦在大安區、中山區（lib/pilot.ts），這頁只看這兩區的垃圾桶，地圖上框出兩區邊界。
-// 政府單位另外有「區域滿桶警示」：同一清潔隊轄區、300 m 內 3 桶以上 ≥90% 就跳通知（lib/fullAlert.ts）。
+// 「需出動分隊」：把 ≥80% 的桶依負責清潔分隊分組，列出此刻要出動的分隊（lib/dispatch.ts）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Polygon, Tooltip, useMap } from "react-leaflet";
@@ -16,10 +16,9 @@ import { Section, SourceTag, escapeHtml, fmt } from "../ui";
 import type { AppData } from "../data";
 import type { Strategy } from "../types";
 import { MAP } from "../lib/theme";
-import { DEMO_ALERT, demoBinIndices } from "../lib/demoAlert";
 import { PILOT_LABEL, areaOutlines, pilotBinIndices, pilotSummary } from "../lib/pilot";
 import { squadLabel, squadOf } from "../lib/squads";
-import { ALERT, findFullClusters, neighborIndex, nextAlertHour, type FullCluster } from "../lib/fullAlert";
+import { DISPATCH, binSquads, squadDispatch, type SquadDispatch } from "../lib/dispatch";
 
 const DAYS = ["週一", "週二", "週三", "週四", "週五", "週六", "週日"];
 const LIVE: Strategy = "B";
@@ -81,35 +80,16 @@ function squadName(district: string, lat: number, lng: number): string | undefin
   return s ? squadLabel(s) : undefined;
 }
 
-/** 此刻的區域滿桶警示；鄰居表只跟位置有關，只在換資料時重算 */
-function useFullClusters(data: AppData, hour: number) {
+/** 此刻需要出動的分隊 */
+function useDispatch(data: AppData, hour: number) {
   const pilot = usePilot(data);
-  const bins = useMemo(
-    () =>
-      pilot.map((i) => data.bins.features[i]).map((f) => ({
-        lat: f.geometry.coordinates[1],
-        lng: f.geometry.coordinates[0],
-        district: f.properties.district,
-        road: f.properties.road,
-        squad: squadName(f.properties.district, f.geometry.coordinates[1], f.geometry.coordinates[0]),
-      })),
-    [data.bins, pilot]
+  const squads = useMemo(() => binSquads(data.bins), [data.bins]);
+  const levels = data.fill.levels[LIVE];
+  const list = useMemo(
+    () => squadDispatch(data.bins, squads, pilot, (i) => levels[i][hour]),
+    [data.bins, squads, pilot, levels, hour]
   );
-  const neighbors = useMemo(() => neighborIndex(bins), [bins]);
-  const levels = useMemo(() => pilot.map((i) => data.fill.levels[LIVE][i]), [data.fill, pilot]);
-  const demo = useMemo(() => demoBinIndices(data.bins), [data.bins]);
-  const clusters = useMemo(
-    () =>
-      findFullClusters(bins, levels.map((row) => row[hour]), neighbors)
-        // 分群用的是試辦區子集合的索引，換回全部垃圾桶的索引
-        .map((c) => ({ ...c, members: c.members.map((k) => pilot[k]) }))
-        .map((c) =>
-          // Demo 的那一區用分隊名稱，和載入時跳出的通知一致
-          demo.length && demo.every((i) => c.members.includes(i)) ? { ...c, team: DEMO_ALERT.team, demo: true } : c
-        ),
-    [bins, levels, neighbors, hour, demo, pilot]
-  );
-  return { bins, levels, neighbors, clusters };
+  return { squads, list };
 }
 
 // ---------------- 地圖 ----------------
@@ -125,7 +105,7 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
   const allPoints = useBinPoints(data);
   const places = useMemo(() => binPlaceNames(data), [data]);
   const levels = data.fill.levels[LIVE];
-  const { clusters } = useFullClusters(data, time.hour);
+  const { list: dispatch } = useDispatch(data, time.hour);
   const pilot = usePilot(data);
   // 地圖只畫試辦區的桶；PointLayer 的索引 k 對應 pilot[k]
   const points = useMemo(() => pilot.map((i) => allPoints[i]), [pilot, allPoints]);
@@ -175,14 +155,16 @@ export function FillLayers({ data, time, state, onPickBin }: LayerProps) {
           </Tooltip>
         </Polygon>
       ))}
-      {clusters.map((c) => (
+      {dispatch.map((c) => (
         <Circle
-          key={c.key}
+          key={c.squad}
           center={[c.lat, c.lng]}
           radius={c.radiusM}
           pathOptions={{ color: FILL_COLORS.full, weight: 2, fillColor: FILL_COLORS.full, fillOpacity: 0.12, dashArray: "6 4" }}
           eventHandlers={{ click: () => onPickBin(c.members[0]) }}
-        />
+        >
+          <Tooltip sticky>{c.squad}：{c.members.length} 桶需清運</Tooltip>
+        </Circle>
       ))}
       <ImagePointLayer points={hourPoints} style={style} pane={PANES.top} onClick={pickBin} tooltip={tooltip} />
     </>
@@ -447,48 +429,44 @@ function GovView(props: PanelProps) {
   );
 }
 
-// ---------------- 政府單位：區域滿桶警示 ----------------
-
-function hourLabel(hour: number): string {
-  return `${DAYS[Math.floor(hour / 24) % 7]} ${String(hour % 24).padStart(2, "0")}:00`;
-}
+// ---------------- 政府單位：需出動分隊 ----------------
 
 function notifySupported(): boolean {
   return typeof window !== "undefined" && "Notification" in window;
 }
 
 function FullAlerts({ data, time, onFocus }: PanelProps) {
-  const { bins, levels, neighbors, clusters } = useFullClusters(data, time.hour);
-  const ids = (c: FullCluster) => c.members.map((i) => data.bins.features[i].properties.id);
-  const next = useMemo(
-    () => (clusters.length ? null : nextAlertHour(bins, levels, neighbors, time.hour)),
-    [clusters.length, bins, levels, neighbors, time.hour]
-  );
+  const { list } = useDispatch(data, time.hour);
+  const ids = (c: SquadDispatch) => c.members.map((i) => data.bins.features[i].properties.id);
 
-  // 新出現的警示才跳通知；同一區還沒清掉就不重複跳
-  const seen = useRef<Set<string>>(new Set());
-  const [toasts, setToasts] = useState<FullCluster[]>([]);
+  // 新出現需要出動的分隊才跳通知；載入當下的分隊已經由載入提醒列過，不重複跳
+  const seen = useRef<Set<string> | null>(null);
+  const [toasts, setToasts] = useState<SquadDispatch[]>([]);
   const [desktop, setDesktop] = useState(() => notifySupported() && Notification.permission === "granted");
 
   useEffect(() => {
-    // Demo 那一區載入時已經跳過通知，這裡不重複跳
-    const fresh = clusters.filter((c) => !seen.current.has(c.key) && !c.demo);
-    seen.current = new Set(clusters.map((c) => c.key));
+    const now = new Set(list.map((c) => c.squad));
+    if (seen.current === null) {
+      seen.current = now;
+      return;
+    }
+    const fresh = list.filter((c) => !seen.current!.has(c.squad));
+    seen.current = now;
+    setToasts((t) => [...fresh, ...t.filter((x) => now.has(x.squad))].slice(0, 3));
     if (!fresh.length) return;
-    setToasts((t) => [...fresh, ...t.filter((x) => clusters.some((c) => c.key === x.key))].slice(0, 3));
     if (desktop && notifySupported() && Notification.permission === "granted") {
       for (const c of fresh) {
         try {
-          new Notification(`${c.team}：${c.members.length} 個垃圾桶快滿了`, {
-            body: `${c.area}有 ${c.members.length} 個垃圾桶 ≥${ALERT.LEVEL}%，建議一起派車。`,
-            tag: c.key,
+          new Notification(`${c.squad}：${c.members.length} 個垃圾桶需清運`, {
+            body: `${c.area}有 ${c.members.length} 個垃圾桶 ≥${DISPATCH.LEVEL}%，建議指派清運作業。`,
+            tag: c.squad,
           });
         } catch {
           // 有些瀏覽器（例如手機）不允許直接 new Notification，畫面上的通知還是會出現
         }
       }
     }
-  }, [clusters, desktop]);
+  }, [list, desktop]);
 
   useEffect(() => {
     if (!toasts.length) return;
@@ -502,37 +480,37 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
     setDesktop(p === "granted");
   };
 
-  const focus = (c: FullCluster) => onFocus(c.lat, c.lng, 17);
+  const focus = (c: SquadDispatch) => onFocus(c.lat, c.lng, c.radiusM > 400 ? 15 : 17);
+  const total = list.reduce((n, c) => n + c.members.length, 0);
 
   return (
     <>
       <Section
-        title="區域滿桶警示"
-        aside={
-          clusters.length ? <span className="alert-count">{fmt(clusters.length)} 區</span> : undefined
-        }
+        title="需出動分隊"
+        aside={list.length ? <span className="alert-count">{fmt(list.length)} 隊</span> : undefined}
       >
         <p className="footnote">
-          同一清潔隊轄區、{ALERT.RADIUS_M} 公尺內有 {ALERT.MIN_BINS} 個以上垃圾桶 ≥{ALERT.LEVEL}%，就會跳通知，建議一起派車。
+          清潔分隊轄內有垃圾桶 ≥{DISPATCH.LEVEL}% 就列出，建議指派清運。點一隊在地圖上查看。
         </p>
-        {clusters.length === 0 ? (
-          <p className="muted alert-empty">
-            目前沒有。{next !== null ? `依模擬，下一次預計在 ${hourLabel(next)} 出現。` : ""}
-          </p>
+        {list.length === 0 ? (
+          <p className="muted alert-empty">目前沒有分隊需要出動。</p>
         ) : (
-          <ul className="alert-list">
-            {clusters.map((c) => (
-              <li key={c.key}>
-                <button className="alert-item" onClick={() => focus(c)}>
-                  <span className="alert-team">{c.team}</span>
-                  <span className="alert-area">
-                    {c.area}・<strong>{c.members.length} 桶</strong> ≥{ALERT.LEVEL}%
-                  </span>
-                  <small>{ids(c).join("、")}</small>
-                </button>
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="alert-list">
+              {list.map((c) => (
+                <li key={c.squad}>
+                  <button className="alert-item" onClick={() => focus(c)}>
+                    <span className="alert-team">{c.squad}</span>
+                    <span className="alert-area">
+                      {c.area}・<strong>{c.members.length} 桶</strong>需清運
+                    </span>
+                    <small>{ids(c).join("、")}</small>
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <p className="footnote">共 {fmt(total)} 桶需清運。</p>
+          </>
         )}
         {notifySupported() ? (
           desktop ? (
@@ -548,19 +526,17 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
       {toasts.length ? (
         <div className="alert-toasts" role="status" aria-live="polite">
           {toasts.map((c) => (
-            <div key={c.key} className="alert-toast">
+            <div key={c.squad} className="alert-toast">
               <button className="alert-toast-main" onClick={() => focus(c)}>
                 <strong>
-                  {c.team}：{c.members.length} 個垃圾桶快滿了
+                  {c.squad}：{c.members.length} 個垃圾桶需清運
                 </strong>
-                <span>
-                  {c.area}，都已 ≥{ALERT.LEVEL}%。點這裡在地圖上查看。
-                </span>
+                <span>{c.area}，都已 ≥{DISPATCH.LEVEL}%。點這裡在地圖上查看。</span>
               </button>
               <button
                 className="alert-toast-close"
                 aria-label="關閉通知"
-                onClick={() => setToasts((t) => t.filter((x) => x.key !== c.key))}
+                onClick={() => setToasts((t) => t.filter((x) => x.squad !== c.squad))}
               >
                 ×
               </button>

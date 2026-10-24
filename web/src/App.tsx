@@ -29,7 +29,8 @@ import { useLiveTime } from "./lib/live";
 import { ImportLayer, type ImportOptions } from "./tabs/ImportLayer";
 import { IconToggles } from "./map/IconToggles";
 import { useQrReports } from "./lib/qrFeed";
-import { DEMO_ALERT, demoBinIndices } from "./lib/demoAlert";
+import { binSquads, dispatchMessage, squadDispatch, type SquadDispatch } from "./lib/dispatch";
+import { pilotBinIndices } from "./lib/pilot";
 
 export type TabId = "recommend" | "fill" | "reports" | "progress";
 
@@ -188,23 +189,37 @@ export default function App() {
     [focusBin]
   );
 
-  // ---- Demo：載入 1 秒後跳出固定的即時提醒（lib/demoAlert.ts） ----
+  // ---- 載入 1 秒後跳出即時提醒：列出此刻所有需要出動的分隊（lib/dispatch.ts） ----
   // hidden → shown（載入 1 秒後）→ viewed（按過地圖查看）→ 按確認派工後關閉回 hidden
   const [demoAlert, setDemoAlert] = useState<"hidden" | "shown" | "viewed">("hidden");
-  const demoBins = useMemo(() => (data ? demoBinIndices(data.bins) : []), [data]);
+  // 通知內容固定在跳出的那一刻，之後整點換資料也不會改字
+  const [dispatchAtLoad, setDispatchAtLoad] = useState<SquadDispatch[]>([]);
   useEffect(() => {
     if (!data) return;
-    const id = window.setTimeout(() => setDemoAlert("shown"), DEMO_ALERT.delayMs);
+    const id = window.setTimeout(() => {
+      const hour = liveTime.hour;
+      const list = squadDispatch(data.bins, binSquads(data.bins), pilotBinIndices(data.bins), (i) => data.fill.levels.B[i][hour]);
+      setDispatchAtLoad(list);
+      if (list.length) setDemoAlert("shown");
+    }, 1000);
     return () => window.clearTimeout(id);
+    // 只在資料載入完成時跳一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
   // 按地圖查看後通知不關掉，按鈕換成「確認派工」
   const openDemoAlert = () => {
     setDemoAlert("viewed");
     setTab("fill");
-    if (!data || !demoBins.length) return;
-    const pts = demoBins.map((i) => data.bins.features[i].geometry.coordinates);
-    flyTo(pts.reduce((s, p) => s + p[1], 0) / pts.length, pts.reduce((s, p) => s + p[0], 0) / pts.length, 17);
-    setFillState((st) => ({ ...st, selected: demoBins[0] }));
+    const members = dispatchAtLoad.flatMap((d) => d.members);
+    if (!data || !members.length) return;
+    const pts = members.map((i) => data.bins.features[i].geometry.coordinates);
+    const lats = pts.map((p) => p[1]);
+    const lngs = pts.map((p) => p[0]);
+    // 只有一個分隊就拉近看；跨分隊就退遠一點，把所有需清運的桶都框進來
+    const spread = Math.max(Math.max(...lats) - Math.min(...lats), Math.max(...lngs) - Math.min(...lngs));
+    const zoom = spread < 0.004 ? 17 : spread < 0.012 ? 15 : spread < 0.03 ? 14 : 13;
+    flyTo((Math.max(...lats) + Math.min(...lats)) / 2, (Math.max(...lngs) + Math.min(...lngs)) / 2, zoom);
+    setFillState((st) => ({ ...st, selected: members[0] }));
   };
 
   const ready = data && place;
@@ -349,8 +364,8 @@ export default function App() {
             <button className="alert-toast-close" aria-label="關閉通知" onClick={() => setDemoAlert("hidden")}>
               ×
             </button>
-            <p className="demo-title">{DEMO_ALERT.title}</p>
-            <p className="demo-message">{DEMO_ALERT.message}</p>
+            <p className="demo-title">即時提醒</p>
+            <p className="demo-message">{dispatchMessage(dispatchAtLoad)}</p>
             <div className="demo-actions">
               {demoAlert === "shown" ? (
                 <button className="button primary" onClick={openDemoAlert}>
