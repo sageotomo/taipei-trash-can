@@ -2279,26 +2279,6 @@ textarea {
   font-size: 11px;
 }
 
-.status-select {
-  display: inline-block;
-  position: relative;
-}
-
-.status-select select {
-  appearance: none;
-  padding: 3px 22px 3px 10px;
-  border: 1px solid var(--status);
-  border-radius: 999px;
-  background:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%) right 11px center / 4px 4px no-repeat,
-    linear-gradient(-45deg, transparent 50%, var(--muted) 50%) right 7px center / 4px 4px no-repeat,
-    color-mix(in srgb, var(--status) 14%, var(--surface));
-  color: var(--ink);
-  font: inherit;
-  font-size: 13px;
-  cursor: pointer;
-}
-
 .overdue-pill {
   margin-left: 4px;
 }

@@ -200,7 +200,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
         </div>
 
         <div className="table-meta">
-          <p className="footnote">共 {fmt(rows.length)} 件。點欄位名稱排序，點一列在地圖上找到它，在「處理進度」直接改狀態。</p>
+          <p className="footnote">共 {fmt(rows.length)} 件。點欄位名稱排序，點一列在地圖上找到它，並在上方案件卡更新處理進度。</p>
           <button className="button small" onClick={exportCsv} disabled={rows.length === 0}>
             匯出 CSV
           </button>
@@ -260,8 +260,11 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
                         <span className="muted">附近無桶</span>
                       )}
                     </td>
-                    <td className="nowrap" onClick={(e) => e.stopPropagation()}>
-                      <StatusSelect status={c.status} onChange={(s) => onStatus(r.id, s)} label={`${r.id} 的處理進度`} />
+                    <td className="nowrap">
+                      <span className="case-status">
+                        <Swatch color={CASE_COLORS[c.status]} />
+                        {c.status}
+                      </span>
                       {c.overdue ? <span className="pill pill-full overdue-pill">逾期</span> : null}
                     </td>
                     <td className="nowrap">
@@ -280,19 +283,6 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
         </p>
       </Section>
     </>
-  );
-}
-
-function StatusSelect({ status, onChange, label }: { status: CaseStatus; onChange: (s: CaseStatus) => void; label: string }) {
-  return (
-    <label className="status-select" style={{ ["--status" as string]: CASE_COLORS[status] }}>
-      <span className="sr-only">{label}</span>
-      <select value={status} onChange={(e) => onChange(e.target.value as CaseStatus)}>
-        {CASE_STATUSES.map((s) => (
-          <option key={s}>{s}</option>
-        ))}
-      </select>
-    </label>
   );
 }
 
