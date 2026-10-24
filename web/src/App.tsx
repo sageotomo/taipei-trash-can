@@ -118,6 +118,13 @@ export default function App() {
     setIndicators((prev) => prev.filter((i) => i.layer !== id));
   }, []);
 
+  /** 清掉所有匯入的圖層和用到它們的指標（存在瀏覽器 localStorage 的也一起清掉） */
+  const clearLayers = useCallback(() => {
+    const ids = new Set(customLayers.map((l) => l.id));
+    setIndicators((prev) => prev.filter((i) => !ids.has(i.layer)));
+    setCustomLayers([]);
+  }, [customLayers]);
+
   const selectCell = useCallback(
     (cell: string | null, fly = false) => {
       setSelected(cell);
@@ -282,7 +289,7 @@ export default function App() {
               onVisible={setVisible}
               place={place}
               onRemoveLayer={removeLayer}
-              importTool={<ImportLayer onImport={importLayer} storageOk={storageOk} />}
+              importTool={<ImportLayer onImport={importLayer} storageOk={storageOk} imported={customLayers.map((l) => l.label)} onClear={clearLayers} />}
             />
           ) : null}
           {ready && tab === "fill" ? (

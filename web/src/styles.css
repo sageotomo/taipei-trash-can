@@ -2875,3 +2875,9 @@ textarea {
 @media (prefers-reduced-motion: reduce) {
   .intro-backdrop { animation: none; }
 }
+
+.clear-import {
+  display: block;
+  margin: 6px 0 0 auto;
+  font-size: 0.85em;
+}

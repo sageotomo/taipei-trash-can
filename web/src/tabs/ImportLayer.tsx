@@ -14,7 +14,13 @@ export interface ImportOptions {
 const templateHref = `data:text/csv;charset=utf-8,${encodeURIComponent("﻿" + TEMPLATE_CSV)}`;
 
 /** 匯入 CSV 成為新圖層。檔案只在瀏覽器裡讀，不會上傳 */
-export function ImportLayer({ onImport, storageOk }: { onImport: (o: ImportOptions) => void; storageOk: boolean }) {
+export function ImportLayer({ onImport, storageOk, imported = [], onClear }: {
+  onImport: (o: ImportOptions) => void;
+  storageOk: boolean;
+  /** 目前匯入的圖層名稱；有的話才顯示「清除匯入資料」 */
+  imported?: string[];
+  onClear?: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const [parsed, setParsed] = useState<ParsedCsv | null>(null);
   const [cols, setCols] = useState<Columns>({ lat: -1, lng: -1, name: -1 });
@@ -97,7 +103,20 @@ export function ImportLayer({ onImport, storageOk }: { onImport: (o: ImportOptio
         <button className="button add-button" onClick={() => setOpen(true)}>
           ＋ 匯入新資料（CSV），例如公共廁所
         </button>
-      ) : (
+      ) : null}
+      {!open && imported.length > 0 && onClear ? (
+        <button
+          className="link-button danger clear-import"
+          onClick={() => {
+            if (!window.confirm(`要清除匯入的「${imported.join("、")}」嗎？用到它們的指標也會一起刪掉。`)) return;
+            onClear();
+            setNotice(null);
+          }}
+        >
+          清除匯入資料（{imported.length}）
+        </button>
+      ) : null}
+      {!open ? null : (
         <div className="detail add-form">
           <div className="detail-head">
             <div className="form-title">匯入新資料</div>
