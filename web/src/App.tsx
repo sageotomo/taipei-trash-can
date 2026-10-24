@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer } from "react-leaflet";
 import { BaseMap } from "./map/basemap";
 import { useAppData } from "./data";
@@ -189,23 +189,37 @@ export default function App() {
     [focusBin]
   );
 
-  // ---- 載入 1 秒後跳出即時提醒：列出此刻所有需要出動的分隊（lib/dispatch.ts） ----
-  // hidden → shown（載入 1 秒後）→ 按確認派工或 × 後關閉回 hidden
+  // ---- 一進網站先跳體驗行前提醒（畫面正中央），按「進入決策平台」或 × 關閉 ----
+  const [introOpen, setIntroOpen] = useState(true);
+  useEffect(() => {
+    if (!introOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIntroOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [introOpen]);
+
+  // ---- 行前提醒關掉 0.5 秒後跳出即時提醒：列出此刻所有需要出動的分隊（lib/dispatch.ts） ----
+  // hidden → shown（行前提醒關閉 0.5 秒後）→ 按確認派工或 × 後關閉回 hidden
   const [demoAlert, setDemoAlert] = useState<"hidden" | "shown">("hidden");
   // 通知內容固定在跳出的那一刻，之後整點換資料也不會改字
   const [dispatchAtLoad, setDispatchAtLoad] = useState<SquadDispatch[]>([]);
+  const alertFired = useRef(false);
   useEffect(() => {
-    if (!data) return;
+    if (!data || introOpen || alertFired.current) return;
     const id = window.setTimeout(() => {
+      alertFired.current = true;
       const hour = liveTime.hour;
       const list = squadDispatch(data.bins, binSquads(data.bins), pilotBinIndices(data.bins), (i) => data.fill.levels.B[i][hour]);
       setDispatchAtLoad(list);
       if (list.length) setDemoAlert("shown");
-    }, 1000);
+    }, 500);
     return () => window.clearTimeout(id);
-    // 只在資料載入完成時跳一次
+    // 資料載入完成且行前提醒關閉後只跳一次
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
+  }, [data, introOpen]);
+
   const ready = data && place;
   // 動態調度與通報案件右側要放整張表格，面板加寬
   const wide = tab === "fill" || tab === "reports";
@@ -341,6 +355,48 @@ export default function App() {
           ) : null}
         </section>
       </aside>
+
+      {introOpen ? (
+        <div className="intro-backdrop" onClick={() => setIntroOpen(false)}>
+          <div
+            className="intro-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="intro-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button className="alert-toast-close intro-close" aria-label="關閉" onClick={() => setIntroOpen(false)}>
+              ×
+            </button>
+            <p className="intro-kicker">體驗行前提醒：時空連線中......</p>
+            <h2 id="intro-title" className="intro-title">歡迎來到 2027 年 4 月的台北市！</h2>
+            <p>
+              您目前正參與「找回消失的垃圾桶」專案第一階段試辦。過去一個月，我們已在大安區與中山區的既有清潔箱上裝設感測器，並正式啟用您眼前的這套「桶桶沒問題」數據決策平台。
+            </p>
+            <p>在接下來的系統 Demo 中，您將親自體驗以下核心運作：</p>
+            <ul className="intro-list">
+              <li>
+                <strong>滿桶告警與動態調度：</strong>
+                您將看到系統如何即時監控感測器回傳的水位。當單點滿溢即會觸發警示，若該區累積達三處滿桶，系統將自動跳出告警，並建議指派機動小組前往清運，徹底取代傳統無效的盲目巡迴。
+              </li>
+              <li>
+                <strong>六角形網格佈建分析：</strong>
+                您將操作圖資介面，看系統如何疊加捷運人流、YouBike 站點與 1999 陳情熱點，以此客觀評估下一階段「哪裡該裁撤、哪裡該增設一般或智慧清潔箱」。
+              </li>
+              <li>
+                <strong>公私協力通報機制：</strong>
+                您也可以模擬第一線市民，體驗未來掃描清潔箱 QR Code 即時回報現場狀況的流程，協助補足系統盲區。
+              </li>
+            </ul>
+            <p>準備好體驗數據驅動的市容升級了嗎？請點擊下方按鈕，正式進入決策平台！</p>
+            <div className="intro-actions">
+              <button className="button primary" autoFocus onClick={() => setIntroOpen(false)}>
+                進入決策平台
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {demoAlert !== "hidden" ? (
         <div className="alert-toasts demo" role="alert">
