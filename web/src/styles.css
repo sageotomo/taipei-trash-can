@@ -2881,3 +2881,8 @@ textarea {
   margin: 6px 0 0 auto;
   font-size: 0.85em;
 }
+
+/* 底圖淡色：保留一點顏色，讓地圖上的圖示和六角形格子比較突出 */
+.basemap-muted {
+  filter: saturate(0.35) brightness(1.03);
+}
