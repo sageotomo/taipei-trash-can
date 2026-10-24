@@ -2851,3 +2851,8 @@ textarea {
   margin-right: 4px;
   vertical-align: -3px;
 }
+
+/* 底圖配色：河道、綠地淡色系，其他灰階（濾鏡定義在 map/basemap.tsx） */
+.basemap-muted {
+  filter: url(#basemap-tone);
+}
