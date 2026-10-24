@@ -187,7 +187,7 @@ export function RecommendPanel(props: PanelProps) {
         importTool={props.importTool}
       />
 
-      <Section title={`建議增設前 ${recommendations.length} 名`}>
+      <Section title={`建議增設前 ${recommendations.length} 名`} tour="ranking">
         {recommendations.length === 0 ? (
           <p className="hint-box">目前的設定下，每一格的缺桶指數都是 0。調高「需要桶」指標的權重，就會出現建議點。</p>
         ) : null}
@@ -272,6 +272,7 @@ function IndicatorEditor({ indicators, onChange, onToggle, result, layers, sourc
   return (
     <Section
       title="指標與權重"
+      tour="indicators"
       aside={
         <button className="link-button" onClick={() => onChange(DEFAULT_INDICATORS)} disabled={isDefault}>
           恢復預設

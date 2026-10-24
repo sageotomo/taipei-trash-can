@@ -107,9 +107,9 @@ export function Switch({ on, onChange, label }: { on: boolean; onChange: (on: bo
   );
 }
 
-export function Section({ title, children, aside }: { title: string; children: ReactNode; aside?: ReactNode }) {
+export function Section({ title, children, aside, tour }: { title: string; children: ReactNode; aside?: ReactNode; tour?: string }) {
   return (
-    <section className="section">
+    <section className="section" data-tour={tour}>
       <div className="section-head">
         <h2>{title}</h2>
         {aside}

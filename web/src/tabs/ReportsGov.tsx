@@ -112,7 +112,7 @@ export function ReportGovPanel({ data, place, cases, reportCounts, selectedId, o
         />
       ) : null}
 
-      <Section title="通報案件" aside={<SourceTag source={data.sources.find((s) => s.key === "reports")} />}>
+      <Section title="通報案件" tour="reports" aside={<SourceTag source={data.sources.find((s) => s.key === "reports")} />}>
         <div className="table-tools">
           <div className="table-filters three">
             <label className="select">

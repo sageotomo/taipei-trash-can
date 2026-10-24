@@ -29,7 +29,7 @@ export function IconToggles({ layers, visible, onVisible }: {
   const listId = useId();
 
   return (
-    <div ref={ref} className={open ? "icon-toggles" : "icon-toggles collapsed"} role="group" aria-label="在地圖上顯示的 icon">
+    <div ref={ref} data-tour="icon-toggles" className={open ? "icon-toggles" : "icon-toggles collapsed"} role="group" aria-label="在地圖上顯示的 icon">
       <button type="button" className="icon-toggles-title" aria-expanded={open} aria-controls={listId} onClick={() => setOpen(!open)}>
         <span>顯示 icon</span>
         <svg className="icon-toggles-arrow" viewBox="0 0 12 12" width="12" height="12" aria-hidden="true">

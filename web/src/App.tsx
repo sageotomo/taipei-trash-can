@@ -28,6 +28,7 @@ import { IconToggles } from "./map/IconToggles";
 import { useQrReports } from "./lib/qrFeed";
 import { binSquads, dispatchMessage, squadDispatch, type SquadDispatch } from "./lib/dispatch";
 import { pilotBinIndices } from "./lib/pilot";
+import { Tour } from "./Tour";
 
 export type TabId = "recommend" | "fill" | "reports";
 
@@ -174,6 +175,13 @@ export default function App() {
   // ---- 行前提醒關掉 0.5 秒後跳出即時提醒：列出此刻所有需要出動的分隊（lib/dispatch.ts） ----
   // hidden → shown（行前提醒關閉 0.5 秒後）→ 按確認派工或 × 後關閉回 hidden
   const [demoAlert, setDemoAlert] = useState<"hidden" | "shown">("hidden");
+
+  // ---- 新手導覽：即時提醒關掉後自動開始（沒有提醒就在行前提醒關掉後開始），之後可從面板右上角的「?」重看 ----
+  const [tourOpen, setTourOpen] = useState(false);
+  const closeDemoAlert = useCallback(() => {
+    setDemoAlert("hidden");
+    window.setTimeout(() => setTourOpen(true), 300);
+  }, []);
   // 通知內容固定在跳出的那一刻，之後整點換資料也不會改字
   const [dispatchAtLoad, setDispatchAtLoad] = useState<SquadDispatch[]>([]);
   const alertFired = useRef(false);
@@ -185,6 +193,7 @@ export default function App() {
       const list = squadDispatch(data.bins, binSquads(data.bins), pilotBinIndices(data.bins), (i) => data.fill.levels.B[i][hour]);
       setDispatchAtLoad(list);
       if (list.length) setDemoAlert("shown");
+      else setTourOpen(true);
     }, 500);
     return () => window.clearTimeout(id);
     // 資料載入完成且行前提醒關閉後只跳一次
@@ -198,7 +207,7 @@ export default function App() {
   return (
     <div className={wide ? "app wide" : "app"}>
       {/* 地圖放在內縮的框裡，外圍用側邊欄的底色 */}
-      <div className="map-frame">
+      <div className="map-frame" data-tour="map">
         <MapContainer center={CENTER} zoom={13} className="map" zoomControl>
           <BaseMap />
           <MapPanes />
@@ -239,6 +248,15 @@ export default function App() {
 
       <aside id="side-panel" className="panel">
         <header className="panel-header">
+          <button
+            className="tour-replay"
+            data-tour="tour-replay"
+            aria-label="重看操作導覽"
+            title="操作導覽"
+            onClick={() => setTourOpen(true)}
+          >
+            ?
+          </button>
           <h1 className="brand">
             <img src="./brand/logo.png" alt="桶桶沒問題！" width="640" height="199" />
           </h1>
@@ -246,11 +264,12 @@ export default function App() {
           <p>透過數據輔助決策，提升台北市容與環境衛生以及便利性，一起打造更好的台北!</p>
         </header>
 
-        <nav className="tabs" role="tablist" aria-label="功能">
+        <nav className="tabs" role="tablist" aria-label="功能" data-tour="tabs">
           {TABS.map((t) => (
             <button
               key={t.id}
               role="tab"
+              data-tour={`tab-${t.id}`}
               aria-selected={tab === t.id}
               className={tab === t.id ? "tab active" : "tab"}
               onClick={() => setTab(t.id)}
@@ -345,10 +364,12 @@ export default function App() {
         </div>
       ) : null}
 
+      <Tour open={tourOpen} onClose={() => setTourOpen(false)} onTab={setTab} />
+
       {demoAlert !== "hidden" ? (
         <div className="alert-toasts demo" role="alert">
           <div className="alert-toast demo-toast">
-            <button className="alert-toast-close" aria-label="關閉通知" onClick={() => setDemoAlert("hidden")}>
+            <button className="alert-toast-close" aria-label="關閉通知" onClick={closeDemoAlert}>
               ×
             </button>
             <p className="demo-title">即時提醒</p>
@@ -357,7 +378,7 @@ export default function App() {
               <span className="demo-note">(此為模擬通知，實際情況將是通知訊息到各個分隊的裝置)</span>
             </p>
             <div className="demo-actions">
-              <button className="button primary" onClick={() => setDemoAlert("hidden")}>
+              <button className="button primary" onClick={closeDemoAlert}>
                 確認派工
               </button>
             </div>
