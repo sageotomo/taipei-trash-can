@@ -2882,7 +2882,7 @@ textarea {
   font-size: 0.85em;
 }
 
-/* 底圖淡色：保留一點顏色，讓地圖上的圖示和六角形格子比較突出 */
+/* 底圖配色：河道、綠地淡色系，其他灰階（濾鏡定義在 map/basemap.tsx） */
 .basemap-muted {
-  filter: saturate(0.35) brightness(1.03);
+  filter: url(#basemap-tone);
 }
