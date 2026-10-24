@@ -243,7 +243,7 @@ export default function App() {
             <img src="./brand/logo.png" alt="桶桶沒問題！" width="640" height="199" />
           </h1>
           <div className="brand-topic">找回消失的垃圾桶</div>
-          <p>台北行人垃圾桶從近 3,000 組剩下約 800 組。哪裡最缺？為什麼？</p>
+          <p>透過數據輔助決策，提升台北市容與環境衛生以及便利性，一起打造更好的台北!</p>
         </header>
 
         <nav className="tabs" role="tablist" aria-label="功能">
