@@ -4,7 +4,7 @@
 // 填滿資料是一週的模擬（pipeline/04_fill_sim.py），用「現在是星期幾幾點」取同一個小時；
 // 有智慧垃圾桶就會滿了才派車，所以即時畫面用 B 感測派車的結果。
 // 感測器只試辦在大安區、中山區（lib/pilot.ts），這頁只看這兩區的垃圾桶，地圖上框出兩區邊界。
-// 「需出動分隊」：把 ≥ DISPATCH.LEVEL% 的桶依負責清潔分隊分組，列出此刻要出動的分隊（lib/dispatch.ts）。
+// 「需出動分隊」：把 ≥ DISPATCH.LEVEL% 的桶依負責清潔分隊分組，轄內 ≥ MIN_BINS 桶的分隊才列出（lib/dispatch.ts）。
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Circle, Polygon, Tooltip, useMap } from "react-leaflet";
@@ -490,7 +490,7 @@ function FullAlerts({ data, time, onFocus }: PanelProps) {
         aside={list.length ? <span className="alert-count">{fmt(list.length)} 隊</span> : undefined}
       >
         <p className="footnote">
-          清潔分隊轄內有垃圾桶 ≥{DISPATCH.LEVEL}% 就列出，建議指派清運。點一隊在地圖上查看。
+          清潔分隊轄內有 {DISPATCH.MIN_BINS} 個以上垃圾桶 ≥{DISPATCH.LEVEL}% 就列出，建議指派清運。點一隊在地圖上查看。
         </p>
         {list.length === 0 ? (
           <p className="muted alert-empty">目前沒有分隊需要出動。</p>

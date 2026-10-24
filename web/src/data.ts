@@ -71,7 +71,7 @@ export function useAppData() {
       load<PilotArea>("pilot_districts.geojson"),
     ])
       .then(([bins, pois, reportsSeed, sources, fill, residential, smartBins, pilotArea]) => {
-        // Demo：即時畫面每小時只留 1～3 個分隊需要出動（lib/dispatch.ts）
+        // Demo：即時畫面每小時都剛好有 3 個分隊需要通知（lib/dispatch.ts）
         const liveFill = dampForDemo(fill, bins);
         if (!cancelled) setData({ bins, pois, reportsSeed, sources, fill: liveFill, residential, smartBins, pilotArea });
       })

@@ -12,27 +12,31 @@ describe("Demo 調整後的需出動分隊", () => {
   const pilot = pilotBinIndices(bins);
   const squads = binSquads(bins);
   const live = dampForDemo(fill, bins);
-  const fullCount = (f: FillData, h: number) => pilot.filter((i) => f.levels.B[i][h] >= DISPATCH.LEVEL).length;
 
-  it("一週每個小時都只有 1～3 個分隊需要出動", () => {
+  it("一週每個小時都剛好有 3 個分隊需要通知，每隊剛好 3 桶", () => {
     for (let h = 0; h < fill.hours; h++) {
       const list = squadDispatch(bins, squads, pilot, (i) => live.levels.B[i][h]);
-      expect(list.length, `hour ${h}`).toBeGreaterThanOrEqual(1);
-      expect(list.length, `hour ${h}`).toBeLessThanOrEqual(DISPATCH.MAX_SQUADS);
+      expect(list.length, `hour ${h}`).toBe(DISPATCH.SQUADS);
+      for (const d of list) expect(d.members.length, `hour ${h} ${d.squad}`).toBe(DISPATCH.MIN_BINS);
     }
   });
 
-  it("需清運的桶大約剩一半", () => {
-    let before = 0;
-    let after = 0;
-    // 只算原本就有 2 桶以上的時段；原本 0 桶的時段會補 1 桶，不算在「減半」裡
+  it("不足 3 桶的分隊不列出", () => {
+    const same = pilot.filter((i) => squads[i] === squads[pilot[0]]);
+    const two = same.slice(0, 2);
+    const three = same.slice(0, 3);
+    expect(squadDispatch(bins, squads, pilot, (i) => (two.includes(i) ? 95 : 0))).toEqual([]);
+    expect(squadDispatch(bins, squads, pilot, (i) => (three.includes(i) ? 95 : 0))).toHaveLength(1);
+  });
+
+  it("沒被通知的分隊，沒有需清運的桶", () => {
     for (let h = 0; h < fill.hours; h++) {
-      if (fullCount(fill, h) < 2) continue;
-      before += fullCount(fill, h);
-      after += fullCount(live, h);
-      expect(fullCount(live, h)).toBeLessThanOrEqual(Math.ceil(fullCount(fill, h) / 2) + 1);
+      const notified = new Set(squadDispatch(bins, squads, pilot, (i) => live.levels.B[i][h]).map((d) => d.squad));
+      for (const i of pilot) {
+        if (notified.has(squads[i]!)) continue;
+        expect(live.levels.B[i][h], `hour ${h} bin ${i}`).toBeLessThan(DISPATCH.LEVEL);
+      }
     }
-    expect(after).toBeLessThan(before * 0.6);
   });
 
   it("不改原資料，也不動 A 固定排程", () => {
